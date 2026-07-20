@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from apps.core.models import TimeStampedModel
@@ -375,6 +376,65 @@ class CandidateResolution(TimeStampedModel):
                 ]
             ),
         ]
+
+    def clean(self) -> None:
+        super().clean()
+
+        publishable = {
+            self.Classification.CANONICAL,
+            self.Classification.SUPPORTING,
+        }
+        primary_required = {
+            self.Classification.SUPPORTING,
+            self.Classification.DUPLICATE,
+        }
+
+        if self.classification in publishable:
+            if not self.canonical_title.strip():
+                raise ValidationError(
+                    {
+                        "canonical_title": (
+                            "A canonical title is required "
+                            "for this classification."
+                        )
+                    }
+                )
+
+            if self.resolved_authority_id is None:
+                raise ValidationError(
+                    {
+                        "resolved_authority": (
+                            "A resolved authority is required "
+                            "for this classification."
+                        )
+                    }
+                )
+
+        if (
+            self.classification in primary_required
+            and self.primary_candidate_id is None
+        ):
+            raise ValidationError(
+                {
+                    "primary_candidate": (
+                        "A primary candidate is required "
+                        "for this classification."
+                    )
+                }
+            )
+
+        if (
+            self.primary_candidate_id is not None
+            and self.primary_candidate_id
+            == self.candidate_id
+        ):
+            raise ValidationError(
+                {
+                    "primary_candidate": (
+                        "A candidate cannot reference itself."
+                    )
+                }
+            )
 
     def __str__(self) -> str:
         return (
