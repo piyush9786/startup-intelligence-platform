@@ -5,11 +5,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from .models import StartupProfile
+from .models import (
+    StartupProfile,
+    StartupReadinessAssessment,
+)
 from .serializers import (
     StartupProfileSerializer,
     StartupReadinessAssessmentSerializer,
     StartupReadinessEvaluationRequestSerializer,
+    StartupReadinessRetrievalRequestSerializer,
 )
 from .services import (
     create_startup_readiness_assessment,
@@ -72,4 +76,52 @@ class StartupReadinessEvaluateView(APIView):
         return Response(
             response_serializer.data,
             status=status.HTTP_201_CREATED,
+        )
+
+
+class StartupReadinessCurrentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = StartupReadinessRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(
+            raise_exception=True,
+        )
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        assessment = (
+            StartupReadinessAssessment.objects.filter(
+                startup_profile=startup_profile,
+            )
+            .select_related(
+                "startup_profile",
+                "requested_by",
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+            .first()
+        )
+
+        serialized_assessment = None
+        if assessment is not None:
+            serialized_assessment = StartupReadinessAssessmentSerializer(
+                assessment,
+            ).data
+
+        return Response(
+            {
+                "startup_profile_id": str(
+                    startup_profile.id,
+                ),
+                "has_assessment": (assessment is not None),
+                "assessment": serialized_assessment,
+            },
+            status=status.HTTP_200_OK,
         )

@@ -37,6 +37,7 @@ from apps.sources.views import (
 )
 from apps.startups.views import (
     StartupProfileViewSet,
+    StartupReadinessCurrentView,
     StartupReadinessEvaluateView,
 )
 
@@ -118,6 +119,11 @@ urlpatterns = [
         "api/v1/startup-readiness/evaluate/",
         StartupReadinessEvaluateView.as_view(),
         name="startup-readiness-evaluate",
+    ),
+    path(
+        "api/v1/startup-readiness/current/",
+        StartupReadinessCurrentView.as_view(),
+        name="startup-readiness-current",
     ),
     path(
         "api/v1/eligibility/evaluate/",
