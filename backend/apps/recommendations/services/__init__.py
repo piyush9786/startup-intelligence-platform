@@ -18,13 +18,20 @@ from .recommendations import (
     RecommendationGeneration,
     generate_recommendations,
 )
+from .retrieval import (
+    CurrentRecommendationSet,
+    RecommendationSetIntegrityError,
+    get_current_recommendation_set,
+)
 
 __all__ = [
     "ENGINE_VERSION",
     "PROFILE_SNAPSHOT_FIELDS",
     "RANKING_VERSION",
+    "CurrentRecommendationSet",
     "EligibilityEvaluation",
     "RecommendationGeneration",
+    "RecommendationSetIntegrityError",
     "RuleEvaluation",
     "RuleOutcome",
     "create_eligibility_assessment",
@@ -32,6 +39,7 @@ __all__ = [
     "evaluate_rules",
     "evaluate_scheme_eligibility",
     "generate_recommendations",
+    "get_current_recommendation_set",
     "resolve_profile_field",
     "snapshot_startup_profile",
 ]
