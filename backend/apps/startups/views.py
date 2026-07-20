@@ -27,6 +27,15 @@ def _visible_profiles(user):
     return queryset
 
 
+def _visible_readiness_assessments(user):
+    queryset = StartupReadinessAssessment.objects.all()
+    if not user.is_staff:
+        queryset = queryset.filter(
+            startup_profile__owner=user,
+        )
+    return queryset
+
+
 class StartupProfileViewSet(ModelViewSet):
     serializer_class = StartupProfileSerializer
     permission_classes = [IsAuthenticated]
@@ -123,5 +132,72 @@ class StartupReadinessCurrentView(APIView):
                 "has_assessment": (assessment is not None),
                 "assessment": serialized_assessment,
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupReadinessAssessmentListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = StartupReadinessRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(
+            raise_exception=True,
+        )
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        assessments = (
+            _visible_readiness_assessments(request.user)
+            .filter(
+                startup_profile=startup_profile,
+            )
+            .select_related(
+                "startup_profile",
+                "requested_by",
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
+        response_serializer = StartupReadinessAssessmentSerializer(
+            assessments,
+            many=True,
+        )
+        return Response(
+            {
+                "startup_profile_id": str(
+                    startup_profile.id,
+                ),
+                "count": len(
+                    response_serializer.data,
+                ),
+                "assessments": (response_serializer.data),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupReadinessAssessmentDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, assessment_id):
+        assessment = get_object_or_404(
+            _visible_readiness_assessments(request.user).select_related(
+                "startup_profile",
+                "requested_by",
+            ),
+            pk=assessment_id,
+        )
+        response_serializer = StartupReadinessAssessmentSerializer(
+            assessment,
+        )
+        return Response(
+            response_serializer.data,
             status=status.HTTP_200_OK,
         )
