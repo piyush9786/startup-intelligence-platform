@@ -26,6 +26,8 @@ from apps.recommendations.views import (
     EligibilityEvaluateView,
     RecommendationCurrentView,
     RecommendationGenerateView,
+    RecommendationRunDetailView,
+    RecommendationRunListView,
 )
 from apps.schemes.views import SchemeViewSet
 from apps.sources.views import (
@@ -123,6 +125,16 @@ urlpatterns = [
         "api/v1/recommendations/current/",
         RecommendationCurrentView.as_view(),
         name="recommendation-current",
+    ),
+    path(
+        "api/v1/recommendations/runs/",
+        RecommendationRunListView.as_view(),
+        name="recommendation-run-list",
+    ),
+    path(
+        "api/v1/recommendations/runs/<uuid:run_id>/",
+        RecommendationRunDetailView.as_view(),
+        name="recommendation-run-detail",
     ),
     path(
         "api/v1/documents/process/",

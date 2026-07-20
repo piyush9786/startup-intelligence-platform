@@ -7,10 +7,13 @@ from rest_framework.views import APIView
 from apps.schemes.models import Scheme
 from apps.startups.models import StartupProfile
 
+from .models import RecommendationGenerationRun
 from .serializers import (
     EligibilityAssessmentSerializer,
     EligibilityRequestSerializer,
     RecommendationGenerationRequestSerializer,
+    RecommendationGenerationRunDetailSerializer,
+    RecommendationGenerationRunListSerializer,
     RecommendationRetrievalRequestSerializer,
     RecommendationSerializer,
 )
@@ -26,6 +29,15 @@ def _visible_profiles(user):
     queryset = StartupProfile.objects.all()
     if not user.is_staff:
         queryset = queryset.filter(owner=user)
+    return queryset
+
+
+def _visible_generation_runs(user):
+    queryset = RecommendationGenerationRun.objects.all()
+    if not user.is_staff:
+        queryset = queryset.filter(
+            startup_profile__owner=user,
+        )
     return queryset
 
 
@@ -179,5 +191,65 @@ class RecommendationCurrentView(APIView):
                 "excluded_schemes": (current_set.excluded_schemes),
                 "recommendations": (recommendation_serializer.data),
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+class RecommendationRunListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = RecommendationRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        runs = (
+            _visible_generation_runs(request.user)
+            .filter(startup_profile=startup_profile)
+            .select_related(
+                "startup_profile",
+                "requested_by",
+            )
+            .order_by(
+                "-completed_at",
+                "-created_at",
+                "-id",
+            )
+        )
+        response_serializer = RecommendationGenerationRunListSerializer(
+            runs,
+            many=True,
+        )
+        return Response(
+            {
+                "startup_profile_id": str(startup_profile.id),
+                "count": len(response_serializer.data),
+                "runs": response_serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class RecommendationRunDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, run_id):
+        generation_run = get_object_or_404(
+            _visible_generation_runs(request.user).select_related(
+                "startup_profile",
+                "requested_by",
+            ),
+            pk=run_id,
+        )
+        response_serializer = RecommendationGenerationRunDetailSerializer(
+            generation_run,
+        )
+        return Response(
+            response_serializer.data,
             status=status.HTTP_200_OK,
         )
