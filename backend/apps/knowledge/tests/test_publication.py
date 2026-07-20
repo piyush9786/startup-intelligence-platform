@@ -530,3 +530,104 @@ def test_publication_uses_curated_and_approved_content(
     assert [row["description"] for row in version.benefits] == ["Approved benefit."]
     assert [row["name"] for row in version.required_documents] == ["Approved document"]
     assert [row["instruction"] for row in version.application_steps] == ["Use the reviewed portal."]
+
+
+def test_curated_replacements_override_extraction(
+    reviewer,
+    authority,
+):
+    candidate = make_candidate(
+        key="publication-replacements",
+        title="Replacement Scheme",
+    )
+
+    extracted_benefit = BenefitCandidate.objects.create(
+        candidate=candidate,
+        description="Approved extracted benefit.",
+        confidence=90,
+    )
+    extracted_document = RequiredDocumentCandidate.objects.create(
+        candidate=candidate,
+        name="Extracted document",
+        confidence=90,
+    )
+    extracted_step = ApplicationStepCandidate.objects.create(
+        candidate=candidate,
+        step_number=1,
+        instruction="Extracted application step.",
+        confidence=90,
+    )
+
+    for item in (
+        extracted_benefit,
+        extracted_document,
+        extracted_step,
+    ):
+        review_structured_item(
+            item=item,
+            status=item.ReviewStatus.APPROVED,
+            reviewer=reviewer,
+        )
+
+    resolve_as_canonical(
+        candidate=candidate,
+        reviewer=reviewer,
+        authority=authority,
+        canonical_title="Replacement Scheme",
+    )
+
+    curate_candidate(
+        candidate=candidate,
+        status=CandidateCuration.ReviewStatus.APPROVED,
+        reviewer=reviewer,
+        canonical_summary="Reviewed replacement summary.",
+        canonical_objective="Reviewed replacement objective.",
+        canonical_eligibility_text="Reviewed replacement eligibility.",
+        official_url="https://example.gov.in/scheme",
+        application_url="https://example.gov.in/apply",
+        canonical_support_types=["grant"],
+        canonical_categories=["seed_funding"],
+        canonical_benefits=[
+            {
+                "type": "grant",
+                "description": "Reviewed replacement benefit.",
+                "amount_min": None,
+                "amount_max": "2000000.00",
+                "currency": "INR",
+            }
+        ],
+        canonical_required_documents=[],
+        canonical_application_steps=[
+            {
+                "step_number": 1,
+                "instruction": "Use the reviewed portal.",
+                "url": "https://example.gov.in/apply",
+            }
+        ],
+    )
+
+    result = publish_candidate(
+        candidate=candidate,
+        publisher=reviewer,
+    )
+    version = result.scheme_version
+
+    assert version.support_types == ["grant"]
+    assert version.categories == ["seed_funding"]
+    assert version.benefits == [
+        {
+            "amount_max": "2000000.00",
+            "amount_min": None,
+            "currency": "INR",
+            "description": "Reviewed replacement benefit.",
+            "type": "grant",
+        }
+    ]
+    assert version.required_documents == []
+    assert version.application_steps == [
+        {
+            "instruction": "Use the reviewed portal.",
+            "step_number": 1,
+            "url": "https://example.gov.in/apply",
+        }
+    ]

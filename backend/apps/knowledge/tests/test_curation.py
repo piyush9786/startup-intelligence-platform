@@ -254,3 +254,24 @@ def test_returning_rule_to_draft_clears_audit(
 
     assert reviewed.reviewed_by is None
     assert reviewed.reviewed_at is None
+
+
+def test_curation_replacements_require_lists(
+    reviewer,
+):
+    candidate = make_candidate(
+        key="invalid-curation-replacement",
+    )
+
+    with pytest.raises(
+        ValidationError,
+        match="JSON list",
+    ):
+        curate_candidate(
+            candidate=candidate,
+            status=CandidateCuration.ReviewStatus.APPROVED,
+            reviewer=reviewer,
+            canonical_summary="Reviewed summary.",
+            official_url="https://example.gov.in/scheme",
+            canonical_support_types="grant",
+        )

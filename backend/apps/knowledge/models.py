@@ -524,6 +524,31 @@ class CandidateCuration(TimeStampedModel):
         max_length=2000,
         blank=True,
     )
+    canonical_support_types = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+    )
+    canonical_categories = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+    )
+    canonical_benefits = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+    )
+    canonical_required_documents = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+    )
+    canonical_application_steps = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+    )
     review_status = models.CharField(
         max_length=20,
         choices=ReviewStatus.choices,
@@ -551,6 +576,103 @@ class CandidateCuration(TimeStampedModel):
 
     def clean(self) -> None:
         super().clean()
+
+        errors = {}
+
+        for field_name in (
+            "canonical_support_types",
+            "canonical_categories",
+        ):
+            value = getattr(self, field_name)
+
+            if value is None:
+                continue
+
+            if not isinstance(value, list):
+                errors[field_name] = "The curated replacement must be a JSON list."
+                continue
+
+            if any(not isinstance(item, str) or not item.strip() for item in value):
+                errors[field_name] = "Every curated value must be a non-empty string."
+
+        for field_name in (
+            "canonical_benefits",
+            "canonical_required_documents",
+            "canonical_application_steps",
+        ):
+            value = getattr(self, field_name)
+
+            if value is None:
+                continue
+
+            if not isinstance(value, list):
+                errors[field_name] = "The curated replacement must be a JSON list."
+                continue
+
+            if any(not isinstance(item, dict) for item in value):
+                errors[field_name] = "Every curated row must be a JSON object."
+
+        if isinstance(self.canonical_benefits, list):
+            for row in self.canonical_benefits:
+                if not isinstance(row, dict):
+                    continue
+
+                description = row.get("description", "")
+                currency = row.get("currency", "INR")
+
+                if not isinstance(description, str) or not description.strip():
+                    errors["canonical_benefits"] = "Every curated benefit requires a description."
+                    break
+
+                if not isinstance(currency, str) or len(currency.strip()) != 3:
+                    errors["canonical_benefits"] = (
+                        "Every curated benefit requires a three-letter currency code."
+                    )
+                    break
+
+        if isinstance(self.canonical_required_documents, list):
+            for row in self.canonical_required_documents:
+                if not isinstance(row, dict):
+                    continue
+
+                name = row.get("name", "")
+                if not isinstance(name, str) or not name.strip():
+                    errors["canonical_required_documents"] = (
+                        "Every curated required document requires a name."
+                    )
+                    break
+
+        if isinstance(self.canonical_application_steps, list):
+            step_numbers = []
+
+            for row in self.canonical_application_steps:
+                if not isinstance(row, dict):
+                    continue
+
+                step_number = row.get("step_number")
+                instruction = row.get("instruction", "")
+
+                if not isinstance(step_number, int) or step_number < 1:
+                    errors["canonical_application_steps"] = (
+                        "Every curated application step requires a positive integer step number."
+                    )
+                    break
+
+                if not isinstance(instruction, str) or not instruction.strip():
+                    errors["canonical_application_steps"] = (
+                        "Every curated application step requires an instruction."
+                    )
+                    break
+
+                step_numbers.append(step_number)
+
+            if step_numbers and len(step_numbers) != len(set(step_numbers)):
+                errors["canonical_application_steps"] = (
+                    "Curated application step numbers must be unique."
+                )
+
+        if errors:
+            raise ValidationError(errors)
 
         if self.review_status == self.ReviewStatus.APPROVED:
             errors = {}
