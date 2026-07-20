@@ -4,9 +4,11 @@ from .models import (
     ApplicationStepCandidate,
     BenefitCandidate,
     CandidateEvidence,
+    CandidatePublication,
     CandidateResolution,
     EligibilityRuleCandidate,
     KnowledgeExtractionRun,
+    PublishedEvidence,
     RequiredDocumentCandidate,
     SchemeCandidate,
 )
@@ -158,6 +160,80 @@ class CandidateResolutionAdmin(admin.ModelAdmin):
         "resolved_by",
     )
     readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
+
+
+class PublishedEvidenceInline(admin.TabularInline):
+    model = PublishedEvidence
+    extra = 0
+    can_delete = False
+    readonly_fields = (
+        "candidate_evidence",
+        "evidence_type",
+        "quote",
+        "page_number",
+        "metadata",
+        "created_at",
+        "updated_at",
+    )
+
+
+@admin.register(CandidatePublication)
+class CandidatePublicationAdmin(admin.ModelAdmin):
+    list_display = (
+        "candidate",
+        "scheme",
+        "scheme_version",
+        "role",
+        "published_by",
+        "published_at",
+    )
+    list_filter = ("role", "published_at", "scheme__authority")
+    search_fields = (
+        "candidate__title",
+        "scheme__canonical_name",
+        "publication_hash",
+    )
+    raw_id_fields = (
+        "candidate",
+        "scheme",
+        "scheme_version",
+        "published_by",
+    )
+    readonly_fields = (
+        "publication_hash",
+        "published_at",
+        "metadata",
+        "created_at",
+        "updated_at",
+    )
+    inlines = (PublishedEvidenceInline,)
+
+
+@admin.register(PublishedEvidence)
+class PublishedEvidenceAdmin(admin.ModelAdmin):
+    list_display = (
+        "publication",
+        "evidence_type",
+        "page_number",
+        "candidate_evidence",
+    )
+    list_filter = ("evidence_type",)
+    search_fields = (
+        "quote",
+        "publication__candidate__title",
+        "publication__scheme__canonical_name",
+    )
+    raw_id_fields = ("publication", "candidate_evidence")
+    readonly_fields = (
+        "publication",
+        "candidate_evidence",
+        "evidence_type",
+        "quote",
+        "page_number",
+        "metadata",
         "created_at",
         "updated_at",
     )
