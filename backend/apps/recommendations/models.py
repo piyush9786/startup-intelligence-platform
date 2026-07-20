@@ -2,11 +2,49 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.core.models import TimeStampedModel
 from apps.schemes.models import SchemeVersion
 from apps.startups.models import StartupProfile
+
+
+class RecommendationGenerationRun(TimeStampedModel):
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="recommendation_generation_runs",
+    )
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="recommendation_generation_runs",
+    )
+    assessment_date = models.DateField()
+    ranking_version = models.CharField(
+        max_length=50,
+        default="recommendations-v1",
+    )
+    profile_snapshot = models.JSONField(default=dict)
+    assessed_scheme_count = models.PositiveIntegerField(default=0)
+    recommendation_count = models.PositiveIntegerField(default=0)
+    excluded_schemes = models.JSONField(default=list)
+    recommendation_snapshot = models.JSONField(default=list)
+    is_current = models.BooleanField(default=True)
+    completed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["startup_profile", "-completed_at", "-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["startup_profile"],
+                condition=Q(is_current=True),
+                name="unique_current_recommendation_run",
+            )
+        ]
 
 
 class EligibilityAssessment(TimeStampedModel):
@@ -35,6 +73,13 @@ class EligibilityAssessment(TimeStampedModel):
         on_delete=models.PROTECT,
         related_name="assessments",
     )
+    generation_run = models.ForeignKey(
+        RecommendationGenerationRun,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assessments",
+    )
     assessment_date = models.DateField(default=timezone.localdate)
     profile_snapshot = models.JSONField(default=dict)
     result = models.CharField(max_length=40, choices=Result.choices)
@@ -59,6 +104,11 @@ class Recommendation(TimeStampedModel):
         EligibilityAssessment,
         on_delete=models.PROTECT,
     )
+    generation_run = models.ForeignKey(
+        RecommendationGenerationRun,
+        on_delete=models.PROTECT,
+        related_name="recommendations",
+    )
     generation_id = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -79,5 +129,9 @@ class Recommendation(TimeStampedModel):
             models.UniqueConstraint(
                 fields=["generation_id", "rank"],
                 name="unique_recommendation_generation_rank",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["generation_run", "rank"],
+                name="unique_recommendation_run_rank",
+            ),
         ]
