@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 
 from apps.knowledge.services.parser import (
+    CandidateBlock,
     classify_section,
     detect_kind,
     parse_amounts,
     parse_rules,
     segment_candidates,
+    title_from_chunk,
 )
 
 
@@ -165,12 +167,10 @@ def test_removes_scheme_list_number_from_title():
         ),
     )
 
-    blocks = segment_candidates(
-        [chunk],
-        min_score=3,
+    assert (
+        title_from_chunk(chunk)
+        == "Biotechnology Ignition Grant"
     )
-
-    assert blocks[0].title == "Biotechnology Ignition Grant"
 
 
 def test_joins_wrapped_title_ending_with_ampersand():
@@ -398,7 +398,12 @@ def test_parses_split_visual_section_headings():
         ),
     )
 
-    block = segment_candidates([chunk], min_score=3)[0]
+    block = CandidateBlock(
+        title="Fund of Funds for Startups (FFS)",
+        chunks=[chunk],
+        start_page=33,
+        end_page=33,
+    )
     values, _evidence = split_block_sections(block)
 
     assert "SEBI-registered AIFs" in values["eligibility"][0]
