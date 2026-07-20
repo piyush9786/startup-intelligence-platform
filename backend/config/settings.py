@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.sources",
     "apps.documents",
     "apps.discovery",
+    "apps.knowledge",
     "apps.schemes",
     "apps.startups",
     "apps.recommendations",
@@ -180,3 +181,10 @@ DISCOVERY_MAX_PAGES_PER_SOURCE = int(os.environ.get("DISCOVERY_MAX_PAGES_PER_SOU
 DISCOVERY_REQUEST_DELAY_SECONDS = float(os.environ.get("DISCOVERY_REQUEST_DELAY_SECONDS", "1.5"))
 DISCOVERY_MIN_RAG_SCORE = float(os.environ.get("DISCOVERY_MIN_RAG_SCORE", "45"))
 DISCOVERY_MIN_STRUCTURED_SCORE = float(os.environ.get("DISCOVERY_MIN_STRUCTURED_SCORE", "60"))
+
+KNOWLEDGE_EXTRACTOR_VERSION = os.environ.get(
+    "KNOWLEDGE_EXTRACTOR_VERSION",
+    "v1",
+)
+KNOWLEDGE_MIN_CANDIDATE_SCORE = int(os.environ.get("KNOWLEDGE_MIN_CANDIDATE_SCORE", "4"))
+KNOWLEDGE_MAX_BLOCK_CHARS = int(os.environ.get("KNOWLEDGE_MAX_BLOCK_CHARS", "30000"))
