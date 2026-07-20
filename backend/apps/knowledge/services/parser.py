@@ -156,8 +156,6 @@ def first_meaningful_line(value: str) -> str:
     return ""
 
 
-
-
 def _clean_title(value: str) -> str:
     value = normalize_line(value)
     value = re.sub(
@@ -242,10 +240,7 @@ def _is_non_detail_page(value: str) -> bool:
     if any(signal in lowered for signal in signals):
         return True
 
-    if (
-        "startup india initiative" in lowered
-        and "contents" in lowered
-    ):
+    if "startup india initiative" in lowered and "contents" in lowered:
         return True
 
     return False
@@ -318,9 +313,8 @@ def _is_publication_title(value: str) -> bool:
         "initiatives",
     )
 
-    return (
-        any(word in lowered for word in publication_words)
-        and any(word in lowered for word in ecosystem_words)
+    return any(word in lowered for word in publication_words) and any(
+        word in lowered for word in ecosystem_words
     )
 
 
@@ -446,6 +440,7 @@ def _match_section_heading(value: str) -> tuple[str, str] | None:
 
     return None
 
+
 def _is_sentence_like(value: str) -> bool:
     title = normalize_line(value)
     lowered = title.casefold()
@@ -537,10 +532,7 @@ def _has_title_signal(value: str) -> bool:
         "technology development",
     )
 
-    return any(
-        signal in lowered
-        for signal in TITLE_SIGNALS + extra_signals
-    )
+    return any(signal in lowered for signal in TITLE_SIGNALS + extra_signals)
 
 
 def looks_like_title(value: str) -> bool:
@@ -622,7 +614,6 @@ def _is_title_continuation(value: str) -> bool:
     return not _is_sentence_like(line)
 
 
-
 def title_from_chunk(chunk: ChunkLike) -> str:
     if _is_non_detail_page(chunk.text or ""):
         return ""
@@ -636,11 +627,7 @@ def title_from_chunk(chunk: ChunkLike) -> str:
         )
     )
 
-    if (
-        heading
-        and not generated_page_heading
-        and looks_like_title(heading)
-    ):
+    if heading and not generated_page_heading and looks_like_title(heading):
         return heading
 
     lines: list[str] = []
@@ -689,6 +676,7 @@ def title_from_chunk(chunk: ChunkLike) -> str:
                 return candidate
 
     return ""
+
 
 def candidate_score(title: str, text: str) -> int:
     combined = f"{title}\n{text}".casefold()
@@ -749,11 +737,7 @@ def _candidate_has_substance(block: CandidateBlock) -> bool:
         "rs.",
     )
 
-    return sum(
-        signal in lowered
-        for signal in content_signals
-    ) >= 2
-
+    return sum(signal in lowered for signal in content_signals) >= 2
 
 
 def segment_candidates(
@@ -782,8 +766,7 @@ def segment_candidates(
     for chunk in ordered:
         if (
             chunk.page_number is not None
-            and first_chunk_by_page.get(chunk.page_number)
-            == chunk.chunk_index
+            and first_chunk_by_page.get(chunk.page_number) == chunk.chunk_index
             and _is_non_detail_page(chunk.text or "")
         ):
             skipped_pages.add(chunk.page_number)
@@ -820,30 +803,17 @@ def segment_candidates(
         current = None
 
     for chunk in ordered:
-        if (
-            chunk.page_number is not None
-            and chunk.page_number in skipped_pages
-        ):
-            if (
-                current is not None
-                and current.end_page != chunk.page_number
-            ):
+        if chunk.page_number is not None and chunk.page_number in skipped_pages:
+            if current is not None and current.end_page != chunk.page_number:
                 flush()
             continue
 
         can_start_boundary = (
             chunk.page_number is None
-            or first_chunk_by_page.get(
-                chunk.page_number
-            )
-            == chunk.chunk_index
+            or first_chunk_by_page.get(chunk.page_number) == chunk.chunk_index
         )
 
-        detected_title = (
-            title_from_chunk(chunk)
-            if can_start_boundary
-            else ""
-        )
+        detected_title = title_from_chunk(chunk) if can_start_boundary else ""
 
         if detected_title:
             repeated_title = bool(
@@ -852,11 +822,7 @@ def segment_candidates(
                 == normalize_line(detected_title).casefold()
             )
 
-            if (
-                current is not None
-                and current.chunks
-                and not repeated_title
-            ):
+            if current is not None and current.chunks and not repeated_title:
                 flush()
 
             if current is None:
@@ -885,6 +851,7 @@ def segment_candidates(
 
     flush()
     return blocks
+
 
 def _infer_line_section(value: str) -> str:
     lowered = normalize_line(value).casefold()
@@ -926,7 +893,6 @@ def _infer_line_section(value: str) -> str:
     return "summary"
 
 
-
 def split_block_sections(
     block: CandidateBlock,
 ) -> tuple[
@@ -942,16 +908,12 @@ def split_block_sections(
         "document": [],
         "authority": [],
     }
-    evidence: dict[str, list[ChunkLike]] = {
-        key: [] for key in values
-    }
+    evidence: dict[str, list[ChunkLike]] = {key: [] for key in values}
 
     normalized_title = normalize_line(block.title).casefold()
 
     for chunk in block.chunks:
-        per_section: dict[str, list[str]] = {
-            key: [] for key in values
-        }
+        per_section: dict[str, list[str]] = {key: [] for key in values}
         heading = normalize_line(chunk.heading)
         current_section = "summary"
 
@@ -988,14 +950,10 @@ def split_block_sections(
 
             if title_scan_open:
                 cleaned = _clean_title(stripped)
-                proposed = normalize_line(
-                    f"{title_accumulator} {cleaned}"
-                ).casefold()
+                proposed = normalize_line(f"{title_accumulator} {cleaned}").casefold()
 
                 if proposed and normalized_title.startswith(proposed):
-                    title_accumulator = normalize_line(
-                        f"{title_accumulator} {cleaned}"
-                    )
+                    title_accumulator = normalize_line(f"{title_accumulator} {cleaned}")
                     index += 1
                     if proposed == normalized_title:
                         title_scan_open = False
@@ -1011,13 +969,8 @@ def split_block_sections(
                 if len(window) != width:
                     break
 
-                probe_parts = [
-                    _strip_visual_symbols(item)
-                    for item in window
-                ]
-                probe_parts = [
-                    item for item in probe_parts if item
-                ]
+                probe_parts = [_strip_visual_symbols(item) for item in window]
+                probe_parts = [item for item in probe_parts if item]
 
                 if not probe_parts:
                     continue
@@ -1059,6 +1012,7 @@ def split_block_sections(
                 evidence[section].append(chunk)
 
     return values, evidence
+
 
 def classify_section(heading: str, text: str) -> str:
     probe = normalize_line(heading) or first_meaningful_line(text)
@@ -1163,7 +1117,6 @@ def detect_authority(value: str) -> tuple[str, str]:
         elif not authority:
             authority = found
     return authority, ministry
-
 
 
 def parse_rules(value: str) -> list[ParsedRule]:
@@ -1319,8 +1272,7 @@ def parse_rules(value: str) -> list[ParsedRule]:
         )
         if turnover_match:
             parsed = parse_amounts(
-                f"INR {turnover_match.group('number')} "
-                f"{turnover_match.group('unit')}"
+                f"INR {turnover_match.group('number')} {turnover_match.group('unit')}"
             )
             if parsed:
                 add(
@@ -1350,10 +1302,7 @@ def parse_rules(value: str) -> list[ParsedRule]:
                 "0.84",
             )
 
-        if (
-            "not formed by splitting" in lowered
-            or "not formed by reconstruction" in lowered
-        ):
+        if "not formed by splitting" in lowered or "not formed by reconstruction" in lowered:
             add(
                 "not_formed_by_reconstruction",
                 "eq",
@@ -1363,9 +1312,7 @@ def parse_rules(value: str) -> list[ParsedRule]:
                 "0.88",
             )
 
-        if "sebi" in lowered and re.search(
-            r"register(?:ed|ation)", lowered
-        ):
+        if "sebi" in lowered and re.search(r"register(?:ed|ation)", lowered):
             add(
                 "regulatory_registration",
                 "contains",
@@ -1375,9 +1322,7 @@ def parse_rules(value: str) -> list[ParsedRule]:
                 "0.82",
             )
 
-        if "rbi" in lowered and re.search(
-            r"register(?:ed|ation)", lowered
-        ):
+        if "rbi" in lowered and re.search(r"register(?:ed|ation)", lowered):
             add(
                 "regulatory_registration",
                 "contains",
@@ -1449,6 +1394,7 @@ def parse_rules(value: str) -> list[ParsedRule]:
                 )
 
     return rules
+
 
 def stable_candidate_key(title: str, start_page: int | None, raw_text: str) -> str:
     payload = f"{normalize_line(title).casefold()}|{start_page}|{raw_text[:1000]}"

@@ -7,32 +7,21 @@ from django.db import transaction
 
 from apps.schemes.models import Authority, AuthorityAlias
 
-
 EXACT_NORMALIZATION_MAP = {
     "dbt": "department of biotechnology",
-    "department of biotechnology dbt": (
-        "department of biotechnology"
-    ),
+    "department of biotechnology dbt": ("department of biotechnology"),
     "dst": "department of science and technology",
-    "department of science and technology dst": (
-        "department of science and technology"
-    ),
-    "meity": (
-        "ministry of electronics and information technology"
-    ),
+    "department of science and technology dst": ("department of science and technology"),
+    "meity": ("ministry of electronics and information technology"),
     "ministry of electronics and information technology meity": (
         "ministry of electronics and information technology"
     ),
-    "ministry of msme": (
-        "ministry of micro small and medium enterprises"
-    ),
+    "ministry of msme": ("ministry of micro small and medium enterprises"),
     "ministry of micro small medium enterprises": (
         "ministry of micro small and medium enterprises"
     ),
     "mofpi": "ministry of food processing industries",
-    "ministry of food processing industries mofpi": (
-        "ministry of food processing industries"
-    ),
+    "ministry of food processing industries mofpi": ("ministry of food processing industries"),
 }
 
 
@@ -67,8 +56,7 @@ def find_authority_by_name(
         return None
 
     alias = (
-        AuthorityAlias.objects
-        .select_related("authority")
+        AuthorityAlias.objects.select_related("authority")
         .filter(normalized_alias=normalized)
         .first()
     )
@@ -79,8 +67,7 @@ def find_authority_by_name(
     matches = [
         authority
         for authority in Authority.objects.all()
-        if normalize_authority_name(authority.name)
-        == normalized
+        if normalize_authority_name(authority.name) == normalized
     ]
 
     if len(matches) == 1:
@@ -100,36 +87,23 @@ def register_authority_alias(
     normalized = normalize_authority_name(alias)
 
     if not normalized:
-        raise ValidationError(
-            "Authority alias cannot be blank."
-        )
+        raise ValidationError("Authority alias cannot be blank.")
 
     existing = (
-        AuthorityAlias.objects
-        .select_for_update()
-        .filter(normalized_alias=normalized)
-        .first()
+        AuthorityAlias.objects.select_for_update().filter(normalized_alias=normalized).first()
     )
 
-    if (
-        existing is not None
-        and existing.authority_id != authority.id
-    ):
-        raise ValidationError(
-            "This normalized alias is already assigned "
-            "to another authority."
-        )
+    if existing is not None and existing.authority_id != authority.id:
+        raise ValidationError("This normalized alias is already assigned to another authority.")
 
-    authority_alias, _created = (
-        AuthorityAlias.objects.update_or_create(
-            normalized_alias=normalized,
-            defaults={
-                "authority": authority,
-                "alias": alias.strip(),
-                "source": source.strip(),
-                "verified": verified,
-            },
-        )
+    authority_alias, _created = AuthorityAlias.objects.update_or_create(
+        normalized_alias=normalized,
+        defaults={
+            "authority": authority,
+            "alias": alias.strip(),
+            "source": source.strip(),
+            "verified": verified,
+        },
     )
 
     return authority_alias
