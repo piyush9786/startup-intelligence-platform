@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: startup_test
+          POSTGRES_USER: startup
+          POSTGRES_PASSWORD: startup
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U startup -d startup_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DJANGO_SECRET_KEY: test-secret
+      POSTGRES_DB: startup_test
+      POSTGRES_USER: startup
+      POSTGRES_PASSWORD: startup
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r backend/requirements.txt
+      - run: python backend/manage.py makemigrations --check --dry-run
+      - run: pytest backend
+      - run: ruff check backend
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm install
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
