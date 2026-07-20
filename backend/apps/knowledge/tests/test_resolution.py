@@ -17,7 +17,6 @@ from apps.knowledge.services.resolution import (
 from apps.schemes.models import Authority
 from apps.sources.models import Source, SourceDocument
 
-
 pytestmark = pytest.mark.django_db
 
 
@@ -26,27 +25,18 @@ def make_candidate(
     key: str,
     title: str,
 ) -> SchemeCandidate:
-    stable_key = hashlib.sha256(
-        key.encode("utf-8")
-    ).hexdigest()
+    stable_key = hashlib.sha256(key.encode("utf-8")).hexdigest()
 
     source = Source.objects.create(
         name=f"Source {key}",
         official_domain=f"{key}.example.gov.in",
-        listing_url=(
-            f"https://{key}.example.gov.in"
-        ),
-        authority_tier=(
-            Source.AuthorityTier.OFFICIAL_AUTHORITY
-        ),
+        listing_url=(f"https://{key}.example.gov.in"),
+        authority_tier=(Source.AuthorityTier.OFFICIAL_AUTHORITY),
     )
 
     document = SourceDocument.objects.create(
         source=source,
-        source_url=(
-            f"https://{key}.example.gov.in/"
-            "document.pdf"
-        ),
+        source_url=(f"https://{key}.example.gov.in/document.pdf"),
         content_hash=stable_key,
         retrieved_at=timezone.now(),
     )
@@ -60,18 +50,14 @@ def make_candidate(
     run = KnowledgeExtractionRun.objects.create(
         extraction=extraction,
         extractor_version="v4",
-        status=(
-            KnowledgeExtractionRun.Status.SUCCEEDED
-        ),
+        status=(KnowledgeExtractionRun.Status.SUCCEEDED),
     )
 
     return SchemeCandidate.objects.create(
         run=run,
         stable_key=stable_key,
         title=title,
-        official_url=(
-            f"https://{key}.example.gov.in/scheme"
-        ),
+        official_url=(f"https://{key}.example.gov.in/scheme"),
         confidence=90,
     )
 
@@ -91,10 +77,7 @@ def reviewer():
 @pytest.fixture
 def authority():
     return Authority.objects.create(
-        name=(
-            "Department for Promotion of "
-            "Industry and Internal Trade"
-        ),
+        name=("Department for Promotion of Industry and Internal Trade"),
     )
 
 
@@ -109,19 +92,11 @@ def test_canonical_resolution_approves_candidate(
 
     resolution = resolve_candidate(
         candidate=candidate,
-        classification=(
-            CandidateResolution
-            .Classification
-            .CANONICAL
-        ),
+        classification=(CandidateResolution.Classification.CANONICAL),
         reviewer=reviewer,
-        canonical_title=(
-            "Startup India Seed Fund Scheme"
-        ),
+        canonical_title=("Startup India Seed Fund Scheme"),
         resolved_authority=authority,
-        review_notes=(
-            "Reviewed against official source."
-        ),
+        review_notes=("Reviewed against official source."),
     )
 
     candidate.refresh_from_db()
@@ -129,10 +104,7 @@ def test_canonical_resolution_approves_candidate(
     assert resolution.resolved_authority == authority
     assert resolution.resolved_by == reviewer
     assert resolution.resolved_at is not None
-    assert (
-        candidate.review_status
-        == SchemeCandidate.ReviewStatus.APPROVED
-    )
+    assert candidate.review_status == SchemeCandidate.ReviewStatus.APPROVED
 
 
 def test_rejected_resolution_rejects_candidate(
@@ -145,11 +117,7 @@ def test_rejected_resolution_rejects_candidate(
 
     resolution = resolve_candidate(
         candidate=candidate,
-        classification=(
-            CandidateResolution
-            .Classification
-            .REJECTED
-        ),
+        classification=(CandidateResolution.Classification.REJECTED),
         reviewer=reviewer,
         review_notes="Table header extraction.",
     )
@@ -157,10 +125,7 @@ def test_rejected_resolution_rejects_candidate(
     candidate.refresh_from_db()
 
     assert resolution.classification == "rejected"
-    assert (
-        candidate.review_status
-        == SchemeCandidate.ReviewStatus.REJECTED
-    )
+    assert candidate.review_status == SchemeCandidate.ReviewStatus.REJECTED
 
 
 def test_supporting_resolution_requires_canonical_primary(
@@ -178,11 +143,7 @@ def test_supporting_resolution_requires_canonical_primary(
 
     resolve_candidate(
         candidate=primary,
-        classification=(
-            CandidateResolution
-            .Classification
-            .CANONICAL
-        ),
+        classification=(CandidateResolution.Classification.CANONICAL),
         reviewer=reviewer,
         canonical_title="DPIIT Startup Recognition",
         resolved_authority=authority,
@@ -190,11 +151,7 @@ def test_supporting_resolution_requires_canonical_primary(
 
     resolution = resolve_candidate(
         candidate=supporting,
-        classification=(
-            CandidateResolution
-            .Classification
-            .SUPPORTING
-        ),
+        classification=(CandidateResolution.Classification.SUPPORTING),
         reviewer=reviewer,
         canonical_title="DPIIT Startup Recognition",
         resolved_authority=authority,
@@ -204,10 +161,7 @@ def test_supporting_resolution_requires_canonical_primary(
     supporting.refresh_from_db()
 
     assert resolution.primary_candidate == primary
-    assert (
-        supporting.review_status
-        == SchemeCandidate.ReviewStatus.APPROVED
-    )
+    assert supporting.review_status == SchemeCandidate.ReviewStatus.APPROVED
 
 
 def test_duplicate_requires_primary_candidate(
@@ -221,11 +175,7 @@ def test_duplicate_requires_primary_candidate(
     with pytest.raises(ValidationError):
         resolve_candidate(
             candidate=candidate,
-            classification=(
-                CandidateResolution
-                .Classification
-                .DUPLICATE
-            ),
+            classification=(CandidateResolution.Classification.DUPLICATE),
             reviewer=reviewer,
         )
 
@@ -238,9 +188,7 @@ def test_published_candidate_cannot_be_reresolved(
         title="Published candidate",
     )
 
-    candidate.review_status = (
-        SchemeCandidate.ReviewStatus.PUBLISHED
-    )
+    candidate.review_status = SchemeCandidate.ReviewStatus.PUBLISHED
     candidate.save(
         update_fields=[
             "review_status",
@@ -251,10 +199,6 @@ def test_published_candidate_cannot_be_reresolved(
     with pytest.raises(ValidationError):
         resolve_candidate(
             candidate=candidate,
-            classification=(
-                CandidateResolution
-                .Classification
-                .REJECTED
-            ),
+            classification=(CandidateResolution.Classification.REJECTED),
             reviewer=reviewer,
         )

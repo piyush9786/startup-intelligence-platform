@@ -22,30 +22,15 @@ from apps.schemes.services.authority_normalizer import (
         ),
         (
             "Ministry of MSME",
-            (
-                "ministry of micro small "
-                "and medium enterprises"
-            ),
+            ("ministry of micro small and medium enterprises"),
         ),
         (
-            (
-                "Ministry of Development of "
-                "north -eastern Region,"
-            ),
-            (
-                "ministry of development of "
-                "north eastern region"
-            ),
+            ("Ministry of Development of north -eastern Region,"),
+            ("ministry of development of north eastern region"),
         ),
         (
-            (
-                "Ministry of Electronics & "
-                "Information Technology (MeitY)"
-            ),
-            (
-                "ministry of electronics and "
-                "information technology"
-            ),
+            ("Ministry of Electronics & Information Technology (MeitY)"),
+            ("ministry of electronics and information technology"),
         ),
     ],
 )
@@ -59,31 +44,17 @@ def test_normalizes_observed_authority_variants(
 @pytest.mark.django_db
 def test_registers_and_resolves_authority_alias():
     authority = Authority.objects.create(
-        name=(
-            "Department of Science "
-            "and Technology"
-        ),
+        name=("Department of Science and Technology"),
     )
 
     register_authority_alias(
         authority=authority,
-        alias=(
-            "Department of Science "
-            "& Technology (DST)"
-        ),
+        alias=("Department of Science & Technology (DST)"),
         source="v4-review",
         verified=True,
     )
 
-    assert (
-        find_authority_by_name(
-            (
-                "Department of Science "
-                "and Technology (DST)"
-            )
-        )
-        == authority
-    )
+    assert find_authority_by_name("Department of Science and Technology (DST)") == authority
 
 
 @pytest.mark.django_db
