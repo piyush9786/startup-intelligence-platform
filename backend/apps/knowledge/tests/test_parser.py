@@ -167,10 +167,7 @@ def test_removes_scheme_list_number_from_title():
         ),
     )
 
-    assert (
-        title_from_chunk(chunk)
-        == "Biotechnology Ignition Grant"
-    )
+    assert title_from_chunk(chunk) == "Biotechnology Ignition Grant"
 
 
 def test_joins_wrapped_title_ending_with_ampersand():
@@ -212,10 +209,13 @@ def test_rejects_sentence_fragment_as_candidate_title():
         ),
     )
 
-    assert segment_candidates(
-        [chunk],
-        min_score=3,
-    ) == []
+    assert (
+        segment_candidates(
+            [chunk],
+            min_score=3,
+        )
+        == []
+    )
 
 
 def test_rejects_generic_scheme_heading():
@@ -224,18 +224,16 @@ def test_rejects_generic_scheme_heading():
         0,
         "Page 1",
         1,
-        (
-            "Scheme\n"
-            "Eligibility\n"
-            "Eligible startups can apply.\n"
-            "Benefits include grant assistance."
-        ),
+        ("Scheme\nEligibility\nEligible startups can apply.\nBenefits include grant assistance."),
     )
 
-    assert segment_candidates(
-        [chunk],
-        min_score=3,
-    ) == []
+    assert (
+        segment_candidates(
+            [chunk],
+            min_score=3,
+        )
+        == []
+    )
 
 
 def test_only_first_chunk_on_page_can_start_boundary():
@@ -257,10 +255,7 @@ def test_only_first_chunk_on_page_can_start_boundary():
             1,
             "Page 1",
             1,
-            (
-                "The scheme supports proof of concept development.\n"
-                "Application process is online."
-            ),
+            ("The scheme supports proof of concept development.\nApplication process is online."),
         ),
     ]
 
@@ -350,9 +345,7 @@ def test_strips_page_prefix_and_joins_wrapped_title():
 
     blocks = segment_candidates([chunk], min_score=3)
 
-    assert blocks[0].title == (
-        "Biotechnology Innovation Fund – Accelerating Entrepreneurs (AcE)"
-    )
+    assert blocks[0].title == ("Biotechnology Innovation Fund – Accelerating Entrepreneurs (AcE)")
 
 
 def test_rejects_master_summary_table_page():
@@ -430,19 +423,13 @@ def test_truncates_prose_after_scheme_title():
     blocks = segment_candidates([chunk], min_score=3)
 
     assert blocks[0].title == (
-        "PRISM (Promoting Innovations in Individuals, Start-ups and MSMEs) "
-        "Scheme"
+        "PRISM (Promoting Innovations in Individuals, Start-ups and MSMEs) Scheme"
     )
 
 
 def test_parse_rules_emits_reviewable_entity_rules():
-    rules = parse_rules(
-        "DPIIT-recognised Indian startups and SEBI-registered AIFs can apply."
-    )
-    signatures = {
-        (rule.field_name, rule.operator, str(rule.value))
-        for rule in rules
-    }
+    rules = parse_rules("DPIIT-recognised Indian startups and SEBI-registered AIFs can apply.")
+    signatures = {(rule.field_name, rule.operator, str(rule.value)) for rule in rules}
 
     assert ("dpiit_recognized", "eq", "True") in signatures
     assert (
@@ -460,4 +447,3 @@ def test_parse_rules_emits_reviewable_entity_rules():
         "contains",
         "alternative_investment_fund",
     ) in signatures
-
