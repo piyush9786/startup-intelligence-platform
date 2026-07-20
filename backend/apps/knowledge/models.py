@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from apps.core.models import TimeStampedModel
@@ -300,3 +301,143 @@ class ApplicationStepCandidate(TimeStampedModel):
                 name="unique_candidate_application_step",
             )
         ]
+
+
+class CandidateResolution(TimeStampedModel):
+    class Classification(models.TextChoices):
+        UNRESOLVED = "unresolved", "Unresolved"
+        CANONICAL = "canonical", "Canonical scheme"
+        SUPPORTING = "supporting", "Supporting evidence"
+        DUPLICATE = "duplicate", "Duplicate candidate"
+        REJECTED = "rejected", "Rejected extraction"
+
+    candidate = models.OneToOneField(
+        SchemeCandidate,
+        on_delete=models.CASCADE,
+        related_name="resolution",
+    )
+    canonical_title = models.CharField(
+        max_length=500,
+        blank=True,
+    )
+    resolved_authority = models.ForeignKey(
+        "schemes.Authority",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="candidate_resolutions",
+    )
+    classification = models.CharField(
+        max_length=20,
+        choices=Classification.choices,
+        default=Classification.UNRESOLVED,
+    )
+    primary_candidate = models.ForeignKey(
+        SchemeCandidate,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="dependent_resolutions",
+    )
+    review_notes = models.TextField(blank=True)
+    resolved_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="candidate_resolutions",
+    )
+    resolved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = [
+            "classification",
+            "canonical_title",
+            "candidate",
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "classification",
+                    "-resolved_at",
+                ]
+            ),
+            models.Index(
+                fields=[
+                    "resolved_authority",
+                    "classification",
+                ]
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+
+        publishable = {
+            self.Classification.CANONICAL,
+            self.Classification.SUPPORTING,
+        }
+        primary_required = {
+            self.Classification.SUPPORTING,
+            self.Classification.DUPLICATE,
+        }
+
+        if self.classification in publishable:
+            if not self.canonical_title.strip():
+                raise ValidationError(
+                    {
+                        "canonical_title": (
+                            "A canonical title is required "
+                            "for this classification."
+                        )
+                    }
+                )
+
+            if self.resolved_authority_id is None:
+                raise ValidationError(
+                    {
+                        "resolved_authority": (
+                            "A resolved authority is required "
+                            "for this classification."
+                        )
+                    }
+                )
+
+        if (
+            self.classification in primary_required
+            and self.primary_candidate_id is None
+        ):
+            raise ValidationError(
+                {
+                    "primary_candidate": (
+                        "A primary candidate is required "
+                        "for this classification."
+                    )
+                }
+            )
+
+        if (
+            self.primary_candidate_id is not None
+            and self.primary_candidate_id
+            == self.candidate_id
+        ):
+            raise ValidationError(
+                {
+                    "primary_candidate": (
+                        "A candidate cannot reference itself."
+                    )
+                }
+            )
+
+    def __str__(self) -> str:
+        return (
+            f"{self.candidate.title} - "
+            f"{self.classification}"
+        )

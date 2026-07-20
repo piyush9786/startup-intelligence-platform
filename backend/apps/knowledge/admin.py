@@ -4,6 +4,7 @@ from .models import (
     ApplicationStepCandidate,
     BenefitCandidate,
     CandidateEvidence,
+    CandidateResolution,
     EligibilityRuleCandidate,
     KnowledgeExtractionRun,
     RequiredDocumentCandidate,
@@ -126,3 +127,37 @@ admin.site.register(EligibilityRuleCandidate)
 admin.site.register(BenefitCandidate)
 admin.site.register(RequiredDocumentCandidate)
 admin.site.register(ApplicationStepCandidate)
+
+
+@admin.register(CandidateResolution)
+class CandidateResolutionAdmin(admin.ModelAdmin):
+    list_display = (
+        "candidate",
+        "classification",
+        "canonical_title",
+        "resolved_authority",
+        "primary_candidate",
+        "resolved_by",
+        "resolved_at",
+    )
+    list_filter = (
+        "classification",
+        "resolved_authority",
+        "resolved_at",
+    )
+    search_fields = (
+        "candidate__title",
+        "canonical_title",
+        "resolved_authority__name",
+        "review_notes",
+    )
+    raw_id_fields = (
+        "candidate",
+        "resolved_authority",
+        "primary_candidate",
+        "resolved_by",
+    )
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
