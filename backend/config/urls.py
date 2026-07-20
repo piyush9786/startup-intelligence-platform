@@ -35,7 +35,10 @@ from apps.sources.views import (
     SourceDocumentViewSet,
     SourceViewSet,
 )
-from apps.startups.views import StartupProfileViewSet
+from apps.startups.views import (
+    StartupProfileViewSet,
+    StartupReadinessEvaluateView,
+)
 
 router = DefaultRouter()
 router.register("sources", SourceViewSet, basename="source")
@@ -110,6 +113,11 @@ urlpatterns = [
         "api/v1/auth/token/refresh/",
         TokenRefreshView.as_view(),
         name="token-refresh",
+    ),
+    path(
+        "api/v1/startup-readiness/evaluate/",
+        StartupReadinessEvaluateView.as_view(),
+        name="startup-readiness-evaluate",
     ),
     path(
         "api/v1/eligibility/evaluate/",
