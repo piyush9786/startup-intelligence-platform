@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import (
     ApplicationStepCandidate,
     BenefitCandidate,
+    CandidateCuration,
     CandidateEvidence,
     CandidatePublication,
     CandidateResolution,
@@ -74,16 +75,6 @@ class KnowledgeExtractionRunAdmin(admin.ModelAdmin):
     )
 
 
-@admin.action(description="Mark selected candidates approved")
-def approve_candidates(modeladmin, request, queryset):
-    queryset.update(review_status=SchemeCandidate.ReviewStatus.APPROVED)
-
-
-@admin.action(description="Reject selected candidates")
-def reject_candidates(modeladmin, request, queryset):
-    queryset.update(review_status=SchemeCandidate.ReviewStatus.REJECTED)
-
-
 @admin.register(SchemeCandidate)
 class SchemeCandidateAdmin(admin.ModelAdmin):
     list_display = (
@@ -114,7 +105,6 @@ class SchemeCandidateAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    actions = (approve_candidates, reject_candidates)
     inlines = (
         EligibilityRuleInline,
         BenefitInline,
@@ -234,6 +224,37 @@ class PublishedEvidenceAdmin(admin.ModelAdmin):
         "quote",
         "page_number",
         "metadata",
+        "created_at",
+        "updated_at",
+    )
+
+
+@admin.register(CandidateCuration)
+class CandidateCurationAdmin(admin.ModelAdmin):
+    list_display = (
+        "candidate",
+        "review_status",
+        "official_url",
+        "reviewed_by",
+        "reviewed_at",
+    )
+    list_filter = (
+        "review_status",
+        "reviewed_at",
+    )
+    search_fields = (
+        "candidate__title",
+        "canonical_summary",
+        "canonical_objective",
+        "official_url",
+    )
+    raw_id_fields = (
+        "candidate",
+        "reviewed_by",
+    )
+    readonly_fields = (
+        "reviewed_by",
+        "reviewed_at",
         "created_at",
         "updated_at",
     )
