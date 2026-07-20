@@ -165,3 +165,27 @@ class EligibilityRule(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.field_path} {self.operator} {self.expected_value}"
+
+
+class AuthorityAlias(TimeStampedModel):
+    authority = models.ForeignKey(
+        Authority,
+        on_delete=models.CASCADE,
+        related_name="aliases",
+    )
+    alias = models.CharField(max_length=500)
+    normalized_alias = models.CharField(
+        max_length=500,
+        unique=True,
+    )
+    source = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+    verified = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["normalized_alias"]
+
+    def __str__(self) -> str:
+        return f"{self.alias} → {self.authority.name}"
