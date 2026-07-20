@@ -7,13 +7,21 @@ from django.utils import timezone
 
 from apps.documents.models import DocumentChunk, DocumentExtraction
 from apps.knowledge.models import (
+    ApplicationStepCandidate,
+    BenefitCandidate,
+    CandidateCuration,
     CandidateEvidence,
     CandidatePublication,
     CandidateResolution,
     EligibilityRuleCandidate,
     KnowledgeExtractionRun,
     PublishedEvidence,
+    RequiredDocumentCandidate,
     SchemeCandidate,
+)
+from apps.knowledge.services.curation import (
+    curate_candidate,
+    review_structured_item,
 )
 from apps.knowledge.services.publication import publish_candidate
 from apps.knowledge.services.resolution import resolve_candidate
@@ -125,7 +133,7 @@ def resolve_as_canonical(
     authority,
     canonical_title="Startup India Seed Fund Scheme",
 ):
-    return resolve_candidate(
+    resolution = resolve_candidate(
         candidate=candidate,
         classification=CandidateResolution.Classification.CANONICAL,
         reviewer=reviewer,
@@ -133,6 +141,20 @@ def resolve_as_canonical(
         resolved_authority=authority,
         review_notes="Reviewed against official source.",
     )
+
+    curate_candidate(
+        candidate=candidate,
+        status=CandidateCuration.ReviewStatus.APPROVED,
+        reviewer=reviewer,
+        canonical_summary=candidate.summary,
+        canonical_objective=candidate.objective_text,
+        canonical_eligibility_text=(candidate.eligibility_text),
+        official_url=candidate.official_url,
+        application_url=candidate.application_url,
+        review_notes="Reviewed for canonical publication.",
+    )
+
+    return resolution
 
 
 def test_canonical_publication_is_idempotent(
@@ -344,3 +366,167 @@ def test_founder_cannot_publish(
             candidate=candidate,
             publisher=founder,
         )
+
+
+def test_missing_curation_blocks_canonical_publication(
+    reviewer,
+    authority,
+):
+    candidate = make_candidate(
+        key="publication-no-curation",
+        title="Uncurated Scheme",
+    )
+
+    resolve_candidate(
+        candidate=candidate,
+        classification=(CandidateResolution.Classification.CANONICAL),
+        reviewer=reviewer,
+        canonical_title="Uncurated Scheme",
+        resolved_authority=authority,
+    )
+
+    with pytest.raises(
+        ValidationError,
+        match="requires candidate curation",
+    ):
+        publish_candidate(
+            candidate=candidate,
+            publisher=reviewer,
+        )
+
+
+def test_draft_structured_item_blocks_publication(
+    reviewer,
+    authority,
+):
+    candidate = make_candidate(
+        key="publication-draft-benefit",
+        title="Draft Benefit Scheme",
+    )
+
+    BenefitCandidate.objects.create(
+        candidate=candidate,
+        description="Unreviewed benefit.",
+        confidence=80,
+    )
+
+    resolve_as_canonical(
+        candidate=candidate,
+        reviewer=reviewer,
+        authority=authority,
+        canonical_title=("Draft Benefit Scheme"),
+    )
+
+    with pytest.raises(
+        ValidationError,
+        match="benefit",
+    ):
+        publish_candidate(
+            candidate=candidate,
+            publisher=reviewer,
+        )
+
+
+def test_publication_uses_curated_and_approved_content(
+    reviewer,
+    authority,
+):
+    candidate = make_candidate(
+        key="publication-curated-content",
+        title="Curated Scheme",
+        summary="Raw extraction summary.",
+    )
+
+    approved_benefit = BenefitCandidate.objects.create(
+        candidate=candidate,
+        description="Approved benefit.",
+        confidence=90,
+    )
+    rejected_benefit = BenefitCandidate.objects.create(
+        candidate=candidate,
+        description="Rejected fragment.",
+        confidence=40,
+    )
+
+    approved_document = RequiredDocumentCandidate.objects.create(
+        candidate=candidate,
+        name="Approved document",
+        description=("Reviewed requirement."),
+        mandatory=True,
+        confidence=90,
+    )
+    rejected_document = RequiredDocumentCandidate.objects.create(
+        candidate=candidate,
+        name="Rejected document",
+        confidence=30,
+    )
+
+    approved_step = ApplicationStepCandidate.objects.create(
+        candidate=candidate,
+        step_number=1,
+        instruction=("Use the reviewed portal."),
+        url=("https://curated.example.gov.in/apply"),
+        confidence=90,
+    )
+    rejected_step = ApplicationStepCandidate.objects.create(
+        candidate=candidate,
+        step_number=2,
+        instruction=("Broken extracted fragment."),
+        confidence=30,
+    )
+
+    for item in (
+        approved_benefit,
+        approved_document,
+        approved_step,
+    ):
+        review_structured_item(
+            item=item,
+            status=(item.ReviewStatus.APPROVED),
+            reviewer=reviewer,
+        )
+
+    for item in (
+        rejected_benefit,
+        rejected_document,
+        rejected_step,
+    ):
+        review_structured_item(
+            item=item,
+            status=(item.ReviewStatus.REJECTED),
+            reviewer=reviewer,
+        )
+
+    resolve_as_canonical(
+        candidate=candidate,
+        reviewer=reviewer,
+        authority=authority,
+        canonical_title="Curated Scheme",
+    )
+
+    curate_candidate(
+        candidate=candidate,
+        status=(CandidateCuration.ReviewStatus.APPROVED),
+        reviewer=reviewer,
+        canonical_summary=("Reviewed canonical summary."),
+        canonical_objective=("Reviewed canonical objective."),
+        canonical_eligibility_text=("Reviewed eligibility statement."),
+        official_url=("https://curated.example.gov.in/scheme"),
+        application_url=("https://curated.example.gov.in/apply"),
+    )
+
+    result = publish_candidate(
+        candidate=candidate,
+        publisher=reviewer,
+    )
+
+    version = result.scheme_version
+
+    assert version.description == "Reviewed canonical summary."
+    assert version.objective == "Reviewed canonical objective."
+    assert version.official_url == ("https://curated.example.gov.in/scheme")
+    assert version.application_url == ("https://curated.example.gov.in/apply")
+    assert version.restrictions == ["Reviewed eligibility statement."]
+    assert [row["description"] for row in version.benefits] == ["Approved benefit."]
+    assert [row["name"] for row in version.required_documents] == ["Approved document"]
+    assert [row["instruction"] for row in version.application_steps] == ["Use the reviewed portal."]
