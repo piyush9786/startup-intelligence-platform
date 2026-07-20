@@ -9,6 +9,9 @@ EXCESS_BLANK_LINES = re.compile(r"\n{3,}")
 
 
 def normalize_text(value: str) -> str:
+    # PDF extractors may return malformed lone Unicode surrogates.
+    # Replace them before PostgreSQL or MinIO serialization.
+    value = value.encode("utf-8", errors="replace").decode("utf-8")
     text = unicodedata.normalize("NFKC", value or "")
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = text.replace("\u00a0", " ")

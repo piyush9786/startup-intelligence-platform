@@ -85,7 +85,7 @@ def process_document(
         if not normalized_text:
             raise ProcessingError("Extraction produced empty normalized text.")
 
-        text_hash = hashlib.sha256(normalized_text.encode("utf-8")).hexdigest()
+        text_hash = hashlib.sha256(normalized_text.encode("utf-8", errors="replace")).hexdigest()
         chunks = build_chunks(
             payload.sections,
             max_chars=settings.DOCUMENT_CHUNK_MAX_CHARS,
@@ -98,7 +98,7 @@ def process_document(
         object_key = _processed_object_key(document, version, text_hash)
         upload_bytes(
             object_key=object_key,
-            content=normalized_text.encode("utf-8"),
+            content=normalized_text.encode("utf-8", errors="replace"),
             content_type="text/plain; charset=utf-8",
             bucket_name=settings.MINIO_BUCKET_PROCESSED,
         )
@@ -141,7 +141,7 @@ def process_document(
             document.status = SourceDocument.Status.EXTRACTED
             document.extractor_version = version
             document.metadata = {
-                **document.metadata,
+                **(document.metadata or {}),
                 "latest_extraction_id": str(extraction.id),
                 "processed_text_hash": text_hash,
                 "processed_chunk_count": len(chunks),
@@ -154,6 +154,18 @@ def process_document(
                     "updated_at",
                 ]
             )
+
+        # automatic_quality_assessment
+        try:
+            from apps.discovery.services.quality import assess_extraction
+
+            assess_extraction(extraction)
+        except Exception as quality_error:
+            extraction.metadata = {
+                **(extraction.metadata or {}),
+                "quality_assessment_warning": str(quality_error)[:1000],
+            }
+            extraction.save(update_fields=["metadata", "updated_at"])
 
         return ProcessingResult(
             extraction=extraction,
@@ -174,7 +186,7 @@ def process_document(
         )
         document.status = SourceDocument.Status.FAILED
         document.metadata = {
-            **document.metadata,
+            **(document.metadata or {}),
             "processing_error": str(exc)[:1000],
         }
         document.save(update_fields=["status", "metadata", "updated_at"])
