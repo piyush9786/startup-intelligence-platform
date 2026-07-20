@@ -1,0 +1,6 @@
+name,category,ministry,department,state,official_domain,allowed_domains,listing_url,application_portal_url,authority_tier,crawl_frequency,language,active,respect_robots_txt,notes
+Startup India,startup,Department for Promotion of Industry and Internal Trade,,,startupindia.gov.in,,https://www.startupindia.gov.in/content/sih/en/government-schemes.html,,B,weekly,en,true,true,National startup scheme discovery source
+Ministry of Micro Small and Medium Enterprises,msme,Ministry of MSME,,,msme.gov.in,,https://msme.gov.in/,,B,weekly,en,true,true,National MSME ministry source
+myScheme,government_aggregator,,,,myscheme.gov.in,,https://www.myscheme.gov.in/,,C,weekly,en,true,true,Government scheme discovery aggregator
+SIDBI,credit_and_funding,,,,sidbi.in,,https://www.sidbi.in/,,B,weekly,en,true,true,Public financial institution source
+BIRAC,biotechnology,Department of Biotechnology,,,birac.nic.in,,https://birac.nic.in/,,B,weekly,en,true,true,Biotechnology innovation and funding source

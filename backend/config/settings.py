@@ -152,3 +152,8 @@ MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "")
 MINIO_SECURE = os.environ.get("MINIO_SECURE", "false").lower() == "true"
 MINIO_BUCKET_RAW = os.environ.get("MINIO_BUCKET_RAW", "startup-raw-documents")
+COLLECTOR_USER_AGENT = os.environ.get(
+    "COLLECTOR_USER_AGENT",
+    "StartupIntelligenceCollector/0.1 (+http://localhost:5173)",
+)
+COLLECTOR_MAX_REDIRECTS = int(os.environ.get("COLLECTOR_MAX_REDIRECTS", "5"))
