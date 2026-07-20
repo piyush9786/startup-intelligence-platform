@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import Authority, EligibilityRule, Scheme, SchemeVersion
+from .models import (
+    Authority,
+    AuthorityAlias,
+    EligibilityRule,
+    Scheme,
+    SchemeVersion,
+)
 
 
 class EligibilityRuleInline(admin.TabularInline):
@@ -33,3 +39,24 @@ class SchemeVersionAdmin(admin.ModelAdmin):
     list_filter = ("verification_status", "application_status")
     search_fields = ("scheme__canonical_name", "description", "objective")
     inlines = [EligibilityRuleInline]
+
+
+@admin.register(AuthorityAlias)
+class AuthorityAliasAdmin(admin.ModelAdmin):
+    list_display = (
+        "alias",
+        "normalized_alias",
+        "authority",
+        "verified",
+        "source",
+    )
+    list_filter = (
+        "verified",
+        "source",
+    )
+    search_fields = (
+        "alias",
+        "normalized_alias",
+        "authority__name",
+    )
+    raw_id_fields = ("authority",)
