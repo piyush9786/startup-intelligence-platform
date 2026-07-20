@@ -10,6 +10,7 @@ from apps.knowledge.models import (
     ApplicationStepCandidate,
     BenefitCandidate,
     CandidateCuration,
+    EligibilityRuleCandidate,
     RequiredDocumentCandidate,
     SchemeCandidate,
 )
@@ -42,6 +43,38 @@ def _validate_reviewer(reviewer: Any) -> None:
         and getattr(reviewer, "role", None) not in ALLOWED_REVIEWER_ROLES
     ):
         raise ValidationError("Only reviewers or administrators may curate candidates.")
+
+
+@transaction.atomic
+def review_eligibility_rule(
+    *,
+    rule: EligibilityRuleCandidate,
+    status: str,
+    reviewer: Any | None,
+    review_notes: str = "",
+) -> EligibilityRuleCandidate:
+    valid_statuses = {value for value, _label in EligibilityRuleCandidate.ReviewStatus.choices}
+
+    if status not in valid_statuses:
+        raise ValidationError("Unknown eligibility-rule review status.")
+
+    locked_rule = EligibilityRuleCandidate.objects.select_for_update().get(pk=rule.pk)
+
+    locked_rule.review_status = status
+    locked_rule.review_notes = review_notes.strip()
+
+    if status == EligibilityRuleCandidate.ReviewStatus.DRAFT:
+        locked_rule.reviewed_by = None
+        locked_rule.reviewed_at = None
+    else:
+        _validate_reviewer(reviewer)
+        locked_rule.reviewed_by = reviewer
+        locked_rule.reviewed_at = timezone.now()
+
+    locked_rule.full_clean()
+    locked_rule.save()
+
+    return locked_rule
 
 
 @transaction.atomic

@@ -9,11 +9,13 @@ from apps.documents.models import DocumentExtraction
 from apps.knowledge.models import (
     BenefitCandidate,
     CandidateCuration,
+    EligibilityRuleCandidate,
     KnowledgeExtractionRun,
     SchemeCandidate,
 )
 from apps.knowledge.services.curation import (
     curate_candidate,
+    review_eligibility_rule,
     review_structured_item,
 )
 from apps.sources.models import Source, SourceDocument
@@ -172,6 +174,81 @@ def test_returning_item_to_draft_clears_audit(
     reviewed = review_structured_item(
         item=benefit,
         status=(BenefitCandidate.ReviewStatus.DRAFT),
+        reviewer=None,
+    )
+
+    assert reviewed.reviewed_by is None
+    assert reviewed.reviewed_at is None
+
+
+def make_rule(
+    *,
+    candidate,
+):
+    return EligibilityRuleCandidate.objects.create(
+        candidate=candidate,
+        field_name="dpiit_recognized",
+        operator="eq",
+        value=True,
+        unit="boolean",
+        human_text=("DPIIT recognised startups."),
+        confidence=95,
+    )
+
+
+def test_eligibility_rule_review_records_audit(
+    reviewer,
+):
+    candidate = make_candidate(
+        key="eligibility-review",
+    )
+    rule = make_rule(candidate=candidate)
+
+    reviewed = review_eligibility_rule(
+        rule=rule,
+        status=(EligibilityRuleCandidate.ReviewStatus.APPROVED),
+        reviewer=reviewer,
+        review_notes=("Verified against official evidence."),
+    )
+
+    assert reviewed.reviewed_by == reviewer
+    assert reviewed.reviewed_at is not None
+    assert reviewed.review_status == (EligibilityRuleCandidate.ReviewStatus.APPROVED)
+
+
+def test_founder_cannot_review_eligibility_rule(
+    founder,
+):
+    candidate = make_candidate(
+        key="eligibility-founder",
+    )
+    rule = make_rule(candidate=candidate)
+
+    with pytest.raises(ValidationError):
+        review_eligibility_rule(
+            rule=rule,
+            status=(EligibilityRuleCandidate.ReviewStatus.APPROVED),
+            reviewer=founder,
+        )
+
+
+def test_returning_rule_to_draft_clears_audit(
+    reviewer,
+):
+    candidate = make_candidate(
+        key="eligibility-draft",
+    )
+    rule = make_rule(candidate=candidate)
+
+    review_eligibility_rule(
+        rule=rule,
+        status=(EligibilityRuleCandidate.ReviewStatus.REJECTED),
+        reviewer=reviewer,
+    )
+
+    reviewed = review_eligibility_rule(
+        rule=rule,
+        status=(EligibilityRuleCandidate.ReviewStatus.DRAFT),
         reviewer=None,
     )
 

@@ -207,6 +207,38 @@ class EligibilityRuleCandidate(TimeStampedModel):
         choices=ReviewStatus.choices,
         default=ReviewStatus.DRAFT,
     )
+    review_notes = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_eligibility_rule_candidates",
+    )
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    def clean(self) -> None:
+        super().clean()
+
+        reviewed_statuses = {
+            self.ReviewStatus.APPROVED,
+            self.ReviewStatus.REJECTED,
+        }
+
+        if self.review_status in reviewed_statuses:
+            errors = {}
+
+            if self.reviewed_by_id is None:
+                errors["reviewed_by"] = "A reviewed eligibility rule requires a reviewer."
+
+            if self.reviewed_at is None:
+                errors["reviewed_at"] = "A reviewed eligibility rule requires a review timestamp."
+
+            if errors:
+                raise ValidationError(errors)
 
     class Meta:
         ordering = ["candidate", "field_name", "created_at"]
