@@ -1,3 +1,8 @@
+from .assessment import (
+    PROFILE_SNAPSHOT_FIELDS,
+    create_eligibility_assessment,
+    snapshot_startup_profile,
+)
 from .eligibility import (
     ENGINE_VERSION,
     EligibilityEvaluation,
@@ -11,11 +16,14 @@ from .eligibility import (
 
 __all__ = [
     "ENGINE_VERSION",
+    "PROFILE_SNAPSHOT_FIELDS",
     "EligibilityEvaluation",
     "RuleEvaluation",
     "RuleOutcome",
+    "create_eligibility_assessment",
     "evaluate_rule",
     "evaluate_rules",
     "evaluate_scheme_eligibility",
     "resolve_profile_field",
+    "snapshot_startup_profile",
 ]
