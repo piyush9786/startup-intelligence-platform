@@ -38,6 +38,10 @@ class StartupReadinessEvaluationRequestSerializer(serializers.Serializer):
         return attrs
 
 
+class StartupReadinessRetrievalRequestSerializer(serializers.Serializer):
+    startup_profile_id = serializers.UUIDField()
+
+
 class StartupReadinessAssessmentSerializer(serializers.ModelSerializer):
     startup_profile_id = serializers.UUIDField(
         read_only=True,
