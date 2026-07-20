@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.accounts",
     "apps.sources",
+    "apps.documents",
     "apps.schemes",
     "apps.startups",
     "apps.recommendations",
@@ -157,3 +158,14 @@ COLLECTOR_USER_AGENT = os.environ.get(
     "StartupIntelligenceCollector/0.1 (+http://localhost:5173)",
 )
 COLLECTOR_MAX_REDIRECTS = int(os.environ.get("COLLECTOR_MAX_REDIRECTS", "5"))
+DOCUMENT_EXTRACTOR_VERSION = os.environ.get(
+    "DOCUMENT_EXTRACTOR_VERSION",
+    "v1",
+)
+DOCUMENT_CHUNK_MAX_CHARS = int(os.environ.get("DOCUMENT_CHUNK_MAX_CHARS", "1800"))
+DOCUMENT_CHUNK_OVERLAP_CHARS = int(os.environ.get("DOCUMENT_CHUNK_OVERLAP_CHARS", "250"))
+DOCUMENT_MAX_CHUNKS = int(os.environ.get("DOCUMENT_MAX_CHUNKS", "2000"))
+MINIO_BUCKET_PROCESSED = os.environ.get(
+    "MINIO_BUCKET_PROCESSED",
+    "startup-processed-documents",
+)
