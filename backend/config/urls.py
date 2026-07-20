@@ -96,5 +96,6 @@ urlpatterns = [
         CrawlFrontierView.as_view(),
         name="crawl-frontier",
     ),
+    path("api/v1/knowledge/", include("apps.knowledge.urls")),
     path("api/v1/", include(router.urls)),
 ]

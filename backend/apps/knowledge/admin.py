@@ -1,0 +1,128 @@
+from django.contrib import admin
+
+from .models import (
+    ApplicationStepCandidate,
+    BenefitCandidate,
+    CandidateEvidence,
+    EligibilityRuleCandidate,
+    KnowledgeExtractionRun,
+    RequiredDocumentCandidate,
+    SchemeCandidate,
+)
+
+
+class EvidenceInline(admin.TabularInline):
+    model = CandidateEvidence
+    extra = 0
+    readonly_fields = (
+        "chunk",
+        "evidence_type",
+        "quote",
+        "page_number",
+    )
+    can_delete = False
+    show_change_link = True
+
+
+class EligibilityRuleInline(admin.TabularInline):
+    model = EligibilityRuleCandidate
+    extra = 0
+    show_change_link = True
+
+
+class BenefitInline(admin.TabularInline):
+    model = BenefitCandidate
+    extra = 0
+    show_change_link = True
+
+
+class RequiredDocumentInline(admin.TabularInline):
+    model = RequiredDocumentCandidate
+    extra = 0
+    show_change_link = True
+
+
+class ApplicationStepInline(admin.TabularInline):
+    model = ApplicationStepCandidate
+    extra = 0
+    show_change_link = True
+
+
+@admin.register(KnowledgeExtractionRun)
+class KnowledgeExtractionRunAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "extraction",
+        "extractor_version",
+        "status",
+        "candidate_count",
+        "finished_at",
+    )
+    list_filter = ("status", "extractor_version")
+    search_fields = (
+        "extraction__source_document__source__name",
+        "extraction__source_document__source_url",
+    )
+    readonly_fields = (
+        "started_at",
+        "finished_at",
+        "error_message",
+        "metadata",
+    )
+
+
+@admin.action(description="Mark selected candidates approved")
+def approve_candidates(modeladmin, request, queryset):
+    queryset.update(review_status=SchemeCandidate.ReviewStatus.APPROVED)
+
+
+@admin.action(description="Reject selected candidates")
+def reject_candidates(modeladmin, request, queryset):
+    queryset.update(review_status=SchemeCandidate.ReviewStatus.REJECTED)
+
+
+@admin.register(SchemeCandidate)
+class SchemeCandidateAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "kind",
+        "review_status",
+        "confidence",
+        "authority_name",
+        "start_page",
+        "end_page",
+    )
+    list_filter = (
+        "kind",
+        "review_status",
+        "run__extractor_version",
+    )
+    search_fields = (
+        "title",
+        "authority_name",
+        "ministry_name",
+        "eligibility_text",
+        "benefits_text",
+    )
+    readonly_fields = (
+        "stable_key",
+        "raw_text",
+        "metadata",
+        "created_at",
+        "updated_at",
+    )
+    actions = (approve_candidates, reject_candidates)
+    inlines = (
+        EligibilityRuleInline,
+        BenefitInline,
+        RequiredDocumentInline,
+        ApplicationStepInline,
+        EvidenceInline,
+    )
+
+
+admin.site.register(CandidateEvidence)
+admin.site.register(EligibilityRuleCandidate)
+admin.site.register(BenefitCandidate)
+admin.site.register(RequiredDocumentCandidate)
+admin.site.register(ApplicationStepCandidate)
