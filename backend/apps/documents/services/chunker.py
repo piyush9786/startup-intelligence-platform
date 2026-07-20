@@ -99,7 +99,7 @@ def build_chunks(
                     heading=section.heading[:500],
                     page_number=section.page_number,
                     text=text,
-                    text_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                    text_hash=hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest(),
                     character_start=document_offset + local_start,
                     character_end=document_offset + local_end,
                     token_estimate=token_estimate(text),

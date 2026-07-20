@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.sources",
     "apps.documents",
+    "apps.discovery",
     "apps.schemes",
     "apps.startups",
     "apps.recommendations",
@@ -160,7 +161,7 @@ COLLECTOR_USER_AGENT = os.environ.get(
 COLLECTOR_MAX_REDIRECTS = int(os.environ.get("COLLECTOR_MAX_REDIRECTS", "5"))
 DOCUMENT_EXTRACTOR_VERSION = os.environ.get(
     "DOCUMENT_EXTRACTOR_VERSION",
-    "v1",
+    "v2",
 )
 DOCUMENT_CHUNK_MAX_CHARS = int(os.environ.get("DOCUMENT_CHUNK_MAX_CHARS", "1800"))
 DOCUMENT_CHUNK_OVERLAP_CHARS = int(os.environ.get("DOCUMENT_CHUNK_OVERLAP_CHARS", "250"))
@@ -169,3 +170,13 @@ MINIO_BUCKET_PROCESSED = os.environ.get(
     "MINIO_BUCKET_PROCESSED",
     "startup-processed-documents",
 )
+DISCOVERY_ASSESSOR_VERSION = os.environ.get(
+    "DISCOVERY_ASSESSOR_VERSION",
+    "v1",
+)
+DISCOVERY_MAX_DEPTH = int(os.environ.get("DISCOVERY_MAX_DEPTH", "3"))
+DISCOVERY_MAX_LINKS_PER_DOCUMENT = int(os.environ.get("DISCOVERY_MAX_LINKS_PER_DOCUMENT", "500"))
+DISCOVERY_MAX_PAGES_PER_SOURCE = int(os.environ.get("DISCOVERY_MAX_PAGES_PER_SOURCE", "250"))
+DISCOVERY_REQUEST_DELAY_SECONDS = float(os.environ.get("DISCOVERY_REQUEST_DELAY_SECONDS", "1.5"))
+DISCOVERY_MIN_RAG_SCORE = float(os.environ.get("DISCOVERY_MIN_RAG_SCORE", "45"))
+DISCOVERY_MIN_STRUCTURED_SCORE = float(os.environ.get("DISCOVERY_MIN_STRUCTURED_SCORE", "60"))

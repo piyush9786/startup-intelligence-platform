@@ -5,6 +5,12 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.core.views import HealthView, PlatformStatusView
+from apps.discovery.views import (
+    CrawlFrontierEntryViewSet,
+    CrawlFrontierView,
+    DiscoveredURLViewSet,
+    DocumentQualityAssessmentViewSet,
+)
 from apps.documents.views import (
     DocumentChunkViewSet,
     DocumentExtractionViewSet,
@@ -32,6 +38,21 @@ router.register(
     "document-chunks",
     DocumentChunkViewSet,
     basename="document-chunk",
+)
+router.register(
+    "discovered-urls",
+    DiscoveredURLViewSet,
+    basename="discovered-url",
+)
+router.register(
+    "crawl-frontier",
+    CrawlFrontierEntryViewSet,
+    basename="crawl-frontier-entry",
+)
+router.register(
+    "document-quality",
+    DocumentQualityAssessmentViewSet,
+    basename="document-quality",
 )
 router.register("schemes", SchemeViewSet, basename="scheme")
 router.register(
@@ -69,6 +90,11 @@ urlpatterns = [
         "api/v1/documents/process/",
         ProcessDocumentView.as_view(),
         name="process-document",
+    ),
+    path(
+        "api/v1/discovery/crawl/",
+        CrawlFrontierView.as_view(),
+        name="crawl-frontier",
     ),
     path("api/v1/", include(router.urls)),
 ]
