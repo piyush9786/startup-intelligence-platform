@@ -392,52 +392,25 @@ class CandidateResolution(TimeStampedModel):
         if self.classification in publishable:
             if not self.canonical_title.strip():
                 raise ValidationError(
-                    {
-                        "canonical_title": (
-                            "A canonical title is required "
-                            "for this classification."
-                        )
-                    }
+                    {"canonical_title": ("A canonical title is required for this classification.")}
                 )
 
             if self.resolved_authority_id is None:
                 raise ValidationError(
                     {
                         "resolved_authority": (
-                            "A resolved authority is required "
-                            "for this classification."
+                            "A resolved authority is required for this classification."
                         )
                     }
                 )
 
-        if (
-            self.classification in primary_required
-            and self.primary_candidate_id is None
-        ):
+        if self.classification in primary_required and self.primary_candidate_id is None:
             raise ValidationError(
-                {
-                    "primary_candidate": (
-                        "A primary candidate is required "
-                        "for this classification."
-                    )
-                }
+                {"primary_candidate": ("A primary candidate is required for this classification.")}
             )
 
-        if (
-            self.primary_candidate_id is not None
-            and self.primary_candidate_id
-            == self.candidate_id
-        ):
-            raise ValidationError(
-                {
-                    "primary_candidate": (
-                        "A candidate cannot reference itself."
-                    )
-                }
-            )
+        if self.primary_candidate_id is not None and self.primary_candidate_id == self.candidate_id:
+            raise ValidationError({"primary_candidate": ("A candidate cannot reference itself.")})
 
     def __str__(self) -> str:
-        return (
-            f"{self.candidate.title} - "
-            f"{self.classification}"
-        )
+        return f"{self.candidate.title} - {self.classification}"

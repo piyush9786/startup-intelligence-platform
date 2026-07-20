@@ -58,7 +58,6 @@ def _evidence_type(section: str) -> str:
     return mapping.get(section, CandidateEvidence.EvidenceType.GENERAL)
 
 
-
 def _section_payload(
     block: CandidateBlock,
 ) -> tuple[
@@ -67,10 +66,10 @@ def _section_payload(
 ]:
     values, raw_evidence = split_block_sections(block)
     evidence: dict[str, list[DocumentChunk]] = {
-        section: list(chunks)
-        for section, chunks in raw_evidence.items()
+        section: list(chunks) for section, chunks in raw_evidence.items()
     }
     return values, evidence
+
 
 def _join(values: list[str], limit: int = 20000) -> str:
     output = "\n\n".join(value for value in values if value).strip()
