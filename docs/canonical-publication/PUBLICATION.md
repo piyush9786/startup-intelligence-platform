@@ -51,3 +51,16 @@ version.
 Benefits, required documents, and application steps must each be
 explicitly approved or rejected. Draft structured items block canonical
 publication, and rejected items are excluded from the version payload.
+
+
+## Curated structured replacements
+
+Candidate curation may provide reviewed replacements for support
+types, categories, benefits, required documents, and application
+steps.
+
+A null replacement preserves the approved extracted rows. An empty
+list records an explicit reviewed decision that the canonical version
+should contain no rows for that field. Non-empty replacements take
+precedence over approved extraction rows and participate in the
+deterministic publication hash.
