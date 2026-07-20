@@ -300,3 +300,84 @@ class ApplicationStepCandidate(TimeStampedModel):
                 name="unique_candidate_application_step",
             )
         ]
+
+
+class CandidateResolution(TimeStampedModel):
+    class Classification(models.TextChoices):
+        UNRESOLVED = "unresolved", "Unresolved"
+        CANONICAL = "canonical", "Canonical scheme"
+        SUPPORTING = "supporting", "Supporting evidence"
+        DUPLICATE = "duplicate", "Duplicate candidate"
+        REJECTED = "rejected", "Rejected extraction"
+
+    candidate = models.OneToOneField(
+        SchemeCandidate,
+        on_delete=models.CASCADE,
+        related_name="resolution",
+    )
+    canonical_title = models.CharField(
+        max_length=500,
+        blank=True,
+    )
+    resolved_authority = models.ForeignKey(
+        "schemes.Authority",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="candidate_resolutions",
+    )
+    classification = models.CharField(
+        max_length=20,
+        choices=Classification.choices,
+        default=Classification.UNRESOLVED,
+    )
+    primary_candidate = models.ForeignKey(
+        SchemeCandidate,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="dependent_resolutions",
+    )
+    review_notes = models.TextField(blank=True)
+    resolved_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="candidate_resolutions",
+    )
+    resolved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = [
+            "classification",
+            "canonical_title",
+            "candidate",
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "classification",
+                    "-resolved_at",
+                ]
+            ),
+            models.Index(
+                fields=[
+                    "resolved_authority",
+                    "classification",
+                ]
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.candidate.title} - "
+            f"{self.classification}"
+        )
