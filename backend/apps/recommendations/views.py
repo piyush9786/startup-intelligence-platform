@@ -118,7 +118,7 @@ class RecommendationGenerateView(APIView):
                 "excluded_schemes": list(
                     generation.excluded_schemes,
                 ),
-                "recommendations": recommendation_serializer.data,
+                "recommendations": (recommendation_serializer.data),
             },
             status=status.HTTP_201_CREATED,
         )
@@ -148,26 +148,36 @@ class RecommendationCurrentView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        serializer = RecommendationSerializer(
+        recommendation_serializer = RecommendationSerializer(
             current_set.recommendations,
             many=True,
         )
+
         return Response(
             {
-                "startup_profile_id": str(current_set.startup_profile.id),
-                "has_generation": current_set.has_generation,
+                "startup_profile_id": str(
+                    current_set.startup_profile.id,
+                ),
+                "has_generation": (current_set.has_generation),
                 "generation_id": (
                     str(current_set.generation_id) if current_set.generation_id else None
                 ),
-                "ranking_version": current_set.ranking_version,
+                "ranking_version": (current_set.ranking_version),
                 "assessment_date": (
                     current_set.assessment_date.isoformat() if current_set.assessment_date else None
                 ),
                 "generated_at": (
                     current_set.generated_at.isoformat() if current_set.generated_at else None
                 ),
-                "recommendation_count": len(current_set.recommendations),
-                "recommendations": serializer.data,
+                "assessed_scheme_count": (current_set.assessed_scheme_count),
+                "recommendation_count": len(
+                    current_set.recommendations,
+                ),
+                "excluded_scheme_count": len(
+                    current_set.excluded_schemes,
+                ),
+                "excluded_schemes": (current_set.excluded_schemes),
+                "recommendations": (recommendation_serializer.data),
             },
             status=status.HTTP_200_OK,
         )
