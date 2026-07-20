@@ -11,11 +11,14 @@ from .serializers import (
     EligibilityAssessmentSerializer,
     EligibilityRequestSerializer,
     RecommendationGenerationRequestSerializer,
+    RecommendationRetrievalRequestSerializer,
     RecommendationSerializer,
 )
 from .services import (
+    RecommendationSetIntegrityError,
     create_eligibility_assessment,
     generate_recommendations,
+    get_current_recommendation_set,
 )
 
 
@@ -118,4 +121,53 @@ class RecommendationGenerateView(APIView):
                 "recommendations": recommendation_serializer.data,
             },
             status=status.HTTP_201_CREATED,
+        )
+
+
+class RecommendationCurrentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = RecommendationRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+
+        try:
+            current_set = get_current_recommendation_set(
+                startup_profile=startup_profile,
+            )
+        except RecommendationSetIntegrityError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        serializer = RecommendationSerializer(
+            current_set.recommendations,
+            many=True,
+        )
+        return Response(
+            {
+                "startup_profile_id": str(current_set.startup_profile.id),
+                "has_generation": current_set.has_generation,
+                "generation_id": (
+                    str(current_set.generation_id) if current_set.generation_id else None
+                ),
+                "ranking_version": current_set.ranking_version,
+                "assessment_date": (
+                    current_set.assessment_date.isoformat() if current_set.assessment_date else None
+                ),
+                "generated_at": (
+                    current_set.generated_at.isoformat() if current_set.generated_at else None
+                ),
+                "recommendation_count": len(current_set.recommendations),
+                "recommendations": serializer.data,
+            },
+            status=status.HTTP_200_OK,
         )
