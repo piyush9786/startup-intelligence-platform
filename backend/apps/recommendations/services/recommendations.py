@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
@@ -8,13 +7,16 @@ from typing import Any
 
 from django.db import transaction
 from django.db.models import Prefetch
+from django.utils import timezone
 
 from apps.recommendations.models import (
     EligibilityAssessment,
     Recommendation,
+    RecommendationGenerationRun,
 )
 from apps.recommendations.services.assessment import (
     create_eligibility_assessment,
+    snapshot_startup_profile,
 )
 from apps.schemes.models import EligibilityRule, Scheme, SchemeVersion
 from apps.startups.models import StartupProfile
@@ -42,13 +44,17 @@ class ScoredCandidate:
 
 @dataclass(frozen=True)
 class RecommendationGeneration:
-    generation_id: uuid.UUID
+    generation_run: RecommendationGenerationRun
     startup_profile: StartupProfile
     assessment_date: date
     assessments: tuple[EligibilityAssessment, ...]
     recommendations: tuple[Recommendation, ...]
     excluded_schemes: tuple[dict[str, Any], ...]
     ranking_version: str = RANKING_VERSION
+
+    @property
+    def generation_id(self):
+        return self.generation_run.id
 
 
 def _quantize(value: Decimal) -> Decimal:
@@ -157,6 +163,25 @@ def _candidate_sort_key(
     )
 
 
+def _recommendation_snapshot(
+    recommendation: Recommendation,
+) -> dict[str, Any]:
+    return {
+        "recommendation_id": str(recommendation.id),
+        "assessment_id": str(recommendation.assessment_id),
+        "scheme_id": str(
+            recommendation.scheme_version.scheme_id,
+        ),
+        "scheme_version_id": str(
+            recommendation.scheme_version_id,
+        ),
+        "rank": recommendation.rank,
+        "score": format(recommendation.score, "f"),
+        "score_breakdown": recommendation.score_breakdown,
+        "evidence_snapshot": recommendation.evidence_snapshot,
+    }
+
+
 @transaction.atomic
 def generate_recommendations(
     *,
@@ -166,6 +191,25 @@ def generate_recommendations(
 ) -> RecommendationGeneration:
     locked_profile = StartupProfile.objects.select_for_update().get(
         pk=startup_profile.pk,
+    )
+
+    RecommendationGenerationRun.objects.filter(
+        startup_profile=locked_profile,
+        is_current=True,
+    ).update(
+        is_current=False,
+        updated_at=timezone.now(),
+    )
+
+    generation_run = RecommendationGenerationRun.objects.create(
+        requested_by=requested_by,
+        startup_profile=locked_profile,
+        assessment_date=assessment_date,
+        ranking_version=RANKING_VERSION,
+        profile_snapshot=snapshot_startup_profile(
+            locked_profile,
+        ),
+        is_current=True,
     )
 
     verified_rules = EligibilityRule.objects.order_by(
@@ -205,6 +249,7 @@ def generate_recommendations(
             scheme_version=scheme_version,
             requested_by=requested_by,
             assessment_date=assessment_date,
+            generation_run=generation_run,
         )
         assessments.append(assessment)
 
@@ -246,7 +291,6 @@ def generate_recommendations(
         )
 
     candidates.sort(key=_candidate_sort_key)
-    generation_id = uuid.uuid4()
 
     Recommendation.objects.filter(
         startup_profile=locked_profile,
@@ -259,7 +303,8 @@ def generate_recommendations(
                 startup_profile=locked_profile,
                 scheme_version=candidate.scheme_version,
                 assessment=candidate.assessment,
-                generation_id=generation_id,
+                generation_run=generation_run,
+                generation_id=generation_run.id,
                 ranking_version=RANKING_VERSION,
                 rank=rank,
                 score=candidate.score,
@@ -268,8 +313,26 @@ def generate_recommendations(
             )
         )
 
+    generation_run.assessed_scheme_count = len(assessments)
+    generation_run.recommendation_count = len(recommendations)
+    generation_run.excluded_schemes = excluded_schemes
+    generation_run.recommendation_snapshot = [
+        _recommendation_snapshot(item) for item in recommendations
+    ]
+    generation_run.completed_at = timezone.now()
+    generation_run.save(
+        update_fields=[
+            "assessed_scheme_count",
+            "recommendation_count",
+            "excluded_schemes",
+            "recommendation_snapshot",
+            "completed_at",
+            "updated_at",
+        ]
+    )
+
     return RecommendationGeneration(
-        generation_id=generation_id,
+        generation_run=generation_run,
         startup_profile=locked_profile,
         assessment_date=assessment_date,
         assessments=tuple(assessments),
