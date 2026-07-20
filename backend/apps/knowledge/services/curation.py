@@ -123,6 +123,11 @@ def curate_candidate(
     canonical_objective: str = "",
     canonical_eligibility_text: str = "",
     application_url: str = "",
+    canonical_support_types: list[str] | None = None,
+    canonical_categories: list[str] | None = None,
+    canonical_benefits: list[dict[str, Any]] | None = None,
+    canonical_required_documents: list[dict[str, Any]] | None = None,
+    canonical_application_steps: list[dict[str, Any]] | None = None,
     review_notes: str = "",
     metadata: dict[str, Any] | None = None,
 ) -> CandidateCuration:
@@ -145,6 +150,11 @@ def curate_candidate(
     curation.canonical_eligibility_text = canonical_eligibility_text.strip()
     curation.official_url = official_url.strip()
     curation.application_url = application_url.strip()
+    curation.canonical_support_types = canonical_support_types
+    curation.canonical_categories = canonical_categories
+    curation.canonical_benefits = canonical_benefits
+    curation.canonical_required_documents = canonical_required_documents
+    curation.canonical_application_steps = canonical_application_steps
     curation.review_status = status
     curation.review_notes = review_notes.strip()
 
