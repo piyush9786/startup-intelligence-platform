@@ -10,8 +10,20 @@ from apps.startups.models import StartupProfile
 from .serializers import (
     EligibilityAssessmentSerializer,
     EligibilityRequestSerializer,
+    RecommendationGenerationRequestSerializer,
+    RecommendationSerializer,
 )
-from .services import create_eligibility_assessment
+from .services import (
+    create_eligibility_assessment,
+    generate_recommendations,
+)
+
+
+def _visible_profiles(user):
+    queryset = StartupProfile.objects.all()
+    if not user.is_staff:
+        queryset = queryset.filter(owner=user)
+    return queryset
 
 
 class EligibilityEvaluateView(APIView):
@@ -36,14 +48,8 @@ class EligibilityEvaluateView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        profile_queryset = StartupProfile.objects.all()
-        if not request.user.is_staff:
-            profile_queryset = profile_queryset.filter(
-                owner=request.user,
-            )
-
         startup_profile = get_object_or_404(
-            profile_queryset,
+            _visible_profiles(request.user),
             pk=request_serializer.validated_data["startup_profile_id"],
         )
 
@@ -59,5 +65,57 @@ class EligibilityEvaluateView(APIView):
         )
         return Response(
             response_serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class RecommendationGenerateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        request_serializer = RecommendationGenerationRequestSerializer(
+            data=request.data,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+
+        generation = generate_recommendations(
+            startup_profile=startup_profile,
+            requested_by=request.user,
+            assessment_date=request_serializer.validated_data["assessment_date"],
+        )
+
+        recommendation_serializer = RecommendationSerializer(
+            generation.recommendations,
+            many=True,
+        )
+        return Response(
+            {
+                "generation_id": str(
+                    generation.generation_id,
+                ),
+                "ranking_version": generation.ranking_version,
+                "startup_profile_id": str(
+                    generation.startup_profile.id,
+                ),
+                "assessment_date": (generation.assessment_date.isoformat()),
+                "assessed_scheme_count": len(
+                    generation.assessments,
+                ),
+                "recommendation_count": len(
+                    generation.recommendations,
+                ),
+                "excluded_scheme_count": len(
+                    generation.excluded_schemes,
+                ),
+                "excluded_schemes": list(
+                    generation.excluded_schemes,
+                ),
+                "recommendations": recommendation_serializer.data,
+            },
             status=status.HTTP_201_CREATED,
         )

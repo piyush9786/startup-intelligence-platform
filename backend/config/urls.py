@@ -1,8 +1,14 @@
 from django.contrib import admin
 from django.urls import include, path
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+)
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 from apps.core.views import HealthView, PlatformStatusView
 from apps.discovery.views import (
@@ -16,9 +22,16 @@ from apps.documents.views import (
     DocumentExtractionViewSet,
     ProcessDocumentView,
 )
-from apps.recommendations.views import EligibilityEvaluateView
+from apps.recommendations.views import (
+    EligibilityEvaluateView,
+    RecommendationGenerateView,
+)
 from apps.schemes.views import SchemeViewSet
-from apps.sources.views import CrawlRunViewSet, SourceDocumentViewSet, SourceViewSet
+from apps.sources.views import (
+    CrawlRunViewSet,
+    SourceDocumentViewSet,
+    SourceViewSet,
+)
 from apps.startups.views import StartupProfileViewSet
 
 router = DefaultRouter()
@@ -63,14 +76,28 @@ router.register(
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/schema/",
+        SpectacularAPIView.as_view(),
+        name="schema",
+    ),
     path(
         "api/docs/",
-        SpectacularSwaggerView.as_view(url_name="schema"),
+        SpectacularSwaggerView.as_view(
+            url_name="schema",
+        ),
         name="swagger-ui",
     ),
-    path("api/v1/health/", HealthView.as_view(), name="health"),
-    path("api/v1/status/", PlatformStatusView.as_view(), name="platform-status"),
+    path(
+        "api/v1/health/",
+        HealthView.as_view(),
+        name="health",
+    ),
+    path(
+        "api/v1/status/",
+        PlatformStatusView.as_view(),
+        name="platform-status",
+    ),
     path(
         "api/v1/auth/token/",
         TokenObtainPairView.as_view(),
@@ -87,6 +114,11 @@ urlpatterns = [
         name="eligibility-evaluate",
     ),
     path(
+        "api/v1/recommendations/generate/",
+        RecommendationGenerateView.as_view(),
+        name="recommendation-generate",
+    ),
+    path(
         "api/v1/documents/process/",
         ProcessDocumentView.as_view(),
         name="process-document",
@@ -96,6 +128,9 @@ urlpatterns = [
         CrawlFrontierView.as_view(),
         name="crawl-frontier",
     ),
-    path("api/v1/knowledge/", include("apps.knowledge.urls")),
+    path(
+        "api/v1/knowledge/",
+        include("apps.knowledge.urls"),
+    ),
     path("api/v1/", include(router.urls)),
 ]
