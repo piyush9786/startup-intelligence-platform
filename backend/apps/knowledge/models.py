@@ -243,6 +243,26 @@ class StructuredCandidateReviewMixin(models.Model):
         blank=True,
     )
 
+    def clean(self) -> None:
+        super().clean()
+
+        reviewed_statuses = {
+            self.ReviewStatus.APPROVED,
+            self.ReviewStatus.REJECTED,
+        }
+
+        if self.review_status in reviewed_statuses:
+            errors = {}
+
+            if self.reviewed_by_id is None:
+                errors["reviewed_by"] = "A reviewed item requires a reviewer."
+
+            if self.reviewed_at is None:
+                errors["reviewed_at"] = "A reviewed item requires a review timestamp."
+
+            if errors:
+                raise ValidationError(errors)
+
     class Meta:
         abstract = True
 
