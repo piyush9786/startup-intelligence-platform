@@ -24,6 +24,7 @@ from apps.documents.views import (
 )
 from apps.recommendations.views import (
     EligibilityEvaluateView,
+    RecommendationCurrentView,
     RecommendationGenerateView,
 )
 from apps.schemes.views import SchemeViewSet
@@ -117,6 +118,11 @@ urlpatterns = [
         "api/v1/recommendations/generate/",
         RecommendationGenerateView.as_view(),
         name="recommendation-generate",
+    ),
+    path(
+        "api/v1/recommendations/current/",
+        RecommendationCurrentView.as_view(),
+        name="recommendation-current",
     ),
     path(
         "api/v1/documents/process/",

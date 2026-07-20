@@ -80,6 +80,10 @@ class RecommendationGenerationRequestSerializer(serializers.Serializer):
         return attrs
 
 
+class RecommendationRetrievalRequestSerializer(serializers.Serializer):
+    startup_profile_id = serializers.UUIDField()
+
+
 class RecommendationSerializer(serializers.ModelSerializer):
     startup_profile_id = serializers.UUIDField(
         read_only=True,
