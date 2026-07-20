@@ -249,90 +249,118 @@ def _application_step_rows(
     ]
 
 
+def _curated_string_values(
+    value: list[str] | None,
+    fallback: list[str],
+) -> list[str]:
+    source = fallback if value is None else value
+    return sorted({item.strip() for item in source if item.strip()})
+
+
+def _curated_object_rows(
+    value: list[dict[str, Any]] | None,
+    fallback: list[dict[str, Any]],
+    *,
+    step_order: bool = False,
+) -> list[dict[str, Any]]:
+    source = fallback if value is None else value
+    rows = [_json_ready(dict(row)) for row in source]
+
+    if step_order:
+        rows.sort(
+            key=lambda row: (
+                row.get("step_number", 0),
+                _json_key(row),
+            )
+        )
+    else:
+        rows.sort(key=_json_key)
+
+    return rows
+
+
 def build_publication_payload(
     candidate: SchemeCandidate,
     curation: CandidateCuration,
 ) -> dict[str, Any]:
     rule_rows = _approved_rule_rows(candidate)
-    benefits = _benefit_rows(candidate)
 
     kind = candidate.kind.strip()
-
     if kind == SchemeCandidate.Kind.UNKNOWN:
         kind = ""
 
-    support_types = sorted(
-        {
-            value
-            for value in [
-                kind,
-                *[row["type"] for row in benefits],
-            ]
-            if value
-        }
+    benefits = _curated_object_rows(
+        curation.canonical_benefits,
+        _benefit_rows(candidate),
+    )
+    required_documents = _curated_object_rows(
+        curation.canonical_required_documents,
+        _required_document_rows(candidate),
+    )
+    application_steps = _curated_object_rows(
+        curation.canonical_application_steps,
+        _application_step_rows(candidate),
+        step_order=True,
     )
 
+    fallback_support_types = [
+        value
+        for value in [
+            kind,
+            *[str(row.get("type", "")).strip() for row in benefits],
+        ]
+        if value
+    ]
+
+    support_types = _curated_string_values(
+        curation.canonical_support_types,
+        fallback_support_types,
+    )
+    categories = _curated_string_values(
+        curation.canonical_categories,
+        [kind] if kind else [],
+    )
     eligibility_text = curation.canonical_eligibility_text.strip()
 
     return _json_ready(
         {
-            "description": (curation.canonical_summary.strip()),
-            "objective": (curation.canonical_objective.strip()),
+            "description": curation.canonical_summary.strip(),
+            "objective": curation.canonical_objective.strip(),
             "support_types": support_types,
-            "categories": ([kind] if kind else []),
-            "eligible_sectors": (
-                _flatten_rule_values(
-                    rule_rows,
-                    {
-                        "eligible_sector",
-                        "eligible_sectors",
-                    },
-                )
+            "categories": categories,
+            "eligible_sectors": _flatten_rule_values(
+                rule_rows,
+                {"eligible_sector", "eligible_sectors"},
             ),
-            "eligible_stages": (
-                _flatten_rule_values(
-                    rule_rows,
-                    {
-                        "eligible_startup_stage",
-                        "eligible_stage",
-                    },
-                )
+            "eligible_stages": _flatten_rule_values(
+                rule_rows,
+                {"eligible_startup_stage", "eligible_stage"},
             ),
-            "eligible_states": (
-                _flatten_rule_values(
-                    rule_rows,
-                    {
-                        "eligible_state",
-                        "eligible_states",
-                    },
-                )
+            "eligible_states": _flatten_rule_values(
+                rule_rows,
+                {"eligible_state", "eligible_states"},
             ),
-            "founder_categories": (
-                _flatten_rule_values(
-                    rule_rows,
-                    {
-                        "founder_category",
-                        "founder_categories",
-                    },
-                )
+            "founder_categories": _flatten_rule_values(
+                rule_rows,
+                {"founder_category", "founder_categories"},
             ),
             "minimum_amount": _decimal_text(candidate.financial_amount_min),
             "maximum_amount": _decimal_text(candidate.financial_amount_max),
             "currency": _normalize_currency(candidate.currency),
-            "application_status": (SchemeVersion.ApplicationStatus.UNKNOWN),
-            "official_url": (curation.official_url.strip()),
-            "application_url": (curation.application_url.strip()),
-            "required_documents": (_required_document_rows(candidate)),
-            "application_steps": (_application_step_rows(candidate)),
+            "application_status": SchemeVersion.ApplicationStatus.UNKNOWN,
+            "official_url": curation.official_url.strip(),
+            "application_url": curation.application_url.strip(),
+            "required_documents": required_documents,
+            "application_steps": application_steps,
             "benefits": benefits,
-            "restrictions": ([eligibility_text] if eligibility_text else []),
+            "restrictions": [eligibility_text] if eligibility_text else [],
             "eligibility_rules": [
                 {
-                    "field_path": (row["field_path"]),
+                    "field_path": row["field_path"],
                     "operator": row["operator"],
-                    "expected_value": (row["expected_value"]),
+                    "expected_value": row["expected_value"],
                     "unit": row["unit"],
-                    "human_text": (row["human_text"]),
+                    "human_text": row["human_text"],
                 }
                 for row in rule_rows
             ],

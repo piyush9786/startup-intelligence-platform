@@ -1,0 +1,273 @@
+{
+    "schema_version": 1,
+    "manifest_key": "startup-pilot-v1",
+    "extractor_version": "v4",
+    "source_document": {
+        "content_hash": "26740889858fa7b14d271329703065f8f7d2a980697d0eafd99fc42dbe529c80",
+        "source_name": "Startup India"
+    },
+    "authority": {
+        "canonical_name": "Department for Promotion of Industry and Internal Trade",
+        "authority_type": "central_government_department",
+        "department": "Department for Promotion of Industry and Internal Trade",
+        "aliases": [
+            "DPIIT",
+            "Department for Promotion of Industry and Internal Trade (DPIIT)"
+        ]
+    },
+    "candidates": [
+        {
+            "pilot_key": "sisfs",
+            "candidate_id": "0284385b-548a-4a73-b1d9-5f4b9f259996",
+            "expected_title": "Startup India Seed Fund Scheme (SISFS)",
+            "canonical_title": "Startup India Seed Fund Scheme (SISFS)",
+            "classification": "canonical",
+            "curation": {
+                "canonical_summary": "The Startup India Seed Fund Scheme provides early-stage financial assistance to eligible startups for proof of concept, prototype development, product trials, market entry, commercialisation, and scaling.",
+                "canonical_objective": "Provide seed-stage financial assistance so eligible startups can validate products, enter markets, commercialise, scale, and progress toward investment or institutional finance.",
+                "canonical_eligibility_text": "Eligible applicants are DPIIT-recognised startups incorporated not more than two years before applying. The startup must have a scalable technology-led product, service, or business model and must not have received more than INR 10 lakh of monetary support under another Central or State Government scheme.",
+                "official_url": "https://seedfund.startupindia.gov.in/",
+                "application_url": "https://seedfund.startupindia.gov.in/",
+                "canonical_support_types": [
+                    "grant",
+                    "investment",
+                    "convertible_instrument",
+                    "debt"
+                ],
+                "canonical_categories": [
+                    "seed_funding"
+                ],
+                "canonical_benefits": [
+                    {
+                        "type": "grant",
+                        "description": "Up to INR 20 lakh for proof-of-concept validation, prototype development, or product trials.",
+                        "amount_min": null,
+                        "amount_max": "2000000.00",
+                        "currency": "INR"
+                    },
+                    {
+                        "type": "investment",
+                        "description": "Up to INR 50 lakh for market entry, commercialisation, or scaling through convertible debentures, debt, or debt-linked instruments.",
+                        "amount_min": null,
+                        "amount_max": "5000000.00",
+                        "currency": "INR"
+                    }
+                ],
+                "canonical_required_documents": [],
+                "canonical_application_steps": [
+                    {
+                        "step_number": 1,
+                        "instruction": "Visit the Startup India Seed Fund portal to review the current application status and submit an application when applications are open.",
+                        "url": "https://seedfund.startupindia.gov.in/"
+                    }
+                ]
+            },
+            "eligibility_rules": {
+                "approve": [
+                    "8fb12e0f-1557-4bf4-ace7-4e0b32850f69",
+                    "477aa04a-2db0-4062-9012-4145b2cfa7b1",
+                    "0a1e81bf-a802-4bf5-ad45-84c4baa1fd0d"
+                ],
+                "reject": [
+                    "ebaaa9a1-7a69-4076-8525-d0f2a3ff1b82",
+                    "3f4946b3-f1c4-4c02-86d2-f7a50d0ede6b",
+                    "f0cbe71e-f4eb-4a81-aedd-8eec906deaef",
+                    "c00dcfdf-3076-4506-9bc2-def536979e98",
+                    "de14912a-4548-414b-9108-6a6763198048"
+                ]
+            },
+            "structured_reviews": {
+                "benefits": {
+                    "approve": [],
+                    "reject": [
+                        "66da284a-28cd-49b8-a850-bb4f99a1e292",
+                        "ce1e1824-755f-46aa-8708-8ef8b8cfc2ad",
+                        "479319f0-7bbe-454f-b976-7f5b73974c6e",
+                        "13609382-919e-4466-851d-a3f916604d3e",
+                        "9be5739a-8131-4702-9e6a-47f9f5659013"
+                    ]
+                },
+                "required_documents": {
+                    "approve": [],
+                    "reject": []
+                },
+                "application_steps": {
+                    "approve": [],
+                    "reject": [
+                        "158d8cde-7fda-4cc6-aafd-fdb7db36d058",
+                        "994e8590-5d08-4882-9a1a-e7efdd26daa7",
+                        "8f1bff8d-b3af-4ed1-8857-3531ca647424",
+                        "b11153f7-3652-487a-86e9-a4844755cc12",
+                        "359cce7b-a240-4609-925a-1b95c0517e81",
+                        "73cea82e-2c64-487a-a569-5f014ba3bdc0",
+                        "6934854d-1798-4fbc-8555-83cc8a55875c"
+                    ]
+                }
+            }
+        },
+        {
+            "pilot_key": "ffs",
+            "candidate_id": "09c2a3d6-e58d-4e6e-8e5a-4c5240b81445",
+            "expected_title": "Fund of Funds for Startups (FFS)",
+            "canonical_title": "Fund of Funds for Startups (FFS)",
+            "classification": "canonical",
+            "curation": {
+                "canonical_summary": "The Fund of Funds for Startups provides capital to eligible SEBI-registered Alternative Investment Funds, which then invest in startups through equity and equity-linked instruments.",
+                "canonical_objective": "Catalyse venture-capital investment into startups by providing capital commitments to eligible Alternative Investment Funds through SIDBI.",
+                "canonical_eligibility_text": "SEBI-registered Alternative Investment Funds may apply to SIDBI for capital commitments under the scheme. Startups receive investment indirectly through selected funds.",
+                "official_url": "https://www.sidbivcf.in/en/funds/ffs",
+                "application_url": "https://vcfapplication.sidbi.in/login",
+                "canonical_support_types": [
+                    "fund_of_funds",
+                    "equity",
+                    "equity_linked_instrument"
+                ],
+                "canonical_categories": [
+                    "venture_capital"
+                ],
+                "canonical_benefits": [
+                    {
+                        "type": "fund_of_funds",
+                        "description": "Capital commitments are provided to selected Alternative Investment Funds, which are expected to invest at least twice the FFS contribution in startups across stages.",
+                        "amount_min": null,
+                        "amount_max": null,
+                        "currency": "INR"
+                    }
+                ],
+                "canonical_required_documents": [],
+                "canonical_application_steps": [
+                    {
+                        "step_number": 1,
+                        "instruction": "Eligible Alternative Investment Funds submit a detailed application through SIDBI's Fund Application Portal.",
+                        "url": "https://vcfapplication.sidbi.in/login"
+                    },
+                    {
+                        "step_number": 2,
+                        "instruction": "Eligible startups may approach Alternative Investment Funds selected under the scheme for investment.",
+                        "url": "https://www.sidbivcf.in/en/funds/ffs"
+                    }
+                ]
+            },
+            "eligibility_rules": {
+                "approve": [
+                    "8031a682-c83d-48de-9be7-004b003d2f62",
+                    "f5ac8453-8728-4134-8c14-9534b7760be2"
+                ],
+                "reject": [
+                    "1e124ca8-4dd8-4605-9a9f-b4536719d12d",
+                    "f22958b7-3175-4400-9108-4e1e02022dcc",
+                    "95d496fa-4f8e-4688-b637-5235b418d9c5"
+                ]
+            },
+            "structured_reviews": {
+                "benefits": {
+                    "approve": [],
+                    "reject": [
+                        "c2e7d744-9971-4e0b-8dbd-e577ba2e2816",
+                        "508493e1-8881-4a3c-85e0-ca363dcf196e"
+                    ]
+                },
+                "required_documents": {
+                    "approve": [],
+                    "reject": []
+                },
+                "application_steps": {
+                    "approve": [],
+                    "reject": [
+                        "83e8ad54-b8d9-41c1-a74e-ead0d9c2ad60",
+                        "f0a2035f-78bd-485b-8897-2992d5e3f81f",
+                        "9af3523f-59b0-424e-872f-1ecf74437a7e",
+                        "97bd72b0-6faf-4014-a445-2ae21b58f648",
+                        "83339c2c-cb5a-4180-99f1-14bfe31d4c27",
+                        "9f8080c5-fe87-4bcc-b6f9-54db137047bb",
+                        "2f351005-32fa-486e-a443-1024214580db",
+                        "3e0906f6-9f57-42c6-9c66-9440583bea1c",
+                        "6155bbbb-301a-4fcd-b338-c20028faebce"
+                    ]
+                }
+            }
+        },
+        {
+            "pilot_key": "cgss",
+            "candidate_id": "d87804ea-2dc6-4ff4-8a16-03ed778741e1",
+            "expected_title": "Credit Guarantee Scheme for Startups (CGSS)",
+            "canonical_title": "Credit Guarantee Scheme for Startups (CGSS)",
+            "classification": "canonical",
+            "curation": {
+                "canonical_summary": "The Credit Guarantee Scheme for Startups supports lending to DPIIT-recognised startups by providing a government-backed credit guarantee to eligible member institutions.",
+                "canonical_objective": "Improve access to credit for eligible startups by reducing the credit risk borne by participating banks, financial institutions, NBFCs, and Alternative Investment Funds.",
+                "canonical_eligibility_text": "The borrower must be a DPIIT-recognised startup. Eligible financial institutions participate as member institutions under the scheme rather than as startup beneficiaries.",
+                "official_url": "https://www.ncgtc.in/en/product-details/CGSS/Credit-Guarantee%20Scheme%20for%20Start-ups%20(CGSS)",
+                "application_url": "https://www.jansamarth.in/business-loan-startup-scheme",
+                "canonical_support_types": [
+                    "credit_guarantee"
+                ],
+                "canonical_categories": [
+                    "credit_support"
+                ],
+                "canonical_benefits": [
+                    {
+                        "type": "credit_guarantee",
+                        "description": "Guarantee cover is limited to INR 20 crore or the actual outstanding credit amount, whichever is lower, for transaction-based and umbrella-based cover.",
+                        "amount_min": null,
+                        "amount_max": "200000000.00",
+                        "currency": "INR"
+                    }
+                ],
+                "canonical_required_documents": [],
+                "canonical_application_steps": [
+                    {
+                        "step_number": 1,
+                        "instruction": "Review the scheme details and member-institution process on the NCGTC scheme page.",
+                        "url": "https://www.ncgtc.in/en/product-details/CGSS/Credit-Guarantee%20Scheme%20for%20Start-ups%20(CGSS)"
+                    },
+                    {
+                        "step_number": 2,
+                        "instruction": "Use the Jan Samarth startup business-loan page for the borrower-facing application route.",
+                        "url": "https://www.jansamarth.in/business-loan-startup-scheme"
+                    }
+                ]
+            },
+            "eligibility_rules": {
+                "approve": [
+                    "961adac9-48dd-4f6f-ae24-ac160f235ff4",
+                    "568da493-e138-45a8-97aa-78782d11596e"
+                ],
+                "reject": [
+                    "dae7a0b9-fcfd-419f-862f-afdd81c5cdfa",
+                    "648cf0ff-8789-4560-8a6b-8382e2955c8c",
+                    "97736833-4da4-4b01-b969-b618c078e44b",
+                    "6fe3a060-cd98-4ce2-99ed-00054c0bf5c0",
+                    "f5d2210b-e8ce-46a0-894b-dbf3d2951312",
+                    "edef7c9c-5822-44a0-8f22-77ae71815e9f"
+                ]
+            },
+            "structured_reviews": {
+                "benefits": {
+                    "approve": [],
+                    "reject": [
+                        "a983d926-3c89-4090-9fb3-a32ce60df161",
+                        "5ece7ae9-f555-4764-a6da-2be5feb8fe6d"
+                    ]
+                },
+                "required_documents": {
+                    "approve": [],
+                    "reject": []
+                },
+                "application_steps": {
+                    "approve": [],
+                    "reject": [
+                        "25093b12-5257-4bba-b0bf-1b67f96d5ddd",
+                        "9ee98b6e-dea4-4473-9c01-8c2180798881",
+                        "669a8048-48cf-4927-879e-b337e40cf515",
+                        "6583fefb-f62c-4e56-96ea-b60333209df7",
+                        "a100140b-451d-40cb-9520-74bb0b9b8435",
+                        "7ec3ef48-f7ef-4a84-b07f-61c9a5b3c20a",
+                        "b0171aa4-5cf0-439c-a40d-28a0372e2692",
+                        "d87896e3-39be-4369-90a0-32481bbf1f39"
+                    ]
+                }
+            }
+        }
+    ]
+}
