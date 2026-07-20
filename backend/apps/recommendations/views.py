@@ -1,62 +1,63 @@
+from django.shortcuts import get_object_or_404
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.schemes.models import Scheme
+from apps.startups.models import StartupProfile
 
-from .engine import evaluate_rule
-from .serializers import EligibilityRequestSerializer
+from .serializers import (
+    EligibilityAssessmentSerializer,
+    EligibilityRequestSerializer,
+)
+from .services import create_eligibility_assessment
 
 
 class EligibilityEvaluateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = EligibilityRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        scheme = Scheme.objects.select_related("current_version").get(
-            id=serializer.validated_data["scheme_id"]
+        request_serializer = EligibilityRequestSerializer(
+            data=request.data,
         )
+        request_serializer.is_valid(raise_exception=True)
+
+        scheme = get_object_or_404(
+            Scheme.objects.select_related(
+                "current_version",
+            ),
+            pk=request_serializer.validated_data["scheme_id"],
+        )
+
         if scheme.current_version is None:
-            return Response({"detail": "Scheme has no published current version."}, status=409)
-
-        matched, failed, unknown = [], [], []
-        for rule in scheme.current_version.eligibility_rules.all():
-            result = evaluate_rule(
-                serializer.validated_data["profile"],
-                rule.field_path,
-                rule.operator,
-                rule.expected_value,
-            )
-            payload = {
-                "rule_id": str(rule.id),
-                "field_path": result.field_path,
-                "operator": result.operator,
-                "expected": result.expected,
-                "actual": result.actual,
-                "mandatory": rule.mandatory,
-                "evidence": rule.evidence_text,
-            }
-            {"matched": matched, "failed": failed, "unknown": unknown}[result.status].append(
-                payload
+            return Response(
+                {"detail": ("Scheme has no published current version.")},
+                status=status.HTTP_409_CONFLICT,
             )
 
-        mandatory_failures = [item for item in failed if item["mandatory"]]
-        mandatory_unknowns = [item for item in unknown if item["mandatory"]]
-        if mandatory_failures:
-            outcome = "ineligible"
-        elif mandatory_unknowns:
-            outcome = "insufficient_information"
-        else:
-            outcome = "eligible"
+        profile_queryset = StartupProfile.objects.all()
+        if not request.user.is_staff:
+            profile_queryset = profile_queryset.filter(
+                owner=request.user,
+            )
 
+        startup_profile = get_object_or_404(
+            profile_queryset,
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+
+        assessment = create_eligibility_assessment(
+            startup_profile=startup_profile,
+            scheme_version=scheme.current_version,
+            requested_by=request.user,
+            assessment_date=request_serializer.validated_data["assessment_date"],
+        )
+
+        response_serializer = EligibilityAssessmentSerializer(
+            assessment,
+        )
         return Response(
-            {
-                "scheme_id": str(scheme.id),
-                "scheme_name": scheme.canonical_name,
-                "result": outcome,
-                "matched_rules": matched,
-                "failed_rules": failed,
-                "unknown_rules": unknown,
-            }
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
         )
