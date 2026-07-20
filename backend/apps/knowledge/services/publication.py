@@ -12,10 +12,14 @@ from django.db.models import Max
 from django.utils import timezone
 
 from apps.knowledge.models import (
+    ApplicationStepCandidate,
+    BenefitCandidate,
+    CandidateCuration,
     CandidatePublication,
     CandidateResolution,
     EligibilityRuleCandidate,
     PublishedEvidence,
+    RequiredDocumentCandidate,
     SchemeCandidate,
 )
 from apps.schemes.models import EligibilityRule, Scheme, SchemeVersion
@@ -185,7 +189,9 @@ def _flatten_rule_values(
     return [unique[key] for key in sorted(unique)]
 
 
-def _benefit_rows(candidate: SchemeCandidate) -> list[dict[str, Any]]:
+def _benefit_rows(
+    candidate: SchemeCandidate,
+) -> list[dict[str, Any]]:
     rows = [
         {
             "type": item.benefit_type.strip(),
@@ -194,19 +200,10 @@ def _benefit_rows(candidate: SchemeCandidate) -> list[dict[str, Any]]:
             "amount_max": _decimal_text(item.amount_max),
             "currency": _normalize_currency(item.currency),
         }
-        for item in candidate.benefit_items.all()
-    ]
-
-    if not rows and candidate.benefits_text.strip():
-        rows.append(
-            {
-                "type": candidate.kind.strip(),
-                "description": candidate.benefits_text.strip(),
-                "amount_min": _decimal_text(candidate.financial_amount_min),
-                "amount_max": _decimal_text(candidate.financial_amount_max),
-                "currency": _normalize_currency(candidate.currency),
-            }
+        for item in candidate.benefit_items.filter(
+            review_status=(BenefitCandidate.ReviewStatus.APPROVED),
         )
+    ]
 
     rows.sort(key=_json_key)
     return rows
@@ -218,11 +215,16 @@ def _required_document_rows(
     rows = [
         {
             "name": item.name.strip(),
-            "description": item.description.strip(),
+            "description": (item.description.strip()),
             "mandatory": item.mandatory,
         }
-        for item in candidate.required_document_items.all()
+        for item in (
+            candidate.required_document_items.filter(
+                review_status=(RequiredDocumentCandidate.ReviewStatus.APPROVED),
+            )
+        )
     ]
+
     rows.sort(key=_json_key)
     return rows
 
@@ -230,35 +232,32 @@ def _required_document_rows(
 def _application_step_rows(
     candidate: SchemeCandidate,
 ) -> list[dict[str, Any]]:
-    rows = [
+    return [
         {
             "step_number": item.step_number,
-            "instruction": item.instruction.strip(),
+            "instruction": (item.instruction.strip()),
             "url": item.url.strip(),
         }
-        for item in candidate.application_steps.all().order_by(
-            "step_number",
-            "id",
+        for item in (
+            candidate.application_steps.filter(
+                review_status=(ApplicationStepCandidate.ReviewStatus.APPROVED),
+            ).order_by(
+                "step_number",
+                "id",
+            )
         )
     ]
-
-    if not rows and candidate.application_text.strip():
-        rows.append(
-            {
-                "step_number": 1,
-                "instruction": candidate.application_text.strip(),
-                "url": candidate.application_url.strip(),
-            }
-        )
-    return rows
 
 
 def build_publication_payload(
     candidate: SchemeCandidate,
+    curation: CandidateCuration,
 ) -> dict[str, Any]:
     rule_rows = _approved_rule_rows(candidate)
     benefits = _benefit_rows(candidate)
+
     kind = candidate.kind.strip()
+
     if kind == SchemeCandidate.Kind.UNKNOWN:
         kind = ""
 
@@ -273,47 +272,67 @@ def build_publication_payload(
         }
     )
 
+    eligibility_text = curation.canonical_eligibility_text.strip()
+
     return _json_ready(
         {
-            "description": candidate.summary.strip(),
-            "objective": candidate.objective_text.strip(),
+            "description": (curation.canonical_summary.strip()),
+            "objective": (curation.canonical_objective.strip()),
             "support_types": support_types,
-            "categories": [kind] if kind else [],
-            "eligible_sectors": _flatten_rule_values(
-                rule_rows,
-                {"eligible_sector", "eligible_sectors"},
+            "categories": ([kind] if kind else []),
+            "eligible_sectors": (
+                _flatten_rule_values(
+                    rule_rows,
+                    {
+                        "eligible_sector",
+                        "eligible_sectors",
+                    },
+                )
             ),
-            "eligible_stages": _flatten_rule_values(
-                rule_rows,
-                {"eligible_startup_stage", "eligible_stage"},
+            "eligible_stages": (
+                _flatten_rule_values(
+                    rule_rows,
+                    {
+                        "eligible_startup_stage",
+                        "eligible_stage",
+                    },
+                )
             ),
-            "eligible_states": _flatten_rule_values(
-                rule_rows,
-                {"eligible_state", "eligible_states"},
+            "eligible_states": (
+                _flatten_rule_values(
+                    rule_rows,
+                    {
+                        "eligible_state",
+                        "eligible_states",
+                    },
+                )
             ),
-            "founder_categories": _flatten_rule_values(
-                rule_rows,
-                {"founder_category", "founder_categories"},
+            "founder_categories": (
+                _flatten_rule_values(
+                    rule_rows,
+                    {
+                        "founder_category",
+                        "founder_categories",
+                    },
+                )
             ),
             "minimum_amount": _decimal_text(candidate.financial_amount_min),
             "maximum_amount": _decimal_text(candidate.financial_amount_max),
             "currency": _normalize_currency(candidate.currency),
-            "application_status": SchemeVersion.ApplicationStatus.UNKNOWN,
-            "official_url": candidate.official_url.strip(),
-            "application_url": candidate.application_url.strip(),
-            "required_documents": _required_document_rows(candidate),
-            "application_steps": _application_step_rows(candidate),
+            "application_status": (SchemeVersion.ApplicationStatus.UNKNOWN),
+            "official_url": (curation.official_url.strip()),
+            "application_url": (curation.application_url.strip()),
+            "required_documents": (_required_document_rows(candidate)),
+            "application_steps": (_application_step_rows(candidate)),
             "benefits": benefits,
-            "restrictions": (
-                [candidate.eligibility_text.strip()] if candidate.eligibility_text.strip() else []
-            ),
+            "restrictions": ([eligibility_text] if eligibility_text else []),
             "eligibility_rules": [
                 {
-                    "field_path": row["field_path"],
+                    "field_path": (row["field_path"]),
                     "operator": row["operator"],
-                    "expected_value": row["expected_value"],
+                    "expected_value": (row["expected_value"]),
                     "unit": row["unit"],
-                    "human_text": row["human_text"],
+                    "human_text": (row["human_text"]),
                 }
                 for row in rule_rows
             ],
@@ -375,13 +394,65 @@ def _validate_candidate(
     ):
         raise ValidationError("The candidate resolution is incomplete.")
 
-    if not candidate.official_url.strip():
-        raise ValidationError("A canonical publication requires an official URL.")
-
     if not candidate.evidence.exists():
         raise ValidationError("A candidate must have evidence before publication.")
 
     return resolution
+
+
+def _approved_curation(
+    candidate: SchemeCandidate,
+) -> CandidateCuration:
+    try:
+        curation = candidate.curation
+    except CandidateCuration.DoesNotExist as exc:
+        raise ValidationError("Canonical publication requires candidate curation.") from exc
+
+    if curation.review_status != (CandidateCuration.ReviewStatus.APPROVED):
+        raise ValidationError("Candidate curation must be approved before publication.")
+
+    if (
+        curation.reviewed_by_id is None
+        or curation.reviewed_at is None
+        or not (curation.canonical_summary.strip())
+        or not curation.official_url.strip()
+    ):
+        raise ValidationError("Approved candidate curation is incomplete.")
+
+    return curation
+
+
+def _validate_structured_reviews(
+    candidate: SchemeCandidate,
+) -> None:
+    review_sets = (
+        (
+            candidate.benefit_items,
+            BenefitCandidate,
+            "benefit",
+        ),
+        (
+            candidate.required_document_items,
+            RequiredDocumentCandidate,
+            "required document",
+        ),
+        (
+            candidate.application_steps,
+            ApplicationStepCandidate,
+            "application step",
+        ),
+    )
+
+    for manager, model, label in review_sets:
+        if manager.filter(
+            review_status=(model.ReviewStatus.DRAFT),
+        ).exists():
+            raise ValidationError(
+                "All extracted "
+                f"{label} items must be "
+                "approved or rejected before "
+                "canonical publication."
+            )
 
 
 def _update_aliases(scheme: Scheme, title: str) -> None:
@@ -510,6 +581,9 @@ def _publish_canonical(
             "rejected before canonical publication."
         )
 
+    curation = _approved_curation(candidate)
+    _validate_structured_reviews(candidate)
+
     title = resolution.canonical_title.strip()
     authority = resolution.resolved_authority
 
@@ -528,7 +602,10 @@ def _publish_canonical(
 
     _update_aliases(scheme, candidate.title)
 
-    payload = build_publication_payload(candidate)
+    payload = build_publication_payload(
+        candidate,
+        curation,
+    )
     content_hash = publication_hash(payload)
     version = scheme.versions.select_for_update().filter(content_hash=content_hash).first()
 

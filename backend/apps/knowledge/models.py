@@ -219,7 +219,58 @@ class EligibilityRuleCandidate(TimeStampedModel):
         return f"{self.field_name} {self.operator} {self.value}"
 
 
-class BenefitCandidate(TimeStampedModel):
+class StructuredCandidateReviewMixin(models.Model):
+    class ReviewStatus(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    review_status = models.CharField(
+        max_length=20,
+        choices=ReviewStatus.choices,
+        default=ReviewStatus.DRAFT,
+    )
+    review_notes = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    def clean(self) -> None:
+        super().clean()
+
+        reviewed_statuses = {
+            self.ReviewStatus.APPROVED,
+            self.ReviewStatus.REJECTED,
+        }
+
+        if self.review_status in reviewed_statuses:
+            errors = {}
+
+            if self.reviewed_by_id is None:
+                errors["reviewed_by"] = "A reviewed item requires a reviewer."
+
+            if self.reviewed_at is None:
+                errors["reviewed_at"] = "A reviewed item requires a review timestamp."
+
+            if errors:
+                raise ValidationError(errors)
+
+    class Meta:
+        abstract = True
+
+
+class BenefitCandidate(
+    StructuredCandidateReviewMixin,
+    TimeStampedModel,
+):
     candidate = models.ForeignKey(
         SchemeCandidate,
         on_delete=models.CASCADE,
@@ -253,7 +304,10 @@ class BenefitCandidate(TimeStampedModel):
         ordering = ["candidate", "created_at"]
 
 
-class RequiredDocumentCandidate(TimeStampedModel):
+class RequiredDocumentCandidate(
+    StructuredCandidateReviewMixin,
+    TimeStampedModel,
+):
     candidate = models.ForeignKey(
         SchemeCandidate,
         on_delete=models.CASCADE,
@@ -275,7 +329,10 @@ class RequiredDocumentCandidate(TimeStampedModel):
         ordering = ["candidate", "name"]
 
 
-class ApplicationStepCandidate(TimeStampedModel):
+class ApplicationStepCandidate(
+    StructuredCandidateReviewMixin,
+    TimeStampedModel,
+):
     candidate = models.ForeignKey(
         SchemeCandidate,
         on_delete=models.CASCADE,
@@ -414,6 +471,75 @@ class CandidateResolution(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.candidate.title} - {self.classification}"
+
+
+class CandidateCuration(TimeStampedModel):
+    class ReviewStatus(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    candidate = models.OneToOneField(
+        SchemeCandidate,
+        on_delete=models.CASCADE,
+        related_name="curation",
+    )
+    canonical_summary = models.TextField()
+    canonical_objective = models.TextField(blank=True)
+    canonical_eligibility_text = models.TextField(blank=True)
+    official_url = models.URLField(max_length=2000)
+    application_url = models.URLField(
+        max_length=2000,
+        blank=True,
+    )
+    review_status = models.CharField(
+        max_length=20,
+        choices=ReviewStatus.choices,
+        default=ReviewStatus.DRAFT,
+    )
+    review_notes = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="candidate_curations",
+    )
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["review_status", "candidate"]
+
+    def clean(self) -> None:
+        super().clean()
+
+        if self.review_status == self.ReviewStatus.APPROVED:
+            errors = {}
+
+            if not self.canonical_summary.strip():
+                errors["canonical_summary"] = "An approved curation requires a canonical summary."
+
+            if not self.official_url.strip():
+                errors["official_url"] = "An approved curation requires an official scheme URL."
+
+            if self.reviewed_by_id is None:
+                errors["reviewed_by"] = "An approved curation requires a reviewer."
+
+            if self.reviewed_at is None:
+                errors["reviewed_at"] = "An approved curation requires a review timestamp."
+
+            if errors:
+                raise ValidationError(errors)
+
+    def __str__(self) -> str:
+        return f"{self.candidate.title} - {self.review_status}"
 
 
 class CandidatePublication(TimeStampedModel):

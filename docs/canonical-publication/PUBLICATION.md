@@ -40,3 +40,14 @@ and retains its protected link to the original `CandidateEvidence`.
 Only approved rule candidates become canonical `EligibilityRule`
 records. Candidate operators are mapped explicitly to the canonical
 operator vocabulary. Canonical rules are marked manually verified.
+
+## Curation gate
+
+Canonical publication requires an approved `CandidateCuration`.
+The curated summary, objective, eligibility statement, official URL,
+and application URL replace the raw extraction fields in the published
+version.
+
+Benefits, required documents, and application steps must each be
+explicitly approved or rejected. Draft structured items block canonical
+publication, and rejected items are excluded from the version payload.
