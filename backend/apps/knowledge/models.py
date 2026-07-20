@@ -414,3 +414,100 @@ class CandidateResolution(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.candidate.title} - {self.classification}"
+
+
+class CandidatePublication(TimeStampedModel):
+    class Role(models.TextChoices):
+        PRIMARY = "primary", "Primary"
+        SUPPORTING = "supporting", "Supporting"
+
+    candidate = models.OneToOneField(
+        SchemeCandidate,
+        on_delete=models.PROTECT,
+        related_name="publication",
+    )
+    scheme = models.ForeignKey(
+        "schemes.Scheme",
+        on_delete=models.PROTECT,
+        related_name="candidate_publications",
+    )
+    scheme_version = models.ForeignKey(
+        "schemes.SchemeVersion",
+        on_delete=models.PROTECT,
+        related_name="candidate_publications",
+    )
+    role = models.CharField(
+        max_length=20,
+        choices=Role.choices,
+        default=Role.PRIMARY,
+    )
+    publication_hash = models.CharField(max_length=64, db_index=True)
+    published_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="candidate_publications",
+    )
+    published_at = models.DateTimeField()
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-published_at", "candidate"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["scheme_version"],
+                condition=models.Q(role="primary"),
+                name="unique_primary_candidate_publication",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["role", "-published_at"]),
+            models.Index(fields=["scheme", "scheme_version"]),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        if (
+            self.scheme_version_id is not None
+            and self.scheme_id is not None
+            and self.scheme_version.scheme_id != self.scheme_id
+        ):
+            raise ValidationError(
+                {"scheme_version": ("The scheme version must belong to the selected scheme.")}
+            )
+
+    def __str__(self) -> str:
+        return (
+            f"{self.candidate.title} → {self.scheme.canonical_name} "
+            f"v{self.scheme_version.version_number}"
+        )
+
+
+class PublishedEvidence(TimeStampedModel):
+    publication = models.ForeignKey(
+        CandidatePublication,
+        on_delete=models.CASCADE,
+        related_name="evidence_snapshots",
+    )
+    candidate_evidence = models.ForeignKey(
+        CandidateEvidence,
+        on_delete=models.PROTECT,
+        related_name="published_snapshots",
+    )
+    evidence_type = models.CharField(max_length=30)
+    quote = models.TextField()
+    page_number = models.PositiveIntegerField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["publication", "page_number", "candidate_evidence"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["publication", "candidate_evidence"],
+                name="unique_publication_candidate_evidence",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.publication_id} - {self.evidence_type} - page {self.page_number or '-'}"
