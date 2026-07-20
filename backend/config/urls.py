@@ -5,6 +5,11 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.core.views import HealthView, PlatformStatusView
+from apps.documents.views import (
+    DocumentChunkViewSet,
+    DocumentExtractionViewSet,
+    ProcessDocumentView,
+)
 from apps.recommendations.views import EligibilityEvaluateView
 from apps.schemes.views import SchemeViewSet
 from apps.sources.views import CrawlRunViewSet, SourceDocumentViewSet, SourceViewSet
@@ -18,6 +23,16 @@ router.register(
     basename="source-document",
 )
 router.register("crawl-runs", CrawlRunViewSet, basename="crawl-run")
+router.register(
+    "document-extractions",
+    DocumentExtractionViewSet,
+    basename="document-extraction",
+)
+router.register(
+    "document-chunks",
+    DocumentChunkViewSet,
+    basename="document-chunk",
+)
 router.register("schemes", SchemeViewSet, basename="scheme")
 router.register(
     "startup-profiles",
@@ -49,6 +64,11 @@ urlpatterns = [
         "api/v1/eligibility/evaluate/",
         EligibilityEvaluateView.as_view(),
         name="eligibility-evaluate",
+    ),
+    path(
+        "api/v1/documents/process/",
+        ProcessDocumentView.as_view(),
+        name="process-document",
     ),
     path("api/v1/", include(router.urls)),
 ]
