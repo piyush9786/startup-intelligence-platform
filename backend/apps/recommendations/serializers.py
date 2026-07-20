@@ -1,7 +1,11 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import EligibilityAssessment, Recommendation
+from .models import (
+    EligibilityAssessment,
+    Recommendation,
+    RecommendationGenerationRun,
+)
 
 
 class EligibilityRequestSerializer(serializers.Serializer):
@@ -129,5 +133,51 @@ class RecommendationSerializer(serializers.ModelSerializer):
             "score_breakdown",
             "evidence_snapshot",
             "created_at",
+        )
+        read_only_fields = fields
+
+
+class RecommendationGenerationRunListSerializer(serializers.ModelSerializer):
+    generation_id = serializers.UUIDField(
+        source="id",
+        read_only=True,
+    )
+    startup_profile_id = serializers.UUIDField(
+        read_only=True,
+    )
+    requested_by_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
+    excluded_scheme_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RecommendationGenerationRun
+        fields = (
+            "generation_id",
+            "startup_profile_id",
+            "requested_by_id",
+            "assessment_date",
+            "ranking_version",
+            "assessed_scheme_count",
+            "recommendation_count",
+            "excluded_scheme_count",
+            "is_current",
+            "completed_at",
+            "created_at",
+        )
+        read_only_fields = fields
+
+    def get_excluded_scheme_count(self, instance):
+        return len(instance.excluded_schemes)
+
+
+class RecommendationGenerationRunDetailSerializer(RecommendationGenerationRunListSerializer):
+    class Meta(RecommendationGenerationRunListSerializer.Meta):
+        fields = (
+            *RecommendationGenerationRunListSerializer.Meta.fields,
+            "profile_snapshot",
+            "excluded_schemes",
+            "recommendation_snapshot",
         )
         read_only_fields = fields
