@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from dataclasses import dataclass
 from io import BytesIO, StringIO
 from typing import Any
@@ -50,19 +51,111 @@ def _decode_text(content: bytes) -> str:
     return content.decode("utf-8", errors="replace")
 
 
+NOISE_ATTRIBUTE_PATTERN = re.compile(
+    r"(?:^|[-_ ])(?:nav|navbar|menu|header|footer|sidebar|aside|breadcrumb|"
+    r"login|logout|register|language|locale|social|share|cookie|newsletter|"
+    r"modal|popup|overlay|password|otp|captcha|contact|toolbar)(?:$|[-_ ])",
+    flags=re.IGNORECASE,
+)
+NOISE_TEXT_PATTERN = re.compile(
+    r"^(?:login|logout|register|forgot your password|privacy policy|terms of use|"
+    r"change password|create password|notifications?|dashboard|settings?|"
+    r"select language|english|contact us)$",
+    flags=re.IGNORECASE,
+)
+
+
+def _element_is_noise(element) -> bool:
+    if getattr(element, "attrs", None) is None:
+        return False
+
+    values: list[str] = []
+    element_id = element.get("id")
+    if element_id:
+        values.append(str(element_id))
+    classes = element.get("class") or []
+    values.extend(str(value) for value in classes)
+    role = element.get("role")
+    if role:
+        values.append(str(role))
+    return bool(NOISE_ATTRIBUTE_PATTERN.search(" ".join(values)))
+
+
+def _select_content_root(soup: BeautifulSoup):
+    explicit = soup.find("main") or soup.find("article") or soup.find(attrs={"role": "main"})
+    if explicit is not None:
+        return explicit
+
+    candidates = soup.find_all(["section", "div"], limit=500)
+    best = None
+    best_score = -1.0
+    for candidate in candidates:
+        if _element_is_noise(candidate):
+            continue
+        text = normalize_text(candidate.get_text(" ", strip=True))
+        if len(text) < 200:
+            continue
+        link_text = normalize_text(
+            " ".join(link.get_text(" ", strip=True) for link in candidate.find_all("a"))
+        )
+        link_density = len(link_text) / max(1, len(text))
+        heading_count = len(candidate.find_all(["h1", "h2", "h3", "h4"]))
+        paragraph_count = len(candidate.find_all(["p", "li", "td", "dd"]))
+        score = len(text) + heading_count * 120 + paragraph_count * 20
+        score -= link_density * len(text) * 0.75
+        if score > best_score:
+            best = candidate
+            best_score = score
+    return best or soup.body or soup
+
+
 def extract_html(content: bytes) -> ExtractionPayload:
     soup = BeautifulSoup(content, "html.parser")
-    for element in soup(["script", "style", "noscript", "template", "svg", "canvas"]):
+    removed_elements = 0
+
+    for element in soup(
+        [
+            "script",
+            "style",
+            "noscript",
+            "template",
+            "svg",
+            "canvas",
+            "nav",
+            "header",
+            "footer",
+            "aside",
+            "form",
+            "dialog",
+        ]
+    ):
         element.decompose()
+        removed_elements += 1
+
+    for element in list(soup.find_all(True)):
+        # Removing a parent with decompose() invalidates descendant
+        # Tag objects that may already be present in this list.
+        if getattr(element, "attrs", None) is None:
+            continue
+
+        if _element_is_noise(element):
+            element.decompose()
+            removed_elements += 1
+            continue
+        style = str(element.get("style") or "").replace(" ", "").lower()
+        if element.has_attr("hidden") or "display:none" in style:
+            element.decompose()
+            removed_elements += 1
 
     title = ""
     if soup.title and soup.title.string:
         title = normalize_text(soup.title.string)[:500]
 
-    root = soup.find("main") or soup.find("article") or soup.body or soup
+    root = _select_content_root(soup)
     sections: list[ExtractedSection] = []
     current_heading = ""
     buffered: list[str] = []
+    seen_values: set[str] = set()
 
     def flush() -> None:
         nonlocal buffered
@@ -77,16 +170,34 @@ def extract_html(content: bytes) -> ExtractionPayload:
             )
         buffered = []
 
-    for element in root.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "tr"]):
+    for element in root.find_all(
+        [
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "p",
+            "li",
+            "tr",
+            "dt",
+            "dd",
+        ]
+    ):
         value = normalize_text(element.get_text(" ", strip=True))
-        if not value:
+        if not value or value in seen_values:
             continue
+        if NOISE_TEXT_PATTERN.match(value) and len(value) < 80:
+            continue
+        seen_values.add(value)
+
         if element.name and element.name.startswith("h"):
             flush()
             current_heading = value[:500]
             if not title and element.name == "h1":
                 title = value[:500]
-        elif not buffered or buffered[-1] != value:
+        else:
             buffered.append(value)
     flush()
 
@@ -102,7 +213,10 @@ def extract_html(content: bytes) -> ExtractionPayload:
         title=title,
         sections=sections,
         page_count=0,
-        metadata={"format": "html"},
+        metadata={
+            "format": "html",
+            "boilerplate_elements_removed": removed_elements,
+        },
     )
 
 
@@ -187,6 +301,25 @@ def extract_csv(content: bytes) -> ExtractionPayload:
         sections=[ExtractedSection(text=text)],
         page_count=0,
         metadata={"format": "csv"},
+    )
+
+
+def extract_xml(content: bytes) -> ExtractionPayload:
+    soup = BeautifulSoup(content, "xml")
+    values = [
+        normalize_text(element.get_text(" ", strip=True))
+        for element in soup.find_all(["loc", "title", "description", "url"])
+    ]
+    text = normalize_text("\n".join(value for value in values if value))
+    if not text:
+        text = normalize_text(soup.get_text("\n", strip=True))
+    if not text:
+        raise ExtractionError("XML document did not contain extractable text.")
+    return ExtractionPayload(
+        title="",
+        sections=[ExtractedSection(text=text)],
+        page_count=0,
+        metadata={"format": "xml"},
     )
 
 
