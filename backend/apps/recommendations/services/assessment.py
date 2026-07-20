@@ -6,7 +6,10 @@ from typing import Any
 
 from django.db import transaction
 
-from apps.recommendations.models import EligibilityAssessment
+from apps.recommendations.models import (
+    EligibilityAssessment,
+    RecommendationGenerationRun,
+)
 from apps.recommendations.services.eligibility import (
     EligibilityEvaluation,
     evaluate_scheme_eligibility,
@@ -73,6 +76,7 @@ def create_eligibility_assessment(
     scheme_version: Any,
     requested_by: Any,
     assessment_date: date,
+    generation_run: RecommendationGenerationRun | None = None,
 ) -> EligibilityAssessment:
     evaluation: EligibilityEvaluation = evaluate_scheme_eligibility(
         startup_profile=startup_profile,
@@ -84,6 +88,7 @@ def create_eligibility_assessment(
         requested_by=requested_by,
         startup_profile=startup_profile,
         scheme_version=scheme_version,
+        generation_run=generation_run,
         assessment_date=assessment_date,
         profile_snapshot=snapshot_startup_profile(
             startup_profile,
