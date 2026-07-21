@@ -7,6 +7,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from .models import (
     StartupProfile,
+    StartupReadinessActionPlan,
     StartupReadinessAssessment,
 )
 from .serializers import (
@@ -32,6 +33,13 @@ def _visible_profiles(user):
 
 def _visible_readiness_assessments(user):
     queryset = StartupReadinessAssessment.objects.all()
+    if not user.is_staff:
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
+
+
+def _visible_readiness_action_plans(user):
+    queryset = StartupReadinessActionPlan.objects.all()
     if not user.is_staff:
         queryset = queryset.filter(startup_profile__owner=user)
     return queryset
@@ -192,4 +200,43 @@ class StartupReadinessActionPlanGenerateView(APIView):
         return Response(
             StartupReadinessActionPlanSerializer(action_plan).data,
             status=status.HTTP_201_CREATED,
+        )
+
+
+class StartupReadinessActionPlanCurrentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = StartupReadinessRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        action_plan = (
+            _visible_readiness_action_plans(request.user)
+            .filter(startup_profile=startup_profile)
+            .select_related(
+                "startup_profile",
+                "source_assessment",
+                "requested_by",
+            )
+            .order_by("-created_at", "-id")
+            .first()
+        )
+        serialized_action_plan = (
+            StartupReadinessActionPlanSerializer(action_plan).data
+            if action_plan is not None
+            else None
+        )
+        return Response(
+            {
+                "startup_profile_id": str(startup_profile.id),
+                "has_action_plan": action_plan is not None,
+                "action_plan": serialized_action_plan,
+            },
+            status=status.HTTP_200_OK,
         )
