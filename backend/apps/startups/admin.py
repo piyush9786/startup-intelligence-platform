@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     StartupAdvisorBriefing,
+    StartupAdvisorBriefingJob,
     StartupAdvisorSnapshot,
     StartupAssessmentDraft,
     StartupProfile,
@@ -244,6 +245,51 @@ class StartupAdvisorBriefingAdmin(admin.ModelAdmin):
         "output_token_count",
         "total_duration_ns",
         "response_metadata",
+        "completed_at",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(StartupAdvisorBriefingJob)
+class StartupAdvisorBriefingJobAdmin(admin.ModelAdmin):
+    list_display = (
+        "startup_profile",
+        "status",
+        "source_snapshot",
+        "briefing",
+        "requested_by",
+        "started_at",
+        "completed_at",
+        "created_at",
+    )
+    list_filter = (
+        "status",
+        "error_code",
+        "created_at",
+    )
+    search_fields = (
+        "startup_profile__startup_name",
+        "startup_profile__legal_name",
+        "requested_by__email",
+        "celery_task_id",
+    )
+    readonly_fields = (
+        "requested_by",
+        "startup_profile",
+        "source_snapshot",
+        "briefing",
+        "status",
+        "celery_task_id",
+        "error_code",
+        "error_message",
+        "started_at",
         "completed_at",
         "created_at",
         "updated_at",

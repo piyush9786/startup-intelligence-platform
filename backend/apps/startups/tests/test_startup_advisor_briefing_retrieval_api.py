@@ -324,9 +324,16 @@ def test_retrieval_performs_no_writes_or_llm_calls(monkeypatch):
     def unexpected_generation(*args, **kwargs):
         raise AssertionError("Retrieval must not invoke LLM generation.")
 
+    def unexpected_dispatch(*args, **kwargs):
+        raise AssertionError("Retrieval must not queue generation jobs.")
+
     monkeypatch.setattr(
-        "apps.startups.advisor_views.generate_startup_advisor_briefing",
+        "apps.startups.tasks.generate_startup_advisor_briefing",
         unexpected_generation,
+    )
+    monkeypatch.setattr(
+        "apps.startups.advisor_views.queue_startup_advisor_briefing_job",
+        unexpected_dispatch,
     )
     counts_before = {
         "briefings": StartupAdvisorBriefing.objects.count(),

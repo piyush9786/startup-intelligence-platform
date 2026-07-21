@@ -39,6 +39,8 @@ from apps.startups.advisor_views import (
     StartupAdvisorBriefingCurrentView,
     StartupAdvisorBriefingDetailView,
     StartupAdvisorBriefingGenerateView,
+    StartupAdvisorBriefingJobCurrentView,
+    StartupAdvisorBriefingJobDetailView,
     StartupAdvisorBriefingListView,
     StartupAdvisorCurrentView,
     StartupAdvisorSnapshotGenerateView,
@@ -136,6 +138,16 @@ urlpatterns = [
         "api/v1/startup-advisor/briefings/generate/",
         StartupAdvisorBriefingGenerateView.as_view(),
         name="startup-advisor-briefing-generate",
+    ),
+    path(
+        "api/v1/startup-advisor/briefings/jobs/current/",
+        StartupAdvisorBriefingJobCurrentView.as_view(),
+        name="startup-advisor-briefing-job-current",
+    ),
+    path(
+        "api/v1/startup-advisor/briefings/jobs/<uuid:job_id>/",
+        StartupAdvisorBriefingJobDetailView.as_view(),
+        name="startup-advisor-briefing-job-detail",
     ),
     path(
         "api/v1/startup-advisor/briefings/current/",
