@@ -15,6 +15,7 @@ import {
   listStartupProfiles,
   login,
 } from "./api";
+import AssessmentWizard from "./AssessmentWizard";
 import {
   actionItemStatus,
   actionItemTitle,
@@ -320,6 +321,7 @@ function Navigation({ activeView, onNavigate }) {
       label: "Your workspace",
       items: [
         ["overview", "⌂", "Dashboard"],
+        ["assessment", "＋", "Startup assessment"],
         ["startup", "◉", "My startup"],
         ["roadmap", "↗", "Action roadmap"],
       ],
@@ -903,7 +905,7 @@ function FundingPage({ onOpenScheme, query, schemes }) {
   );
 }
 
-function StartupPage({ dashboardData, profile }) {
+function StartupPage({ dashboardData, onAssess, profile }) {
   const assessment = dashboardData?.readiness?.assessment;
   const findings = assessment?.findings || [];
   const blockers = assessment?.blocking_findings || [];
@@ -913,7 +915,7 @@ function StartupPage({ dashboardData, profile }) {
         eyebrow="YOUR STARTUP"
         title={profile?.startup_name || "Startup profile"}
         description="Understand the profile evidence currently used for eligibility, readiness and founder guidance."
-        actions={<a className="button button-secondary" href={adminUrl} rel="noopener noreferrer" target="_blank">Update profile data</a>}
+        actions={<button className="button button-secondary" onClick={onAssess} type="button">Update startup assessment</button>}
       />
       <div className="startup-profile-grid">
         <section className="dashboard-card profile-detail-card">
@@ -1046,13 +1048,33 @@ function AdvisorWorkspace({ briefing, generating, history, loading, onGenerate, 
   );
 }
 
-function EmptyProfileState() {
+function EmptyProfileState({ onStart }) {
   return (
     <section className="empty-state empty-state-page">
       <span className="empty-icon" aria-hidden="true">＋</span>
-      <h2>No startup profile is available</h2>
-      <p>Create a startup profile before using eligibility, readiness, recommendations and founder guidance.</p>
-      <a className="button button-secondary" href={adminUrl} rel="noopener noreferrer" target="_blank">Open data admin</a>
+      <span className="section-kicker">FOUNDER ONBOARDING</span>
+      <h2>Build your startup support dashboard</h2>
+      <p>
+        Complete the founder assessment to create your profile, calculate
+        readiness, generate an action roadmap and match relevant schemes.
+      </p>
+      <div className="empty-state-actions">
+        <button
+          className="button button-primary empty-state-primary"
+          onClick={onStart}
+          type="button"
+        >
+          Start startup assessment
+        </button>
+        <a
+          className="button button-ghost"
+          href={adminUrl}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Open data admin
+        </a>
+      </div>
     </section>
   );
 }
@@ -1201,14 +1223,70 @@ function Workspace({ onSignOut }) {
     }
   }
 
+  function handleAssessmentSubmitted(submission) {
+    const profile = submission.startup_profile;
+    const recommendationPayload = submission.recommendations || {};
+
+    setProfiles((current) => [
+      profile,
+      ...current.filter((item) => item.id !== profile.id),
+    ]);
+    setSelectedProfileId(profile.id);
+    setDashboardData({
+      startup_profile: profile,
+      readiness: {
+        has_assessment: true,
+        assessment: submission.readiness_assessment,
+      },
+      action_plan: {
+        has_action_plan: true,
+        action_plan: submission.action_plan,
+      },
+      recommendations: {
+        has_generation: true,
+        generation: {
+          id: recommendationPayload.generation_id,
+          ranking_version: recommendationPayload.ranking_version,
+          assessment_date: recommendationPayload.assessment_date,
+        },
+        recommendation_count:
+          recommendationPayload.recommendation_count ||
+          recommendationPayload.recommendations?.length ||
+          0,
+        recommendations: recommendationPayload.recommendations || [],
+      },
+    });
+    setCurrentBriefing(null);
+    setHistory([]);
+    setActiveView("overview");
+    setSuccess(
+      "Your startup profile, readiness, roadmap and recommendations are ready.",
+    );
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function handleLogout() {
     clearSession();
     onSignOut();
   }
 
   let page = null;
-  if (activeView === "startup") {
-    page = <StartupPage dashboardData={dashboardData} profile={selectedProfile} />;
+  if (activeView === "assessment") {
+    page = (
+      <AssessmentWizard
+        onCancel={() => handleNavigate(profiles.length ? "startup" : "overview")}
+        onSubmitted={handleAssessmentSubmitted}
+        startupProfileId={selectedProfileId || null}
+      />
+    );
+  } else if (activeView === "startup") {
+    page = (
+      <StartupPage
+        dashboardData={dashboardData}
+        onAssess={() => handleNavigate("assessment")}
+        profile={selectedProfile}
+      />
+    );
   } else if (activeView === "schemes") {
     page = <SchemeExplorer onOpenScheme={handleOpenScheme} query={query} schemes={schemes} />;
   } else if (activeView === "requirements") {
@@ -1234,7 +1312,22 @@ function Workspace({ onSignOut }) {
           {generationStep && <InlineNotice><span className="spinner" aria-hidden="true" />{generationStep} The first local-model request can take longer.</InlineNotice>}
           {error && <InlineNotice tone="danger">{error}</InlineNotice>}
           {success && <InlineNotice tone="success">{success}</InlineNotice>}
-          {!loadingProfiles && !profiles.length ? <EmptyProfileState /> : loadingWorkspace && !dashboardData ? <div className="dashboard-loader" role="status"><span className="spinner" aria-hidden="true" />Loading verified founder records…</div> : page}
+          {!loadingProfiles &&
+          !profiles.length &&
+          activeView !== "assessment" ? (
+            <EmptyProfileState
+              onStart={() => handleNavigate("assessment")}
+            />
+          ) : loadingWorkspace &&
+            !dashboardData &&
+            activeView !== "assessment" ? (
+            <div className="dashboard-loader" role="status">
+              <span className="spinner" aria-hidden="true" />
+              Loading verified founder records…
+            </div>
+          ) : (
+            page
+          )}
         </div>
       </main>
     </div>

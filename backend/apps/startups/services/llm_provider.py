@@ -44,6 +44,76 @@ class StartupAdvisorLLMProvider(Protocol):
     ) -> LLMGenerationResult: ...
 
 
+def _ollama_generation_schema(schema: Any) -> Any:
+    """Reduce JSON Schema to the subset needed for Ollama generation.
+
+    Django still validates the returned payload against the complete schema,
+    including lengths, item counts, constants, formats, patterns and grounding.
+    """
+    if isinstance(schema, list):
+        return [_ollama_generation_schema(item) for item in schema]
+
+    if not isinstance(schema, dict):
+        return schema
+
+    simplified: dict[str, Any] = {}
+
+    for key in (
+        "type",
+        "additionalProperties",
+        "required",
+        "enum",
+    ):
+        if key in schema:
+            simplified[key] = schema[key]
+
+    if "const" in schema:
+        simplified["enum"] = [schema["const"]]
+
+    if "properties" in schema:
+        simplified["properties"] = {
+            name: _ollama_generation_schema(value) for name, value in schema["properties"].items()
+        }
+
+    if "items" in schema:
+        simplified["items"] = _ollama_generation_schema(
+            schema["items"],
+        )
+
+    # Preserve only the inexpensive zero-item constraint. This lets
+    # callers require an unsupported result group to remain empty.
+    if schema.get("maxItems") == 0:
+        simplified["maxItems"] = 0
+
+    return simplified
+
+
+def _messages_to_generate_prompt(
+    messages: list[dict[str, str]],
+) -> tuple[str, str]:
+    """Convert advisor messages for Ollama's generate endpoint."""
+    system_parts: list[str] = []
+    conversation: list[tuple[str, str]] = []
+
+    for message in messages:
+        role = message["role"]
+        content = message["content"]
+
+        if role == "system":
+            system_parts.append(content)
+        else:
+            conversation.append((role, content))
+
+    system_prompt = "\n\n".join(system_parts)
+
+    if len(conversation) == 1 and conversation[0][0] == "user":
+        prompt = conversation[0][1]
+    else:
+        prompt = "\n\n".join(f"{role.upper()}:\n{content}" for role, content in conversation)
+
+    return system_prompt, prompt
+
+
 class OllamaStartupAdvisorProvider:
     provider_name = "ollama"
 
@@ -85,12 +155,17 @@ class OllamaStartupAdvisorProvider:
         messages: list[dict[str, str]],
         response_schema: dict[str, Any],
     ) -> LLMGenerationResult:
+        system_prompt, prompt = _messages_to_generate_prompt(
+            messages,
+        )
+
         request_payload = {
             "model": self.model_name,
-            "messages": messages,
+            "system": system_prompt,
+            "prompt": prompt,
             "stream": False,
             "think": False,
-            "format": response_schema,
+            "format": _ollama_generation_schema(response_schema),
             "keep_alive": self.keep_alive,
             "options": {
                 "temperature": self.temperature,
@@ -105,14 +180,22 @@ class OllamaStartupAdvisorProvider:
                 transport=self.transport,
             ) as client:
                 response = client.post(
-                    f"{self.base_url}/api/chat",
+                    f"{self.base_url}/api/generate",
                     json=request_payload,
                 )
                 response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 400 or exc.response.status_code >= 500:
+                raise LLMProviderResponseError(
+                    "The local Ollama model rejected the structured response request."
+                ) from exc
+            raise LLMProviderUnavailableError(
+                "The local Ollama model service is unavailable or "
+                "the configured model is not ready."
+            ) from exc
         except (
             httpx.ConnectError,
             httpx.TimeoutException,
-            httpx.HTTPStatusError,
         ) as exc:
             raise LLMProviderUnavailableError(
                 "The local Ollama model service is unavailable or "
@@ -123,7 +206,9 @@ class OllamaStartupAdvisorProvider:
 
         try:
             response_data = response.json()
-            content = response_data["message"]["content"]
+            content = response_data.get("response")
+            if content is None:
+                content = response_data["message"]["content"]
             payload = json.loads(content)
         except (
             KeyError,

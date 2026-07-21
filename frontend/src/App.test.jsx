@@ -8,15 +8,20 @@ const api = vi.hoisted(() => ({
   adminUrl: "https://platform.example/admin/",
   apiDocsUrl: "https://platform.example/api/docs/",
   clearSession: vi.fn(),
+  createStartupAssessmentDraft: vi.fn(),
+  describeApiFailure: vi.fn(() => "Request failed"),
   generateGroundedBriefing: vi.fn(),
   getCurrentBriefing: vi.fn(),
   getSession: vi.fn(),
   getStartupAdvisorBriefing: vi.fn(),
   getStartupAdvisorCurrent: vi.fn(),
   listSchemes: vi.fn(),
+  listStartupAssessmentDrafts: vi.fn(),
   listStartupAdvisorBriefings: vi.fn(),
   listStartupProfiles: vi.fn(),
   login: vi.fn(),
+  submitStartupAssessmentDraft: vi.fn(),
+  updateStartupAssessmentDraft: vi.fn(),
 }));
 
 vi.mock("./api", () => api);
@@ -207,6 +212,25 @@ beforeEach(() => {
   api.login.mockResolvedValue({ access: "access-token", refresh: "refresh-token" });
   api.getStartupAdvisorBriefing.mockResolvedValue(makeBriefing());
   api.generateGroundedBriefing.mockResolvedValue(makeBriefing());
+  api.listStartupAssessmentDrafts.mockResolvedValue([]);
+  api.createStartupAssessmentDraft.mockResolvedValue({
+    id: "draft-one",
+    startup_profile_id: null,
+    status: "draft",
+    current_step: 1,
+    completion_percent: 0,
+    data: {},
+  });
+  api.updateStartupAssessmentDraft.mockImplementation(
+    async (draftId, payload) => ({
+      id: draftId,
+      startup_profile_id: null,
+      status: "draft",
+      current_step: payload.current_step,
+      completion_percent: 10,
+      data: payload.data,
+    }),
+  );
 });
 
 describe("founder authentication", () => {
@@ -364,13 +388,32 @@ describe("functional user dashboard", () => {
     expect(screen.getByRole("heading", { name: "New grounded guidance." })).toBeInTheDocument();
   });
 
-  test("shows the empty profile state with a safe admin link", async () => {
+  test("starts founder onboarding when no startup profile exists", async () => {
     configureAuthenticatedWorkspace({ profiles: [] });
+    const user = userEvent.setup();
     render(<App />);
 
-    const adminLink = await screen.findByRole("link", { name: "Open data admin" });
+    const startButton = await screen.findByRole("button", {
+      name: "Start startup assessment",
+    });
+    const adminLink = screen.getByRole("link", { name: "Open data admin" });
     expect(adminLink).toHaveAttribute("href", api.adminUrl);
     expect(adminLink).toHaveAttribute("rel", "noopener noreferrer");
+
+    await user.click(startButton);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Tell us about your startup",
+      }),
+    ).toBeInTheDocument();
+    expect(api.listStartupAssessmentDrafts).toHaveBeenCalledWith({
+      startupProfileId: null,
+      status: "draft",
+    });
+    expect(api.createStartupAssessmentDraft).toHaveBeenCalledWith({
+      startupProfileId: null,
+    });
   });
 
   test("returns to sign-in when the session expires", async () => {
