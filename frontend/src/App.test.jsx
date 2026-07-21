@@ -1,5 +1,11 @@
 import React from "react";
-import { act, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -12,8 +18,10 @@ const api = vi.hoisted(() => ({
   describeApiFailure: vi.fn(() => "Request failed"),
   generateGroundedBriefing: vi.fn(),
   getCurrentBriefing: vi.fn(),
+  getCurrentStartupAdvisorBriefingJob: vi.fn(),
   getSession: vi.fn(),
   getStartupAdvisorBriefing: vi.fn(),
+  getStartupAdvisorBriefingJob: vi.fn(),
   getStartupAdvisorCurrent: vi.fn(),
   listSchemes: vi.fn(),
   listStartupAssessmentDrafts: vi.fn(),
@@ -130,6 +138,35 @@ function makeBriefing({
   };
 }
 
+function makeJob({
+  id = "44444444-4444-4444-4444-444444444444",
+  status = "queued",
+  briefingId = null,
+  errorCode = "",
+  errorMessage = "",
+} = {}) {
+  return {
+    id,
+    startup_profile_id: profile.id,
+    source_snapshot_id:
+      "33333333-3333-3333-3333-333333333333",
+    requested_by_id:
+      "55555555-5555-5555-5555-555555555555",
+    briefing_id: briefingId,
+    status,
+    error_code: errorCode,
+    error_message: errorMessage,
+    started_at: status === "queued" ? null : "2026-07-22T02:00:00Z",
+    completed_at:
+      status === "succeeded" || status === "failed"
+        ? "2026-07-22T02:03:00Z"
+        : null,
+    created_at: "2026-07-22T02:00:00Z",
+    updated_at: "2026-07-22T02:00:00Z",
+    is_terminal: status === "succeeded" || status === "failed",
+  };
+}
+
 function makeDashboard() {
   return {
     startup_profile: profile,
@@ -188,6 +225,7 @@ function configureAuthenticatedWorkspace({
   briefing = makeBriefing(),
   dashboard = makeDashboard(),
   history = [makeBriefing()],
+  job = null,
   profiles = [profile],
 } = {}) {
   api.getSession.mockReturnValue({ access: "access-token", refresh: "refresh-token" });
@@ -198,6 +236,11 @@ function configureAuthenticatedWorkspace({
     startup_profile_id: profile.id,
     has_briefing: Boolean(briefing),
     briefing,
+  });
+  api.getCurrentStartupAdvisorBriefingJob.mockResolvedValue({
+    startup_profile_id: profile.id,
+    has_job: Boolean(job),
+    job,
   });
   api.listStartupAdvisorBriefings.mockResolvedValue({
     startup_profile_id: profile.id,
@@ -211,7 +254,16 @@ beforeEach(() => {
   configureAuthenticatedWorkspace();
   api.login.mockResolvedValue({ access: "access-token", refresh: "refresh-token" });
   api.getStartupAdvisorBriefing.mockResolvedValue(makeBriefing());
-  api.generateGroundedBriefing.mockResolvedValue(makeBriefing());
+  api.getStartupAdvisorBriefingJob.mockResolvedValue(
+    makeJob({
+      status: "succeeded",
+      briefingId: makeBriefing().id,
+    }),
+  );
+  api.generateGroundedBriefing.mockResolvedValue({
+    created: true,
+    job: makeJob(),
+  });
   api.listStartupAssessmentDrafts.mockResolvedValue([]);
   api.createStartupAssessmentDraft.mockResolvedValue({
     id: "draft-one",
@@ -372,20 +424,155 @@ describe("functional user dashboard", () => {
     ).toBeInTheDocument();
   });
 
-  test("generates missing guidance and opens the advisor page", async () => {
+  test("queues missing guidance and opens the persisted result", async () => {
     configureAuthenticatedWorkspace({ briefing: null, history: [] });
-    const generated = makeBriefing({ summary: "New grounded guidance." });
-    api.generateGroundedBriefing.mockResolvedValue(generated);
+
+    const generated = makeBriefing({
+      summary: "New grounded guidance.",
+    });
+    const queuedJob = makeJob();
+    const succeededJob = makeJob({
+      status: "succeeded",
+      briefingId: generated.id,
+    });
+
+    api.generateGroundedBriefing.mockResolvedValue({
+      created: true,
+      job: queuedJob,
+    });
+    api.getStartupAdvisorBriefingJob.mockResolvedValue(
+      succeededJob,
+    );
+    api.getStartupAdvisorBriefing.mockResolvedValue(generated);
     api.listStartupAdvisorBriefings
-      .mockResolvedValueOnce({ startup_profile_id: profile.id, count: 0, briefings: [] })
-      .mockResolvedValueOnce({ startup_profile_id: profile.id, count: 1, briefings: [generated] });
+      .mockResolvedValueOnce({
+        startup_profile_id: profile.id,
+        count: 0,
+        briefings: [],
+      })
+      .mockResolvedValueOnce({
+        startup_profile_id: profile.id,
+        count: 1,
+        briefings: [generated],
+      });
+
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Generate founder guidance" }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Generate founder guidance",
+      }),
+    );
 
-    expect(api.generateGroundedBriefing).toHaveBeenCalledWith(profile.id, expect.any(Function));
-    expect(screen.getByRole("heading", { name: "New grounded guidance." })).toBeInTheDocument();
+    expect(api.generateGroundedBriefing).toHaveBeenCalledWith(
+      profile.id,
+      expect.any(Function),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "New grounded guidance.",
+      }),
+    ).toBeInTheDocument();
+    expect(api.getStartupAdvisorBriefingJob).toHaveBeenCalledWith(
+      queuedJob.id,
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  test("shows separate queued and running generation states", async () => {
+    configureAuthenticatedWorkspace({ briefing: null, history: [] });
+
+    const queuedJob = makeJob();
+    const runningJob = makeJob({ status: "running" });
+
+    let resolvePollingRequest;
+    api.generateGroundedBriefing.mockResolvedValue({
+      created: true,
+      job: queuedJob,
+    });
+    api.getStartupAdvisorBriefingJob.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePollingRequest = resolve;
+        }),
+    );
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Generate founder guidance",
+      }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "Queued…" }),
+    ).toBeDisabled();
+
+    await waitFor(() => {
+      expect(api.getStartupAdvisorBriefingJob).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      resolvePollingRequest(runningJob);
+      await Promise.resolve();
+    });
+
+    expect(
+      await screen.findByRole("button", { name: "Generating…" }),
+    ).toBeDisabled();
+  });
+
+  test("resumes an active founder guidance job after reload", async () => {
+    const generated = makeBriefing({
+      summary: "Recovered grounded guidance.",
+    });
+    const runningJob = makeJob({ status: "running" });
+    const succeededJob = makeJob({
+      id: runningJob.id,
+      status: "succeeded",
+      briefingId: generated.id,
+    });
+
+    configureAuthenticatedWorkspace({
+      briefing: null,
+      history: [],
+      job: runningJob,
+    });
+
+    api.getStartupAdvisorBriefingJob.mockResolvedValue(
+      succeededJob,
+    );
+    api.getStartupAdvisorBriefing.mockResolvedValue(generated);
+    api.listStartupAdvisorBriefings
+      .mockResolvedValueOnce({
+        startup_profile_id: profile.id,
+        count: 0,
+        briefings: [],
+      })
+      .mockResolvedValueOnce({
+        startup_profile_id: profile.id,
+        count: 1,
+        briefings: [generated],
+      });
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Recovered grounded guidance.",
+      }),
+    ).toBeInTheDocument();
+    expect(api.getStartupAdvisorBriefingJob).toHaveBeenCalledWith(
+      runningJob.id,
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    );
   });
 
   test("starts founder onboarding when no startup profile exists", async () => {

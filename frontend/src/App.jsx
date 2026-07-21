@@ -7,8 +7,10 @@ import {
   clearSession,
   generateGroundedBriefing,
   getCurrentBriefing,
+  getCurrentStartupAdvisorBriefingJob,
   getSession,
   getStartupAdvisorBriefing,
+  getStartupAdvisorBriefingJob,
   getStartupAdvisorCurrent,
   listSchemes,
   listStartupAdvisorBriefings,
@@ -43,6 +45,28 @@ import {
   humanizeApiError,
   sourceReferenceLabel,
 } from "./advisor";
+
+const ACTIVE_ADVISOR_JOB_STATUSES = new Set(["queued", "running"]);
+
+function isActiveAdvisorJob(job) {
+  return Boolean(job && ACTIVE_ADVISOR_JOB_STATUSES.has(job.status));
+}
+
+function advisorJobProgress(job) {
+  if (job?.status === "queued") {
+    return "Founder guidance is queued and waiting for the local model worker…";
+  }
+  if (job?.status === "running") {
+    return "Generating grounded guidance with the local open-source model…";
+  }
+  return "";
+}
+
+function advisorJobButtonLabel(job) {
+  if (job?.status === "queued") return "Queued…";
+  if (job?.status === "running") return "Generating…";
+  return "";
+}
 
 function InlineNotice({ children, tone = "info" }) {
   return (
@@ -555,7 +579,13 @@ function RecommendationList({ onOpenScheme, query, recommendations, schemes }) {
   );
 }
 
-function AdvisorSummary({ briefing, generating, onGenerate, onOpen }) {
+function AdvisorSummary({
+  briefing,
+  generating,
+  generationLabel,
+  onGenerate,
+  onOpen,
+}) {
   const payload = briefing?.briefing;
   return (
     <section className="dashboard-card advisor-card" aria-labelledby="advisor-summary-title">
@@ -565,7 +595,9 @@ function AdvisorSummary({ briefing, generating, onGenerate, onOpen }) {
           <h2 id="advisor-summary-title">Founder guidance</h2>
           <span>Grounded in your saved startup evidence</span>
         </div>
-        <span className="online-pill">Ready</span>
+        <span className="online-pill">
+          {generationLabel || "Ready"}
+        </span>
       </div>
 
       {payload ? (
@@ -588,7 +620,7 @@ function AdvisorSummary({ briefing, generating, onGenerate, onOpen }) {
             onClick={onGenerate}
             type="button"
           >
-            {generating ? "Generating…" : "Generate founder guidance"}
+            {generationLabel || "Generate founder guidance"}
           </button>
         </>
       )}
@@ -600,6 +632,7 @@ function DashboardHome({
   briefing,
   dashboardData,
   generating,
+  generationLabel,
   onGenerate,
   onNavigate,
   onOpenScheme,
@@ -695,6 +728,7 @@ function DashboardHome({
         <AdvisorSummary
           briefing={briefing}
           generating={generating}
+          generationLabel={generationLabel}
           onGenerate={onGenerate}
           onOpen={() => onNavigate("advisor")}
         />
@@ -1026,14 +1060,31 @@ function HistoryPanel({ history, loading, onSelect, selectedId }) {
   );
 }
 
-function AdvisorWorkspace({ briefing, generating, history, loading, onGenerate, onHistorySelection }) {
+function AdvisorWorkspace({
+  briefing,
+  generating,
+  generationLabel,
+  history,
+  loading,
+  onGenerate,
+  onHistorySelection,
+}) {
   return (
     <div className="advisor-workspace-page">
       <PageHeader
         eyebrow="EVIDENCE-BACKED GUIDANCE"
         title="Founder advisor"
         description="Review priorities, scheme guidance, risks and unanswered founder questions grounded in an immutable startup snapshot."
-        actions={<button className="button button-primary" disabled={generating || loading} onClick={onGenerate} type="button">{generating ? "Generating…" : "Generate new guidance"}</button>}
+        actions={
+          <button
+            className="button button-primary"
+            disabled={generating || loading}
+            onClick={onGenerate}
+            type="button"
+          >
+            {generationLabel || "Generate new guidance"}
+          </button>
+        }
       />
       <div className="advisor-layout">
         <aside className="advisor-history-column">
@@ -1093,7 +1144,7 @@ function Workspace({ onSignOut }) {
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loadingWorkspace, setLoadingWorkspace] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [generationJob, setGenerationJob] = useState(null);
   const [generationStep, setGenerationStep] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -1103,6 +1154,8 @@ function Workspace({ onSignOut }) {
     [profiles, selectedProfileId],
   );
   const metrics = dashboardMetrics(dashboardData, currentBriefing);
+  const generating = isActiveAdvisorJob(generationJob);
+  const generationLabel = advisorJobButtonLabel(generationJob);
 
   function handleRequestError(requestError) {
     if (requestError?.response?.status === 401) {
@@ -1146,32 +1199,144 @@ function Workspace({ onSignOut }) {
       setDashboardData(null);
       setCurrentBriefing(null);
       setHistory([]);
+      setGenerationJob(null);
+      setGenerationStep("");
       return undefined;
     }
+
     let active = true;
+
+    setGenerationJob(null);
+    setGenerationStep("");
+
     async function loadWorkspace() {
       setLoadingWorkspace(true);
       setError("");
       setSuccess("");
+
       try {
-        const [advisorCurrent, current, historyResponse] = await Promise.all([
+        const [
+          advisorCurrent,
+          current,
+          historyResponse,
+          currentJobResponse,
+        ] = await Promise.all([
           getStartupAdvisorCurrent(selectedProfileId),
           getCurrentBriefing(selectedProfileId),
           listStartupAdvisorBriefings(selectedProfileId),
+          getCurrentStartupAdvisorBriefingJob(selectedProfileId),
         ]);
+
         if (!active) return;
+
         setDashboardData(advisorCurrent);
         setCurrentBriefing(current.briefing);
         setHistory(historyResponse.briefings || []);
+
+        const latestJob = currentJobResponse.job;
+        if (isActiveAdvisorJob(latestJob)) {
+          setGenerationJob(latestJob);
+          setGenerationStep(advisorJobProgress(latestJob));
+        } else {
+          setGenerationJob(null);
+          setGenerationStep("");
+        }
       } catch (requestError) {
         if (active) handleRequestError(requestError);
       } finally {
         if (active) setLoadingWorkspace(false);
       }
     }
+
     loadWorkspace();
-    return () => { active = false; };
+
+    return () => {
+      active = false;
+    };
   }, [selectedProfileId]);
+
+  useEffect(() => {
+    if (!selectedProfileId || !isActiveAdvisorJob(generationJob)) {
+      return undefined;
+    }
+
+    let active = true;
+    let timerId = null;
+    const controller = new AbortController();
+
+    async function pollGenerationJob() {
+      try {
+        const nextJob = await getStartupAdvisorBriefingJob(
+          generationJob.id,
+          { signal: controller.signal },
+        );
+
+        if (!active) return;
+
+        setGenerationJob(nextJob);
+        setGenerationStep(advisorJobProgress(nextJob));
+
+        if (nextJob.status === "succeeded") {
+          if (!nextJob.briefing_id) {
+            throw new Error(
+              "Completed founder guidance job has no briefing record.",
+            );
+          }
+
+          const [briefing, historyResponse] = await Promise.all([
+            getStartupAdvisorBriefing(nextJob.briefing_id),
+            listStartupAdvisorBriefings(selectedProfileId),
+          ]);
+
+          if (!active) return;
+
+          setCurrentBriefing(briefing);
+          setHistory(historyResponse.briefings || []);
+          setGenerationStep("");
+          setError("");
+          setSuccess(
+            "New founder guidance was generated and persisted.",
+          );
+          setActiveView("advisor");
+          return;
+        }
+
+        if (nextJob.status === "failed") {
+          setGenerationStep("");
+          setSuccess("");
+          setError(
+            nextJob.error_message ||
+              "Founder guidance generation failed. Please try again.",
+          );
+          return;
+        }
+
+        timerId = window.setTimeout(pollGenerationJob, 3000);
+      } catch (requestError) {
+        if (
+          !active ||
+          requestError?.code === "ERR_CANCELED" ||
+          requestError?.name === "CanceledError"
+        ) {
+          return;
+        }
+
+        setGenerationJob(null);
+        setGenerationStep("");
+        handleRequestError(requestError);
+      }
+    }
+
+    pollGenerationJob();
+
+    return () => {
+      active = false;
+      controller.abort();
+      if (timerId !== null) {
+        window.clearTimeout(timerId);
+      }
+    };
+  }, [generationJob?.id, selectedProfileId]);
 
   function handleNavigate(view) {
     setActiveView(view);
@@ -1189,22 +1354,38 @@ function Workspace({ onSignOut }) {
 
   async function handleGenerate() {
     if (!selectedProfileId || generating) return;
-    setGenerating(true);
+
     setError("");
     setSuccess("");
-    setGenerationStep("Freezing the current verified advisor snapshot…");
+    setGenerationStep(
+      "Freezing the current verified advisor snapshot…",
+    );
+
     try {
-      const generated = await generateGroundedBriefing(selectedProfileId, setGenerationStep);
-      setCurrentBriefing(generated);
-      const historyResponse = await listStartupAdvisorBriefings(selectedProfileId);
-      setHistory(historyResponse.briefings || []);
+      const queuedResponse = await generateGroundedBriefing(
+        selectedProfileId,
+        setGenerationStep,
+      );
+
+      if (!queuedResponse?.job) {
+        throw new Error(
+          "The server did not return a founder guidance job.",
+        );
+      }
+
+      setGenerationJob(queuedResponse.job);
+      setGenerationStep(advisorJobProgress(queuedResponse.job));
       setActiveView("advisor");
-      setSuccess("New founder guidance was generated and persisted.");
+
+      if (!queuedResponse.created) {
+        setSuccess(
+          "The existing founder guidance job was resumed.",
+        );
+      }
     } catch (requestError) {
-      handleRequestError(requestError);
-    } finally {
-      setGenerating(false);
+      setGenerationJob(null);
       setGenerationStep("");
+      handleRequestError(requestError);
     }
   }
 
@@ -1258,6 +1439,8 @@ function Workspace({ onSignOut }) {
     });
     setCurrentBriefing(null);
     setHistory([]);
+    setGenerationJob(null);
+    setGenerationStep("");
     setActiveView("overview");
     setSuccess(
       "Your startup profile, readiness, roadmap and recommendations are ready.",
@@ -1296,11 +1479,34 @@ function Workspace({ onSignOut }) {
   } else if (activeView === "roadmap") {
     page = <RoadmapPage actionPlan={dashboardData?.action_plan} />;
   } else if (activeView === "advisor") {
-    page = <AdvisorWorkspace briefing={currentBriefing} generating={generating} history={history} loading={loadingWorkspace || loadingDetail} onGenerate={handleGenerate} onHistorySelection={handleHistorySelection} />;
+    page = (
+      <AdvisorWorkspace
+        briefing={currentBriefing}
+        generating={generating}
+        generationLabel={generationLabel}
+        history={history}
+        loading={loadingWorkspace || loadingDetail}
+        onGenerate={handleGenerate}
+        onHistorySelection={handleHistorySelection}
+      />
+    );
   } else if (activeView === "scheme-detail" && selectedScheme) {
     page = <SchemeDetailPage backLabel={schemeBackView === "funding" ? "funding and loans" : schemeBackView === "requirements" ? "requirements" : schemeBackView === "overview" ? "dashboard" : "schemes"} onBack={() => setActiveView(schemeBackView)} scheme={selectedScheme} />;
   } else {
-    page = <DashboardHome briefing={currentBriefing} dashboardData={dashboardData} generating={generating} onGenerate={handleGenerate} onNavigate={handleNavigate} onOpenScheme={handleOpenScheme} profile={selectedProfile} query={query} schemes={schemes} />;
+    page = (
+      <DashboardHome
+        briefing={currentBriefing}
+        dashboardData={dashboardData}
+        generating={generating}
+        generationLabel={generationLabel}
+        onGenerate={handleGenerate}
+        onNavigate={handleNavigate}
+        onOpenScheme={handleOpenScheme}
+        profile={selectedProfile}
+        query={query}
+        schemes={schemes}
+      />
+    );
   }
 
   return (
