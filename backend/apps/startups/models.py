@@ -418,3 +418,111 @@ class StartupAdvisorBriefing(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.startup_profile} briefing with {self.provider}/{self.model_name}"
+
+
+class StartupAdvisorBriefingJob(TimeStampedModel):
+    class Status(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        RUNNING = "running", "Running"
+        SUCCEEDED = "succeeded", "Succeeded"
+        FAILED = "failed", "Failed"
+
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="startup_advisor_briefing_jobs",
+    )
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="advisor_briefing_jobs",
+    )
+    source_snapshot = models.ForeignKey(
+        StartupAdvisorSnapshot,
+        on_delete=models.PROTECT,
+        related_name="briefing_jobs",
+    )
+    briefing = models.OneToOneField(
+        StartupAdvisorBriefing,
+        on_delete=models.SET_NULL,
+        related_name="generation_job",
+        null=True,
+        blank=True,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.QUEUED,
+    )
+    celery_task_id = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+    error_code = models.CharField(
+        max_length=64,
+        blank=True,
+    )
+    error_message = models.TextField(blank=True)
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["startup_profile", "-created_at"],
+                name="st_brief_job_profile_created",
+            ),
+            models.Index(
+                fields=["status", "-created_at"],
+                name="st_brief_job_status_created",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["startup_profile"],
+                condition=models.Q(
+                    status__in=("queued", "running"),
+                ),
+                name="st_brief_one_active_job",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        status="queued",
+                        started_at__isnull=True,
+                        completed_at__isnull=True,
+                        briefing__isnull=True,
+                    )
+                    | models.Q(
+                        status="running",
+                        started_at__isnull=False,
+                        completed_at__isnull=True,
+                        briefing__isnull=True,
+                    )
+                    | models.Q(
+                        status="succeeded",
+                        started_at__isnull=False,
+                        completed_at__isnull=False,
+                        briefing__isnull=False,
+                    )
+                    | models.Q(
+                        status="failed",
+                        completed_at__isnull=False,
+                        briefing__isnull=True,
+                    )
+                ),
+                name="st_brief_job_state_match",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.startup_profile} advisor briefing job {self.status}"
