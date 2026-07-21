@@ -32,8 +32,13 @@ Never invent eligibility, application status, deadlines, benefits,
 government requirements, scores, or founder facts.
 
 Every top priority, scheme-guidance item, and risk must cite one or more
-exact source references. Each field_path must be a JSON Pointer beginning
-with "/" and must resolve inside the cited source object.
+exact source references. Each field_path must use RFC 6901 JSON Pointer
+syntax, begin with "/", and resolve inside the cited source object.
+
+Use paths such as "/blocking_findings/0/reason".
+Never use JavaScript notation such as "/blocking_findings[0].reason".
+Do not prefix field_path with source_type: use "/blocking_findings/0",
+not "/readiness/blocking_findings/0".
 
 Source types:
 - profile
@@ -42,9 +47,28 @@ Source types:
 - recommendation_generation
 - recommendation
 
-Use the source record's UUID as source_id. When information is absent,
-state that it is unknown and add a practical question for the founder.
+Use only source IDs listed in citation_contract.source_ids_by_type.
+The source_id must exactly match an ID listed for its source_type.
+Never use nested identifiers such as assessment_id, scheme_id or profile_id
+as source_id unless they are explicitly listed in the citation contract.
+
+Each scheme-guidance item must cite at least one persisted recommendation.
+When citation_contract.scheme_guidance_must_be_empty is true, return
+"scheme_guidance": [] exactly. Excluded schemes may instead inform risks or
+priorities using the recommendation_generation document.
+
+When information is absent, state that it is unknown and add a practical
+question for the founder.
 Return only a JSON object matching the supplied JSON schema.
+
+Keep the briefing concise:
+- return no more than 3 top priorities
+- return no more than 3 scheme-guidance items
+- return no more than 3 risks
+- return no more than 5 founder questions
+- keep each prose field to at most 2 short sentences
+- normally use exactly 1 source reference per item
+- do not fill arrays merely to reach their schema maximum
 """.strip()
 
 
@@ -100,13 +124,62 @@ def snapshot_to_llm_input(
     }
 
 
+def _build_citation_contract(
+    input_payload: dict[str, Any],
+) -> dict[str, Any]:
+    source_ids = input_payload["source_ids"]
+
+    recommendation_ids = [
+        str(recommendation["id"])
+        for recommendation in input_payload["recommendations"]
+        if (isinstance(recommendation, dict) and recommendation.get("id"))
+    ]
+
+    source_ids_by_type = {
+        "profile": [
+            str(input_payload["startup_profile_id"]),
+        ],
+        "readiness": (
+            [str(source_ids["readiness_assessment_id"])]
+            if source_ids["readiness_assessment_id"]
+            else []
+        ),
+        "action_plan": (
+            [str(source_ids["readiness_action_plan_id"])]
+            if source_ids["readiness_action_plan_id"]
+            else []
+        ),
+        "recommendation_generation": (
+            [str(source_ids["recommendation_generation_run_id"])]
+            if source_ids["recommendation_generation_run_id"]
+            else []
+        ),
+        "recommendation": recommendation_ids,
+    }
+
+    return {
+        "source_ids_by_type": source_ids_by_type,
+        "scheme_guidance_must_be_empty": (not recommendation_ids),
+    }
+
+
 def build_startup_advisor_briefing_prompt(
     *,
     source_snapshot: StartupAdvisorSnapshot,
 ) -> dict[str, Any]:
     input_payload = snapshot_to_llm_input(source_snapshot)
+    citation_contract = _build_citation_contract(
+        input_payload,
+    )
+
+    response_schema = deepcopy(
+        STARTUP_ADVISOR_BRIEFING_SCHEMA,
+    )
+    if citation_contract["scheme_guidance_must_be_empty"]:
+        response_schema["properties"]["scheme_guidance"]["maxItems"] = 0
+
     user_payload = {
-        "response_schema": STARTUP_ADVISOR_BRIEFING_SCHEMA,
+        "citation_contract": citation_contract,
         "startup_advisor_snapshot": input_payload,
     }
     messages = [
@@ -128,9 +201,7 @@ def build_startup_advisor_briefing_prompt(
         "prompt_version": BRIEFING_PROMPT_VERSION,
         "schema_version": BRIEFING_SCHEMA_VERSION,
         "messages": messages,
-        "response_schema": deepcopy(
-            STARTUP_ADVISOR_BRIEFING_SCHEMA,
-        ),
+        "response_schema": response_schema,
         "source_input": input_payload,
     }
 

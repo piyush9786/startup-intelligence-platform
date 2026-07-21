@@ -223,7 +223,7 @@ STARTUP_ADVISOR_LLM_SEED = int(
 STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS = int(
     os.environ.get(
         "STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS",
-        "2048",
+        "4096",
     )
 )
 STARTUP_ADVISOR_LLM_KEEP_ALIVE = os.environ.get(

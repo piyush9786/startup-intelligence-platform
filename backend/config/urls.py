@@ -43,6 +43,10 @@ from apps.startups.advisor_views import (
     StartupAdvisorCurrentView,
     StartupAdvisorSnapshotGenerateView,
 )
+from apps.startups.assessment_views import (
+    StartupAssessmentDraftSubmitView,
+    StartupAssessmentDraftViewSet,
+)
 from apps.startups.views import (
     StartupProfileViewSet,
     StartupReadinessActionPlanCurrentView,
@@ -93,6 +97,11 @@ router.register(
     "startup-profiles",
     StartupProfileViewSet,
     basename="startup-profile",
+)
+router.register(
+    "startup-assessment-drafts",
+    StartupAssessmentDraftViewSet,
+    basename="startup-assessment-draft",
 )
 
 urlpatterns = [
@@ -152,6 +161,11 @@ urlpatterns = [
         "api/v1/startup-advisor/snapshots/generate/",
         StartupAdvisorSnapshotGenerateView.as_view(),
         name="startup-advisor-snapshot-generate",
+    ),
+    path(
+        "api/v1/startup-assessment-drafts/<uuid:draft_id>/submit/",
+        StartupAssessmentDraftSubmitView.as_view(),
+        name="startup-assessment-draft-submit",
     ),
     path(
         "api/v1/startup-readiness/evaluate/",
