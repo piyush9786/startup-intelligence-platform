@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import (
+    StartupAdvisorBriefing,
     StartupAdvisorSnapshot,
     StartupProfile,
     StartupReadinessActionPlan,
@@ -154,6 +155,55 @@ class StartupAdvisorSnapshotAdmin(admin.ModelAdmin):
         "recommendations_snapshot",
         "recommendation_count",
         "snapshot_version",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(StartupAdvisorBriefing)
+class StartupAdvisorBriefingAdmin(admin.ModelAdmin):
+    list_display = (
+        "startup_profile",
+        "provider",
+        "model_name",
+        "prompt_version",
+        "schema_version",
+        "requested_by",
+        "completed_at",
+    )
+    list_filter = (
+        "provider",
+        "model_name",
+        "prompt_version",
+        "schema_version",
+    )
+    search_fields = (
+        "startup_profile__startup_name",
+        "startup_profile__legal_name",
+        "requested_by__email",
+    )
+    readonly_fields = (
+        "requested_by",
+        "startup_profile",
+        "source_snapshot",
+        "provider",
+        "model_name",
+        "prompt_version",
+        "schema_version",
+        "generation_parameters",
+        "prompt_snapshot",
+        "briefing",
+        "prompt_token_count",
+        "output_token_count",
+        "total_duration_ns",
+        "response_metadata",
+        "completed_at",
         "created_at",
         "updated_at",
     )
