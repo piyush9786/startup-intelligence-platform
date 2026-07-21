@@ -240,16 +240,50 @@ export async function getStartupAdvisorBriefing(briefingId) {
   return response.data;
 }
 
-export async function generateGroundedBriefing(startupProfileId, onProgress = () => {}) {
-  onProgress("Freezing the current verified advisor snapshot…");
-  const snapshotResponse = await client.post("/startup-advisor/snapshots/generate/", {
-    startup_profile_id: startupProfileId,
-  });
+export async function getCurrentStartupAdvisorBriefingJob(
+  startupProfileId,
+  config = {},
+) {
+  const response = await client.get(
+    "/startup-advisor/briefings/jobs/current/",
+    {
+      ...config,
+      params: {
+        ...config.params,
+        startup_profile_id: startupProfileId,
+      },
+    },
+  );
+  return response.data;
+}
 
-  onProgress("Generating grounded guidance with the local open-source model…");
-  const briefingResponse = await client.post("/startup-advisor/briefings/generate/", {
-    advisor_snapshot_id: snapshotResponse.data.id,
-  });
+export async function getStartupAdvisorBriefingJob(jobId, config = {}) {
+  const response = await client.get(
+    `/startup-advisor/briefings/jobs/${jobId}/`,
+    config,
+  );
+  return response.data;
+}
+
+export async function generateGroundedBriefing(
+  startupProfileId,
+  onProgress = () => {},
+) {
+  onProgress("Freezing the current verified advisor snapshot…");
+  const snapshotResponse = await client.post(
+    "/startup-advisor/snapshots/generate/",
+    {
+      startup_profile_id: startupProfileId,
+    },
+  );
+
+  onProgress("Queuing grounded guidance generation…");
+  const briefingResponse = await client.post(
+    "/startup-advisor/briefings/generate/",
+    {
+      advisor_snapshot_id: snapshotResponse.data.id,
+    },
+  );
 
   return briefingResponse.data;
 }
