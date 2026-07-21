@@ -11,11 +11,14 @@ from .models import (
 )
 from .serializers import (
     StartupProfileSerializer,
+    StartupReadinessActionPlanGenerationRequestSerializer,
+    StartupReadinessActionPlanSerializer,
     StartupReadinessAssessmentSerializer,
     StartupReadinessEvaluationRequestSerializer,
     StartupReadinessRetrievalRequestSerializer,
 )
 from .services import (
+    create_startup_readiness_action_plan,
     create_startup_readiness_assessment,
 )
 
@@ -30,9 +33,7 @@ def _visible_profiles(user):
 def _visible_readiness_assessments(user):
     queryset = StartupReadinessAssessment.objects.all()
     if not user.is_staff:
-        queryset = queryset.filter(
-            startup_profile__owner=user,
-        )
+        queryset = queryset.filter(startup_profile__owner=user)
     return queryset
 
 
@@ -65,25 +66,19 @@ class StartupReadinessEvaluateView(APIView):
         request_serializer = StartupReadinessEvaluationRequestSerializer(
             data=request.data,
         )
-        request_serializer.is_valid(
-            raise_exception=True,
-        )
+        request_serializer.is_valid(raise_exception=True)
 
         startup_profile = get_object_or_404(
             _visible_profiles(request.user),
             pk=request_serializer.validated_data["startup_profile_id"],
         )
-
         assessment = create_startup_readiness_assessment(
             startup_profile=startup_profile,
             requested_by=request.user,
-            assessment_date=(request_serializer.validated_data["assessment_date"]),
-        )
-        response_serializer = StartupReadinessAssessmentSerializer(
-            assessment,
+            assessment_date=request_serializer.validated_data["assessment_date"],
         )
         return Response(
-            response_serializer.data,
+            StartupReadinessAssessmentSerializer(assessment).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -95,9 +90,7 @@ class StartupReadinessCurrentView(APIView):
         request_serializer = StartupReadinessRetrievalRequestSerializer(
             data=request.query_params,
         )
-        request_serializer.is_valid(
-            raise_exception=True,
-        )
+        request_serializer.is_valid(raise_exception=True)
 
         startup_profile = get_object_or_404(
             _visible_profiles(request.user),
@@ -107,29 +100,19 @@ class StartupReadinessCurrentView(APIView):
             StartupReadinessAssessment.objects.filter(
                 startup_profile=startup_profile,
             )
-            .select_related(
-                "startup_profile",
-                "requested_by",
-            )
-            .order_by(
-                "-created_at",
-                "-id",
-            )
+            .select_related("startup_profile", "requested_by")
+            .order_by("-created_at", "-id")
             .first()
         )
-
-        serialized_assessment = None
-        if assessment is not None:
-            serialized_assessment = StartupReadinessAssessmentSerializer(
-                assessment,
-            ).data
-
+        serialized_assessment = (
+            StartupReadinessAssessmentSerializer(assessment).data
+            if assessment is not None
+            else None
+        )
         return Response(
             {
-                "startup_profile_id": str(
-                    startup_profile.id,
-                ),
-                "has_assessment": (assessment is not None),
+                "startup_profile_id": str(startup_profile.id),
+                "has_assessment": assessment is not None,
                 "assessment": serialized_assessment,
             },
             status=status.HTTP_200_OK,
@@ -143,9 +126,7 @@ class StartupReadinessAssessmentListView(APIView):
         request_serializer = StartupReadinessRetrievalRequestSerializer(
             data=request.query_params,
         )
-        request_serializer.is_valid(
-            raise_exception=True,
-        )
+        request_serializer.is_valid(raise_exception=True)
 
         startup_profile = get_object_or_404(
             _visible_profiles(request.user),
@@ -153,31 +134,19 @@ class StartupReadinessAssessmentListView(APIView):
         )
         assessments = (
             _visible_readiness_assessments(request.user)
-            .filter(
-                startup_profile=startup_profile,
-            )
-            .select_related(
-                "startup_profile",
-                "requested_by",
-            )
-            .order_by(
-                "-created_at",
-                "-id",
-            )
+            .filter(startup_profile=startup_profile)
+            .select_related("startup_profile", "requested_by")
+            .order_by("-created_at", "-id")
         )
-        response_serializer = StartupReadinessAssessmentSerializer(
+        data = StartupReadinessAssessmentSerializer(
             assessments,
             many=True,
-        )
+        ).data
         return Response(
             {
-                "startup_profile_id": str(
-                    startup_profile.id,
-                ),
-                "count": len(
-                    response_serializer.data,
-                ),
-                "assessments": (response_serializer.data),
+                "startup_profile_id": str(startup_profile.id),
+                "count": len(data),
+                "assessments": data,
             },
             status=status.HTTP_200_OK,
         )
@@ -194,10 +163,33 @@ class StartupReadinessAssessmentDetailView(APIView):
             ),
             pk=assessment_id,
         )
-        response_serializer = StartupReadinessAssessmentSerializer(
-            assessment,
+        return Response(
+            StartupReadinessAssessmentSerializer(assessment).data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupReadinessActionPlanGenerateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        request_serializer = StartupReadinessActionPlanGenerationRequestSerializer(
+            data=request.data,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        source_assessment = get_object_or_404(
+            _visible_readiness_assessments(request.user).select_related(
+                "startup_profile",
+                "requested_by",
+            ),
+            pk=request_serializer.validated_data["readiness_assessment_id"],
+        )
+        action_plan = create_startup_readiness_action_plan(
+            source_assessment=source_assessment,
+            requested_by=request.user,
         )
         return Response(
-            response_serializer.data,
-            status=status.HTTP_200_OK,
+            StartupReadinessActionPlanSerializer(action_plan).data,
+            status=status.HTTP_201_CREATED,
         )
