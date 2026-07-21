@@ -240,3 +240,58 @@ class StartupReadinessActionPlanCurrentView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class StartupReadinessActionPlanListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = StartupReadinessRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        action_plans = (
+            _visible_readiness_action_plans(request.user)
+            .filter(startup_profile=startup_profile)
+            .select_related(
+                "startup_profile",
+                "source_assessment",
+                "requested_by",
+            )
+            .order_by("-created_at", "-id")
+        )
+        data = StartupReadinessActionPlanSerializer(
+            action_plans,
+            many=True,
+        ).data
+        return Response(
+            {
+                "startup_profile_id": str(startup_profile.id),
+                "count": len(data),
+                "action_plans": data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupReadinessActionPlanDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, action_plan_id):
+        action_plan = get_object_or_404(
+            _visible_readiness_action_plans(request.user).select_related(
+                "startup_profile",
+                "source_assessment",
+                "requested_by",
+            ),
+            pk=action_plan_id,
+        )
+        return Response(
+            StartupReadinessActionPlanSerializer(action_plan).data,
+            status=status.HTTP_200_OK,
+        )
