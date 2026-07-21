@@ -37,6 +37,7 @@ from apps.sources.views import (
 )
 from apps.startups.views import (
     StartupProfileViewSet,
+    StartupReadinessActionPlanGenerateView,
     StartupReadinessAssessmentDetailView,
     StartupReadinessAssessmentListView,
     StartupReadinessCurrentView,
@@ -92,16 +93,10 @@ urlpatterns = [
     ),
     path(
         "api/docs/",
-        SpectacularSwaggerView.as_view(
-            url_name="schema",
-        ),
+        SpectacularSwaggerView.as_view(url_name="schema"),
         name="swagger-ui",
     ),
-    path(
-        "api/v1/health/",
-        HealthView.as_view(),
-        name="health",
-    ),
+    path("api/v1/health/", HealthView.as_view(), name="health"),
     path(
         "api/v1/status/",
         PlatformStatusView.as_view(),
@@ -133,9 +128,14 @@ urlpatterns = [
         name="startup-readiness-assessment-list",
     ),
     path(
-        ("api/v1/startup-readiness/assessments/<uuid:assessment_id>/"),
+        "api/v1/startup-readiness/assessments/<uuid:assessment_id>/",
         StartupReadinessAssessmentDetailView.as_view(),
         name="startup-readiness-assessment-detail",
+    ),
+    path(
+        "api/v1/startup-readiness/action-plans/generate/",
+        StartupReadinessActionPlanGenerateView.as_view(),
+        name="startup-readiness-action-plan-generate",
     ),
     path(
         "api/v1/eligibility/evaluate/",

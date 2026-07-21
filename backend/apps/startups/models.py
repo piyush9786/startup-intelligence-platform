@@ -117,3 +117,77 @@ class StartupReadinessAssessment(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.startup_profile} readiness on {self.assessment_date}"
+
+
+class StartupReadinessActionPlan(TimeStampedModel):
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="startup_readiness_action_plans",
+    )
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="readiness_action_plans",
+    )
+    source_assessment = models.ForeignKey(
+        StartupReadinessAssessment,
+        on_delete=models.PROTECT,
+        related_name="action_plans",
+    )
+    source_assessment_snapshot = models.JSONField(default=dict)
+    readiness_status = models.CharField(
+        max_length=32,
+        choices=StartupReadinessAssessment.Status.choices,
+    )
+    has_actions = models.BooleanField()
+    blocker_count = models.PositiveIntegerField()
+    recommendation_count = models.PositiveIntegerField()
+    total_action_count = models.PositiveIntegerField()
+    next_action = models.TextField(null=True, blank=True)
+    items = models.JSONField(default=list)
+    source_engine_version = models.CharField(max_length=64)
+    planner_version = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["startup_profile", "-created_at"],
+                name="startup_action_profile_created",
+            ),
+            models.Index(
+                fields=["source_assessment", "-created_at"],
+                name="startup_action_source_created",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        has_actions=True,
+                        total_action_count__gt=0,
+                        next_action__isnull=False,
+                    )
+                    | models.Q(
+                        has_actions=False,
+                        total_action_count=0,
+                        next_action__isnull=True,
+                    )
+                ),
+                name="startup_action_presence_match",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    total_action_count=(
+                        models.F("blocker_count") + models.F("recommendation_count")
+                    ),
+                ),
+                name="startup_action_counts_match",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.startup_profile} action plan from {self.source_assessment_id}"
