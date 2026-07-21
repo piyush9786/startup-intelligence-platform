@@ -19,10 +19,13 @@ from .models import (
     StartupReadinessAssessment,
 )
 from .serializers import (
+    StartupAdvisorSnapshotGenerationRequestSerializer,
+    StartupAdvisorSnapshotSerializer,
     StartupReadinessActionPlanSerializer,
     StartupReadinessAssessmentSerializer,
     StartupReadinessRetrievalRequestSerializer,
 )
+from .services import create_startup_advisor_snapshot
 
 
 def _visible_profiles(user):
@@ -123,11 +126,11 @@ class StartupAdvisorCurrentView(APIView):
                     "district": startup_profile.district,
                 },
                 "readiness": {
-                    "has_assessment": readiness_assessment is not None,
+                    "has_assessment": (readiness_assessment is not None),
                     "assessment": assessment_data,
                 },
                 "action_plan": {
-                    "has_action_plan": readiness_action_plan is not None,
+                    "has_action_plan": (readiness_action_plan is not None),
                     "action_plan": action_plan_data,
                 },
                 "recommendations": {
@@ -140,4 +143,35 @@ class StartupAdvisorCurrentView(APIView):
                 },
             },
             status=status.HTTP_200_OK,
+        )
+
+
+class StartupAdvisorSnapshotGenerateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        request_serializer = StartupAdvisorSnapshotGenerationRequestSerializer(
+            data=request.data,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+
+        try:
+            snapshot = create_startup_advisor_snapshot(
+                startup_profile=startup_profile,
+                requested_by=request.user,
+            )
+        except RecommendationSetIntegrityError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(
+            StartupAdvisorSnapshotSerializer(snapshot).data,
+            status=status.HTTP_201_CREATED,
         )

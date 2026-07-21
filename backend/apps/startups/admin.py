@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import (
+    StartupAdvisorSnapshot,
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
@@ -103,6 +104,56 @@ class StartupReadinessActionPlanAdmin(admin.ModelAdmin):
         "items",
         "source_engine_version",
         "planner_version",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(StartupAdvisorSnapshot)
+class StartupAdvisorSnapshotAdmin(admin.ModelAdmin):
+    list_display = (
+        "startup_profile",
+        "has_readiness_assessment",
+        "has_action_plan",
+        "has_recommendation_generation",
+        "recommendation_count",
+        "snapshot_version",
+        "requested_by",
+        "created_at",
+    )
+    list_filter = (
+        "has_readiness_assessment",
+        "has_action_plan",
+        "has_recommendation_generation",
+        "snapshot_version",
+    )
+    search_fields = (
+        "startup_profile__startup_name",
+        "startup_profile__legal_name",
+        "requested_by__email",
+    )
+    readonly_fields = (
+        "requested_by",
+        "startup_profile",
+        "readiness_assessment",
+        "readiness_action_plan",
+        "recommendation_generation_run",
+        "has_readiness_assessment",
+        "has_action_plan",
+        "has_recommendation_generation",
+        "profile_snapshot",
+        "readiness_snapshot",
+        "action_plan_snapshot",
+        "recommendation_generation_snapshot",
+        "recommendations_snapshot",
+        "recommendation_count",
+        "snapshot_version",
         "created_at",
         "updated_at",
     )
