@@ -2,6 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from .models import (
+    StartupAdvisorBriefing,
     StartupAdvisorSnapshot,
     StartupProfile,
     StartupReadinessActionPlan,
@@ -193,6 +194,68 @@ class StartupAdvisorSnapshotSerializer(serializers.ModelSerializer):
             "recommendations_snapshot",
             "recommendation_count",
             "snapshot_version",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
+class StartupAdvisorBriefingGenerationRequestSerializer(serializers.Serializer):
+    advisor_snapshot_id = serializers.UUIDField()
+    snapshot = serializers.JSONField(required=False, write_only=True)
+    prompt = serializers.CharField(required=False, write_only=True)
+    model = serializers.CharField(required=False, write_only=True)
+    provider = serializers.CharField(required=False, write_only=True)
+    briefing = serializers.JSONField(required=False, write_only=True)
+
+    def validate(self, attrs):
+        unsupported = [
+            name
+            for name in (
+                "snapshot",
+                "prompt",
+                "model",
+                "provider",
+                "briefing",
+            )
+            if name in attrs
+        ]
+        if unsupported:
+            raise serializers.ValidationError(
+                {
+                    name: ("This value is server-controlled. Use advisor_snapshot_id only.")
+                    for name in unsupported
+                }
+            )
+        return attrs
+
+
+class StartupAdvisorBriefingSerializer(serializers.ModelSerializer):
+    startup_profile_id = serializers.UUIDField(read_only=True)
+    source_snapshot_id = serializers.UUIDField(read_only=True)
+    requested_by_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = StartupAdvisorBriefing
+        fields = (
+            "id",
+            "startup_profile_id",
+            "source_snapshot_id",
+            "requested_by_id",
+            "provider",
+            "model_name",
+            "prompt_version",
+            "schema_version",
+            "generation_parameters",
+            "prompt_snapshot",
+            "briefing",
+            "prompt_token_count",
+            "output_token_count",
+            "total_duration_ns",
+            "response_metadata",
+            "completed_at",
             "created_at",
         )
         read_only_fields = fields

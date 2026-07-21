@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from apps.core.models import TimeStampedModel
 
@@ -294,3 +295,60 @@ class StartupAdvisorSnapshot(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.startup_profile} advisor snapshot {self.snapshot_version}"
+
+
+class StartupAdvisorBriefing(TimeStampedModel):
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="startup_advisor_briefings",
+    )
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="advisor_briefings",
+    )
+    source_snapshot = models.ForeignKey(
+        StartupAdvisorSnapshot,
+        on_delete=models.PROTECT,
+        related_name="briefings",
+    )
+    provider = models.CharField(max_length=64)
+    model_name = models.CharField(max_length=255)
+    prompt_version = models.CharField(max_length=64)
+    schema_version = models.CharField(max_length=64)
+    generation_parameters = models.JSONField(default=dict)
+    prompt_snapshot = models.JSONField(default=dict)
+    briefing = models.JSONField(default=dict)
+    prompt_token_count = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    output_token_count = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    total_duration_ns = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+    )
+    response_metadata = models.JSONField(default=dict)
+    completed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-completed_at", "-created_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["startup_profile", "-created_at"],
+                name="st_brief_profile_created",
+            ),
+            models.Index(
+                fields=["source_snapshot", "-created_at"],
+                name="st_brief_source_created",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.startup_profile} briefing with {self.provider}/{self.model_name}"
