@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 import {
+  SESSION_EXPIRED_EVENT,
+  adminUrl,
+  apiDocsUrl,
   clearSession,
   generateGroundedBriefing,
   getCurrentBriefing,
@@ -19,7 +22,11 @@ import {
 
 function InlineNotice({ children, tone = "info" }) {
   return (
-    <div className={`notice notice-${tone}`} role={tone === "danger" ? "alert" : "status"}>
+    <div
+      aria-live={tone === "danger" ? "assertive" : "polite"}
+      className={`notice notice-${tone}`}
+      role={tone === "danger" ? "alert" : "status"}
+    >
       {children}
     </div>
   );
@@ -323,6 +330,7 @@ function HistoryPanel({ history, loading, onSelect, selectedId }) {
         <div className="history-list">
           {history.map((item, index) => (
             <button
+              aria-current={selectedId === item.id ? "true" : undefined}
               className={`history-item ${selectedId === item.id ? "history-item-active" : ""}`}
               key={item.id}
               onClick={() => onSelect(item.id)}
@@ -489,9 +497,23 @@ function Workspace({ onSignOut }) {
             <span>Founder advisor</span>
           </div>
         </div>
-        <button className="button button-ghost" onClick={handleLogout} type="button">
-          Sign out
-        </button>
+        <div className="topbar-actions">
+          <a
+            className="topbar-link"
+            href={apiDocsUrl}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            API docs
+          </a>
+          <button
+            className="button button-ghost"
+            onClick={handleLogout}
+            type="button"
+          >
+            Sign out
+          </button>
+        </div>
       </header>
 
       <section className="workspace-intro">
@@ -548,7 +570,12 @@ function Workspace({ onSignOut }) {
             Create a startup profile through the API or Django admin before
             generating an advisor briefing.
           </p>
-          <a className="button button-secondary" href="http://localhost:8000/admin/" target="_blank">
+          <a
+            className="button button-secondary"
+            href={adminUrl}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
             Open data admin
           </a>
         </section>
@@ -587,8 +614,26 @@ function Workspace({ onSignOut }) {
   );
 }
 
+
 export default function App() {
   const [authenticated, setAuthenticated] = useState(Boolean(getSession()?.access));
+
+  useEffect(() => {
+    function handleSessionExpired() {
+      setAuthenticated(false);
+    }
+
+    window.addEventListener(
+      SESSION_EXPIRED_EVENT,
+      handleSessionExpired,
+    );
+    return () => {
+      window.removeEventListener(
+        SESSION_EXPIRED_EVENT,
+        handleSessionExpired,
+      );
+    };
+  }, []);
 
   if (!authenticated) {
     return <LoginPanel onAuthenticated={() => setAuthenticated(true)} />;
