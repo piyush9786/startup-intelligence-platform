@@ -191,3 +191,106 @@ class StartupReadinessActionPlan(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.startup_profile} action plan from {self.source_assessment_id}"
+
+
+class StartupAdvisorSnapshot(TimeStampedModel):
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="startup_advisor_snapshots",
+    )
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="advisor_snapshots",
+    )
+    readiness_assessment = models.ForeignKey(
+        StartupReadinessAssessment,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="advisor_snapshots",
+    )
+    readiness_action_plan = models.ForeignKey(
+        StartupReadinessActionPlan,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="advisor_snapshots",
+    )
+    recommendation_generation_run = models.ForeignKey(
+        "recommendations.RecommendationGenerationRun",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="advisor_snapshots",
+    )
+    has_readiness_assessment = models.BooleanField()
+    has_action_plan = models.BooleanField()
+    has_recommendation_generation = models.BooleanField()
+    profile_snapshot = models.JSONField(default=dict)
+    readiness_snapshot = models.JSONField(default=dict)
+    action_plan_snapshot = models.JSONField(default=dict)
+    recommendation_generation_snapshot = models.JSONField(default=dict)
+    recommendations_snapshot = models.JSONField(default=list)
+    recommendation_count = models.PositiveIntegerField(default=0)
+    snapshot_version = models.CharField(
+        max_length=64,
+        default="startup-advisor-snapshot-v1",
+    )
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["startup_profile", "-created_at"],
+                name="startup_adv_profile_created",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        has_readiness_assessment=True,
+                        readiness_assessment__isnull=False,
+                    )
+                    | models.Q(
+                        has_readiness_assessment=False,
+                        readiness_assessment__isnull=True,
+                    )
+                ),
+                name="startup_adv_readiness_match",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        has_action_plan=True,
+                        readiness_action_plan__isnull=False,
+                    )
+                    | models.Q(
+                        has_action_plan=False,
+                        readiness_action_plan__isnull=True,
+                    )
+                ),
+                name="startup_adv_action_match",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        has_recommendation_generation=True,
+                        recommendation_generation_run__isnull=False,
+                    )
+                    | models.Q(
+                        has_recommendation_generation=False,
+                        recommendation_generation_run__isnull=True,
+                        recommendation_count=0,
+                    )
+                ),
+                name="startup_adv_generation_match",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.startup_profile} advisor snapshot {self.snapshot_version}"
