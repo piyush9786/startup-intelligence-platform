@@ -188,3 +188,45 @@ KNOWLEDGE_EXTRACTOR_VERSION = os.environ.get(
 )
 KNOWLEDGE_MIN_CANDIDATE_SCORE = int(os.environ.get("KNOWLEDGE_MIN_CANDIDATE_SCORE", "4"))
 KNOWLEDGE_MAX_BLOCK_CHARS = int(os.environ.get("KNOWLEDGE_MAX_BLOCK_CHARS", "30000"))
+
+
+STARTUP_ADVISOR_LLM_PROVIDER = os.environ.get(
+    "STARTUP_ADVISOR_LLM_PROVIDER",
+    "ollama",
+)
+OLLAMA_BASE_URL = os.environ.get(
+    "OLLAMA_BASE_URL",
+    "http://ollama:11434",
+)
+STARTUP_ADVISOR_LLM_MODEL = os.environ.get(
+    "STARTUP_ADVISOR_LLM_MODEL",
+    "qwen3.5:9b",
+)
+STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS = float(
+    os.environ.get(
+        "STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS",
+        "300",
+    )
+)
+STARTUP_ADVISOR_LLM_TEMPERATURE = float(
+    os.environ.get(
+        "STARTUP_ADVISOR_LLM_TEMPERATURE",
+        "0",
+    )
+)
+STARTUP_ADVISOR_LLM_SEED = int(
+    os.environ.get(
+        "STARTUP_ADVISOR_LLM_SEED",
+        "7",
+    )
+)
+STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS = int(
+    os.environ.get(
+        "STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS",
+        "2048",
+    )
+)
+STARTUP_ADVISOR_LLM_KEEP_ALIVE = os.environ.get(
+    "STARTUP_ADVISOR_LLM_KEEP_ALIVE",
+    "5m",
+)
