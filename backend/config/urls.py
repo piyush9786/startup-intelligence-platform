@@ -36,6 +36,7 @@ from apps.sources.views import (
     SourceViewSet,
 )
 from apps.startups.advisor_views import (
+    StartupAdvisorBriefingGenerateView,
     StartupAdvisorCurrentView,
     StartupAdvisorSnapshotGenerateView,
 )
@@ -118,6 +119,11 @@ urlpatterns = [
         "api/v1/auth/token/refresh/",
         TokenRefreshView.as_view(),
         name="token-refresh",
+    ),
+    path(
+        "api/v1/startup-advisor/briefings/generate/",
+        StartupAdvisorBriefingGenerateView.as_view(),
+        name="startup-advisor-briefing-generate",
     ),
     path(
         "api/v1/startup-advisor/current/",

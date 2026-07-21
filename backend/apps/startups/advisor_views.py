@@ -14,24 +14,41 @@ from apps.recommendations.services import (
 )
 
 from .models import (
+    StartupAdvisorSnapshot,
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
 )
 from .serializers import (
+    StartupAdvisorBriefingGenerationRequestSerializer,
+    StartupAdvisorBriefingSerializer,
     StartupAdvisorSnapshotGenerationRequestSerializer,
     StartupAdvisorSnapshotSerializer,
     StartupReadinessActionPlanSerializer,
     StartupReadinessAssessmentSerializer,
     StartupReadinessRetrievalRequestSerializer,
 )
-from .services import create_startup_advisor_snapshot
+from .services import (
+    AdvisorSnapshotChangedError,
+    BriefingOutputValidationError,
+    LLMProviderResponseError,
+    LLMProviderUnavailableError,
+    create_startup_advisor_snapshot,
+    generate_startup_advisor_briefing,
+)
 
 
 def _visible_profiles(user):
     queryset = StartupProfile.objects.all()
     if not user.is_staff:
         queryset = queryset.filter(owner=user)
+    return queryset
+
+
+def _visible_advisor_snapshots(user):
+    queryset = StartupAdvisorSnapshot.objects.all()
+    if not user.is_staff:
+        queryset = queryset.filter(startup_profile__owner=user)
     return queryset
 
 
@@ -173,5 +190,52 @@ class StartupAdvisorSnapshotGenerateView(APIView):
 
         return Response(
             StartupAdvisorSnapshotSerializer(snapshot).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class StartupAdvisorBriefingGenerateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        request_serializer = StartupAdvisorBriefingGenerationRequestSerializer(
+            data=request.data,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        source_snapshot = get_object_or_404(
+            _visible_advisor_snapshots(request.user).select_related(
+                "startup_profile",
+                "requested_by",
+            ),
+            pk=request_serializer.validated_data["advisor_snapshot_id"],
+        )
+
+        try:
+            briefing = generate_startup_advisor_briefing(
+                source_snapshot=source_snapshot,
+                requested_by=request.user,
+            )
+        except LLMProviderUnavailableError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except (
+            LLMProviderResponseError,
+            BriefingOutputValidationError,
+        ) as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        except AdvisorSnapshotChangedError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(
+            StartupAdvisorBriefingSerializer(briefing).data,
             status=status.HTTP_201_CREATED,
         )
