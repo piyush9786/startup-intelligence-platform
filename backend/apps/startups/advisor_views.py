@@ -14,6 +14,7 @@ from apps.recommendations.services import (
 )
 
 from .models import (
+    StartupAdvisorBriefing,
     StartupAdvisorSnapshot,
     StartupProfile,
     StartupReadinessActionPlan,
@@ -42,6 +43,13 @@ def _visible_profiles(user):
     queryset = StartupProfile.objects.all()
     if not user.is_staff:
         queryset = queryset.filter(owner=user)
+    return queryset
+
+
+def _visible_advisor_briefings(user):
+    queryset = StartupAdvisorBriefing.objects.all()
+    if not user.is_staff:
+        queryset = queryset.filter(startup_profile__owner=user)
     return queryset
 
 
@@ -238,4 +246,94 @@ class StartupAdvisorBriefingGenerateView(APIView):
         return Response(
             StartupAdvisorBriefingSerializer(briefing).data,
             status=status.HTTP_201_CREATED,
+        )
+
+
+class StartupAdvisorBriefingCurrentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = StartupReadinessRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        briefing = (
+            _visible_advisor_briefings(request.user)
+            .filter(startup_profile=startup_profile)
+            .select_related(
+                "startup_profile",
+                "source_snapshot",
+                "requested_by",
+            )
+            .order_by("-completed_at", "-created_at", "-id")
+            .first()
+        )
+        data = StartupAdvisorBriefingSerializer(briefing).data if briefing is not None else None
+        return Response(
+            {
+                "startup_profile_id": str(startup_profile.id),
+                "has_briefing": briefing is not None,
+                "briefing": data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupAdvisorBriefingListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = StartupReadinessRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        briefings = (
+            _visible_advisor_briefings(request.user)
+            .filter(startup_profile=startup_profile)
+            .select_related(
+                "startup_profile",
+                "source_snapshot",
+                "requested_by",
+            )
+            .order_by("-completed_at", "-created_at", "-id")
+        )
+        data = StartupAdvisorBriefingSerializer(
+            briefings,
+            many=True,
+        ).data
+        return Response(
+            {
+                "startup_profile_id": str(startup_profile.id),
+                "count": len(data),
+                "briefings": data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupAdvisorBriefingDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, briefing_id):
+        briefing = get_object_or_404(
+            _visible_advisor_briefings(request.user).select_related(
+                "startup_profile",
+                "source_snapshot",
+                "requested_by",
+            ),
+            pk=briefing_id,
+        )
+        return Response(
+            StartupAdvisorBriefingSerializer(briefing).data,
+            status=status.HTTP_200_OK,
         )

@@ -36,7 +36,10 @@ from apps.sources.views import (
     SourceViewSet,
 )
 from apps.startups.advisor_views import (
+    StartupAdvisorBriefingCurrentView,
+    StartupAdvisorBriefingDetailView,
     StartupAdvisorBriefingGenerateView,
+    StartupAdvisorBriefingListView,
     StartupAdvisorCurrentView,
     StartupAdvisorSnapshotGenerateView,
 )
@@ -124,6 +127,21 @@ urlpatterns = [
         "api/v1/startup-advisor/briefings/generate/",
         StartupAdvisorBriefingGenerateView.as_view(),
         name="startup-advisor-briefing-generate",
+    ),
+    path(
+        "api/v1/startup-advisor/briefings/current/",
+        StartupAdvisorBriefingCurrentView.as_view(),
+        name="startup-advisor-briefing-current",
+    ),
+    path(
+        "api/v1/startup-advisor/briefings/",
+        StartupAdvisorBriefingListView.as_view(),
+        name="startup-advisor-briefing-list",
+    ),
+    path(
+        "api/v1/startup-advisor/briefings/<uuid:briefing_id>/",
+        StartupAdvisorBriefingDetailView.as_view(),
+        name="startup-advisor-briefing-detail",
     ),
     path(
         "api/v1/startup-advisor/current/",
