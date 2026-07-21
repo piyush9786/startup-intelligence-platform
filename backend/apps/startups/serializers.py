@@ -2,6 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from .models import (
+    StartupAdvisorSnapshot,
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
@@ -114,6 +115,84 @@ class StartupReadinessActionPlanSerializer(serializers.ModelSerializer):
             "items",
             "source_engine_version",
             "planner_version",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
+class StartupAdvisorSnapshotGenerationRequestSerializer(serializers.Serializer):
+    startup_profile_id = serializers.UUIDField()
+    profile = serializers.JSONField(required=False, write_only=True)
+    readiness = serializers.JSONField(required=False, write_only=True)
+    assessment = serializers.JSONField(required=False, write_only=True)
+    action_plan = serializers.JSONField(required=False, write_only=True)
+    recommendations = serializers.JSONField(
+        required=False,
+        write_only=True,
+    )
+    generation = serializers.JSONField(required=False, write_only=True)
+
+    def validate(self, attrs):
+        raw_fields = [
+            name
+            for name in (
+                "profile",
+                "readiness",
+                "assessment",
+                "action_plan",
+                "recommendations",
+                "generation",
+            )
+            if name in attrs
+        ]
+        if raw_fields:
+            raise serializers.ValidationError(
+                {
+                    name: ("Raw advisor data is not accepted. Use startup_profile_id.")
+                    for name in raw_fields
+                }
+            )
+        return attrs
+
+
+class StartupAdvisorSnapshotSerializer(serializers.ModelSerializer):
+    startup_profile_id = serializers.UUIDField(read_only=True)
+    requested_by_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
+    readiness_assessment_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
+    readiness_action_plan_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
+    recommendation_generation_run_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = StartupAdvisorSnapshot
+        fields = (
+            "id",
+            "startup_profile_id",
+            "requested_by_id",
+            "readiness_assessment_id",
+            "readiness_action_plan_id",
+            "recommendation_generation_run_id",
+            "has_readiness_assessment",
+            "has_action_plan",
+            "has_recommendation_generation",
+            "profile_snapshot",
+            "readiness_snapshot",
+            "action_plan_snapshot",
+            "recommendation_generation_snapshot",
+            "recommendations_snapshot",
+            "recommendation_count",
+            "snapshot_version",
             "created_at",
         )
         read_only_fields = fields

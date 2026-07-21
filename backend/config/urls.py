@@ -35,7 +35,10 @@ from apps.sources.views import (
     SourceDocumentViewSet,
     SourceViewSet,
 )
-from apps.startups.advisor_views import StartupAdvisorCurrentView
+from apps.startups.advisor_views import (
+    StartupAdvisorCurrentView,
+    StartupAdvisorSnapshotGenerateView,
+)
 from apps.startups.views import (
     StartupProfileViewSet,
     StartupReadinessActionPlanCurrentView,
@@ -120,6 +123,11 @@ urlpatterns = [
         "api/v1/startup-advisor/current/",
         StartupAdvisorCurrentView.as_view(),
         name="startup-advisor-current",
+    ),
+    path(
+        "api/v1/startup-advisor/snapshots/generate/",
+        StartupAdvisorSnapshotGenerateView.as_view(),
+        name="startup-advisor-snapshot-generate",
     ),
     path(
         "api/v1/startup-readiness/evaluate/",
