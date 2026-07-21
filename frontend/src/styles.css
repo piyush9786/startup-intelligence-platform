@@ -934,3 +934,43 @@ select:focus {
     width: 34px;
   }
 }
+
+.topbar-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+}
+
+.topbar-link {
+  border-radius: 999px;
+  color: var(--forest);
+  font-size: 0.82rem;
+  font-weight: 760;
+  padding: 0.65rem 0.8rem;
+  text-decoration: none;
+}
+
+.topbar-link:hover {
+  background: rgba(217, 239, 225, 0.7);
+}
+
+.button:focus-visible,
+.topbar-link:focus-visible,
+.history-item:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid rgba(28, 81, 55, 0.36);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
