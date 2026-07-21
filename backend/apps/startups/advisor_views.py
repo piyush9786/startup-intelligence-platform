@@ -15,6 +15,7 @@ from apps.recommendations.services import (
 
 from .models import (
     StartupAdvisorBriefing,
+    StartupAdvisorBriefingJob,
     StartupAdvisorSnapshot,
     StartupProfile,
     StartupReadinessActionPlan,
@@ -22,6 +23,7 @@ from .models import (
 )
 from .serializers import (
     StartupAdvisorBriefingGenerationRequestSerializer,
+    StartupAdvisorBriefingJobSerializer,
     StartupAdvisorBriefingSerializer,
     StartupAdvisorSnapshotGenerationRequestSerializer,
     StartupAdvisorSnapshotSerializer,
@@ -30,12 +32,11 @@ from .serializers import (
     StartupReadinessRetrievalRequestSerializer,
 )
 from .services import (
-    AdvisorSnapshotChangedError,
-    BriefingOutputValidationError,
-    LLMProviderResponseError,
-    LLMProviderUnavailableError,
     create_startup_advisor_snapshot,
-    generate_startup_advisor_briefing,
+)
+from .services.advisor_briefing_jobs import (
+    AdvisorBriefingJobDispatchError,
+    queue_startup_advisor_briefing_job,
 )
 
 
@@ -48,6 +49,13 @@ def _visible_profiles(user):
 
 def _visible_advisor_briefings(user):
     queryset = StartupAdvisorBriefing.objects.all()
+    if not user.is_staff:
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
+
+
+def _visible_advisor_briefing_jobs(user):
+    queryset = StartupAdvisorBriefingJob.objects.all()
     if not user.is_staff:
         queryset = queryset.filter(startup_profile__owner=user)
     return queryset
@@ -220,32 +228,79 @@ class StartupAdvisorBriefingGenerateView(APIView):
         )
 
         try:
-            briefing = generate_startup_advisor_briefing(
+            job, created = queue_startup_advisor_briefing_job(
                 source_snapshot=source_snapshot,
                 requested_by=request.user,
             )
-        except LLMProviderUnavailableError as exc:
+        except AdvisorBriefingJobDispatchError as exc:
             return Response(
                 {"detail": str(exc)},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        except (
-            LLMProviderResponseError,
-            BriefingOutputValidationError,
-        ) as exc:
-            return Response(
-                {"detail": str(exc)},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-        except AdvisorSnapshotChangedError as exc:
-            return Response(
-                {"detail": str(exc)},
-                status=status.HTTP_409_CONFLICT,
-            )
 
         return Response(
-            StartupAdvisorBriefingSerializer(briefing).data,
-            status=status.HTTP_201_CREATED,
+            {
+                "created": created,
+                "job": StartupAdvisorBriefingJobSerializer(job).data,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class StartupAdvisorBriefingJobCurrentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = StartupReadinessRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+
+        job = (
+            _visible_advisor_briefing_jobs(request.user)
+            .filter(startup_profile=startup_profile)
+            .select_related(
+                "startup_profile",
+                "source_snapshot",
+                "requested_by",
+                "briefing",
+            )
+            .order_by("-created_at", "-id")
+            .first()
+        )
+
+        return Response(
+            {
+                "startup_profile_id": str(startup_profile.id),
+                "has_job": job is not None,
+                "job": (StartupAdvisorBriefingJobSerializer(job).data if job is not None else None),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupAdvisorBriefingJobDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, job_id):
+        job = get_object_or_404(
+            _visible_advisor_briefing_jobs(request.user).select_related(
+                "startup_profile",
+                "source_snapshot",
+                "requested_by",
+                "briefing",
+            ),
+            pk=job_id,
+        )
+
+        return Response(
+            StartupAdvisorBriefingJobSerializer(job).data,
+            status=status.HTTP_200_OK,
         )
 
 
