@@ -1,5 +1,5 @@
 import uuid
-from copy import deepcopy
+from types import SimpleNamespace
 
 import pytest
 from django.urls import reverse
@@ -11,44 +11,13 @@ from apps.recommendations.tests.test_recommendation_api import (
     make_profile,
     make_user,
 )
-from apps.startups.models import StartupAdvisorBriefing
-from apps.startups.services import (
-    BRIEFING_DISCLAIMER,
-    LLMGenerationResult,
-    LLMProviderUnavailableError,
-    create_startup_advisor_snapshot,
+from apps.startups.models import (
+    StartupAdvisorBriefing,
+    StartupAdvisorBriefingJob,
 )
+from apps.startups.services import create_startup_advisor_snapshot
 
 pytestmark = pytest.mark.django_db
-
-
-class FakeProvider:
-    def __init__(self, payload):
-        self.payload = payload
-
-    @property
-    def generation_parameters(self):
-        return {
-            "temperature": 0,
-            "seed": 7,
-            "think": False,
-        }
-
-    def generate(self, *, messages, response_schema):
-        return LLMGenerationResult(
-            payload=deepcopy(self.payload),
-            provider="fake-open-source",
-            model_name="fake-qwen",
-            prompt_token_count=100,
-            output_token_count=40,
-            total_duration_ns=1234,
-            response_metadata={"done": True},
-        )
-
-
-class UnavailableProvider(FakeProvider):
-    def generate(self, *, messages, response_schema):
-        raise LLMProviderUnavailableError("offline")
 
 
 def generate_url():
@@ -68,46 +37,27 @@ def create_source(*, username):
     return owner, profile, snapshot
 
 
-def valid_payload(profile):
-    return {
-        "executive_summary": "Grounded summary.",
-        "current_position": "Grounded position.",
-        "top_priorities": [
-            {
-                "priority": 1,
-                "title": "Complete startup information",
-                "reason": "The profile is persisted.",
-                "recommended_action": "Add missing details.",
-                "source_references": [
-                    {
-                        "source_type": "profile",
-                        "source_id": str(profile.id),
-                        "field_path": "/startup_name",
-                    }
-                ],
-            }
-        ],
-        "scheme_guidance": [],
-        "risks": [],
-        "questions_for_founder": ["What is the funding goal?"],
-        "disclaimer": BRIEFING_DISCLAIMER,
-    }
+def patch_dispatch(monkeypatch, *, task_id):
+    dispatched_job_ids = []
 
+    def fake_delay(job_id):
+        dispatched_job_ids.append(job_id)
+        return SimpleNamespace(id=task_id)
 
-def patch_provider(monkeypatch, provider):
     monkeypatch.setattr(
-        "apps.startups.services.advisor_briefing.get_startup_advisor_llm_provider",
-        lambda: provider,
+        "apps.startups.tasks.generate_startup_advisor_briefing_task.delay",
+        fake_delay,
     )
+    return dispatched_job_ids
 
 
-def test_owner_can_generate_grounded_briefing(monkeypatch):
+def test_owner_can_queue_briefing_job(monkeypatch):
     owner, profile, snapshot = create_source(
         username="briefing-api-owner",
     )
-    patch_provider(
+    dispatched_job_ids = patch_dispatch(
         monkeypatch,
-        FakeProvider(valid_payload(profile)),
+        task_id="celery-api-owner",
     )
 
     response = authenticated_client(owner).post(
@@ -116,25 +66,65 @@ def test_owner_can_generate_grounded_briefing(monkeypatch):
         format="json",
     )
 
-    assert response.status_code == status.HTTP_201_CREATED
-    assert response.data["source_snapshot_id"] == str(snapshot.id)
-    assert response.data["startup_profile_id"] == str(profile.id)
-    assert response.data["provider"] == "fake-open-source"
-    assert response.data["model_name"] == "fake-qwen"
-    assert response.data["briefing"]["executive_summary"] == ("Grounded summary.")
-    assert StartupAdvisorBriefing.objects.count() == 1
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    assert response.data["created"] is True
+    assert response.data["job"]["startup_profile_id"] == str(profile.id)
+    assert response.data["job"]["source_snapshot_id"] == str(snapshot.id)
+    assert response.data["job"]["status"] == "queued"
+    assert response.data["job"]["is_terminal"] is False
+    assert "celery_task_id" not in response.data["job"]
+
+    job = StartupAdvisorBriefingJob.objects.get()
+    assert dispatched_job_ids == [str(job.id)]
+    assert job.requested_by == owner
+    assert job.celery_task_id == "celery-api-owner"
+    assert StartupAdvisorBriefing.objects.count() == 0
+
+
+def test_duplicate_request_reuses_active_job(monkeypatch):
+    owner, _profile, snapshot = create_source(
+        username="briefing-api-duplicate",
+    )
+    dispatched_job_ids = patch_dispatch(
+        monkeypatch,
+        task_id="celery-api-duplicate",
+    )
+    client = authenticated_client(owner)
+
+    first_response = client.post(
+        generate_url(),
+        {"advisor_snapshot_id": str(snapshot.id)},
+        format="json",
+    )
+    second_response = client.post(
+        generate_url(),
+        {"advisor_snapshot_id": str(snapshot.id)},
+        format="json",
+    )
+
+    assert first_response.status_code == status.HTTP_202_ACCEPTED
+    assert second_response.status_code == status.HTTP_202_ACCEPTED
+    assert first_response.data["created"] is True
+    assert second_response.data["created"] is False
+    assert first_response.data["job"]["id"] == second_response.data["job"]["id"]
+    assert StartupAdvisorBriefingJob.objects.count() == 1
+    assert len(dispatched_job_ids) == 1
 
 
 def test_other_user_receives_404(monkeypatch):
-    owner, profile, snapshot = create_source(
+    _owner, _profile, snapshot = create_source(
         username="briefing-api-private-owner",
     )
     other = make_user(
         username="briefing-api-private-other",
     )
-    patch_provider(
-        monkeypatch,
-        FakeProvider(valid_payload(profile)),
+
+    def unexpected_dispatch(_job_id):
+        raise AssertionError("Private snapshots must not be dispatched.")
+
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing_task.delay",
+        unexpected_dispatch,
     )
 
     response = authenticated_client(other).post(
@@ -144,20 +134,20 @@ def test_other_user_receives_404(monkeypatch):
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert StartupAdvisorBriefing.objects.count() == 0
+    assert StartupAdvisorBriefingJob.objects.count() == 0
 
 
-def test_staff_can_generate_for_another_user(monkeypatch):
-    owner, profile, snapshot = create_source(
+def test_staff_can_queue_for_another_user(monkeypatch):
+    _owner, profile, snapshot = create_source(
         username="briefing-api-staff-owner",
     )
     staff = make_user(
         username="briefing-api-staff",
         is_staff=True,
     )
-    patch_provider(
+    patch_dispatch(
         monkeypatch,
-        FakeProvider(valid_payload(profile)),
+        task_id="celery-api-staff",
     )
 
     response = authenticated_client(staff).post(
@@ -166,10 +156,11 @@ def test_staff_can_generate_for_another_user(monkeypatch):
         format="json",
     )
 
-    assert response.status_code == status.HTTP_201_CREATED
-    briefing = StartupAdvisorBriefing.objects.get()
-    assert briefing.requested_by == staff
-    assert briefing.startup_profile == profile
+    assert response.status_code == status.HTTP_202_ACCEPTED
+
+    job = StartupAdvisorBriefingJob.objects.get()
+    assert job.requested_by == staff
+    assert job.startup_profile == profile
 
 
 @pytest.mark.parametrize(
@@ -187,12 +178,16 @@ def test_raw_or_provider_overrides_are_rejected(
     field_name,
     field_value,
 ):
-    owner, profile, snapshot = create_source(
+    owner, _profile, snapshot = create_source(
         username=f"briefing-api-raw-{field_name}",
     )
-    patch_provider(
-        monkeypatch,
-        FakeProvider(valid_payload(profile)),
+
+    def unexpected_dispatch(_job_id):
+        raise AssertionError("Invalid requests must not be dispatched.")
+
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing_task.delay",
+        unexpected_dispatch,
     )
 
     response = authenticated_client(owner).post(
@@ -206,32 +201,43 @@ def test_raw_or_provider_overrides_are_rejected(
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert field_name in response.data
-    assert StartupAdvisorBriefing.objects.count() == 0
+    assert StartupAdvisorBriefingJob.objects.count() == 0
 
 
 def test_unknown_snapshot_returns_404(monkeypatch):
     owner = make_user(username="briefing-api-unknown")
-    patch_provider(
-        monkeypatch,
-        FakeProvider({}),
+
+    def unexpected_dispatch(_job_id):
+        raise AssertionError("Unknown snapshots must not be dispatched.")
+
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing_task.delay",
+        unexpected_dispatch,
     )
 
     response = authenticated_client(owner).post(
         generate_url(),
-        {"advisor_snapshot_id": ("00000000-0000-0000-0000-000000000001")},
+        {
+            "advisor_snapshot_id": ("00000000-0000-0000-0000-000000000001"),
+        },
         format="json",
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert StartupAdvisorBriefingJob.objects.count() == 0
 
 
-def test_unavailable_local_model_returns_503(monkeypatch):
+def test_dispatch_failure_returns_safe_503(monkeypatch):
     owner, profile, snapshot = create_source(
-        username="briefing-api-offline",
+        username="briefing-api-dispatch-failure",
     )
-    patch_provider(
-        monkeypatch,
-        UnavailableProvider(valid_payload(profile)),
+
+    def failing_dispatch(_job_id):
+        raise OSError("private Redis connection detail")
+
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing_task.delay",
+        failing_dispatch,
     )
 
     response = authenticated_client(owner).post(
@@ -241,28 +247,14 @@ def test_unavailable_local_model_returns_503(monkeypatch):
     )
 
     assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
-    assert StartupAdvisorBriefing.objects.count() == 0
+    assert "private Redis connection detail" not in response.data["detail"]
 
-
-def test_invalid_model_output_returns_502(monkeypatch):
-    owner, profile, snapshot = create_source(
-        username="briefing-api-invalid",
+    job = StartupAdvisorBriefingJob.objects.get(
+        startup_profile=profile,
     )
-    payload = valid_payload(profile)
-    payload["top_priorities"][0]["source_references"][0]["field_path"] = "/invented"
-    patch_provider(
-        monkeypatch,
-        FakeProvider(payload),
-    )
-
-    response = authenticated_client(owner).post(
-        generate_url(),
-        {"advisor_snapshot_id": str(snapshot.id)},
-        format="json",
-    )
-
-    assert response.status_code == status.HTTP_502_BAD_GATEWAY
-    assert StartupAdvisorBriefing.objects.count() == 0
+    assert job.status == StartupAdvisorBriefingJob.Status.FAILED
+    assert job.error_code == "dispatch_failed"
+    assert "private Redis connection detail" not in job.error_message
 
 
 def test_unauthenticated_request_is_rejected():
@@ -273,4 +265,4 @@ def test_unauthenticated_request_is_rejected():
     )
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert StartupAdvisorBriefing.objects.count() == 0
+    assert StartupAdvisorBriefingJob.objects.count() == 0

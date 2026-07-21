@@ -7,6 +7,7 @@ from .assessment_schema import (
 )
 from .models import (
     StartupAdvisorBriefing,
+    StartupAdvisorBriefingJob,
     StartupAdvisorSnapshot,
     StartupAssessmentDraft,
     StartupProfile,
@@ -627,3 +628,42 @@ class StartupAdvisorBriefingSerializer(serializers.ModelSerializer):
             "created_at",
         )
         read_only_fields = fields
+
+
+class StartupAdvisorBriefingJobSerializer(serializers.ModelSerializer):
+    startup_profile_id = serializers.UUIDField(read_only=True)
+    source_snapshot_id = serializers.UUIDField(read_only=True)
+    requested_by_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
+    briefing_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
+    is_terminal = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StartupAdvisorBriefingJob
+        fields = (
+            "id",
+            "startup_profile_id",
+            "source_snapshot_id",
+            "requested_by_id",
+            "briefing_id",
+            "status",
+            "error_code",
+            "error_message",
+            "started_at",
+            "completed_at",
+            "created_at",
+            "updated_at",
+            "is_terminal",
+        )
+        read_only_fields = fields
+
+    def get_is_terminal(self, obj):
+        return obj.status in (
+            StartupAdvisorBriefingJob.Status.SUCCEEDED,
+            StartupAdvisorBriefingJob.Status.FAILED,
+        )
