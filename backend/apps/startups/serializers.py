@@ -1,9 +1,14 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from .assessment_schema import (
+    assessment_completion_percent,
+    startup_profile_to_assessment_data,
+)
 from .models import (
     StartupAdvisorBriefing,
     StartupAdvisorSnapshot,
+    StartupAssessmentDraft,
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
@@ -20,6 +25,369 @@ class StartupProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+
+class StartupAssessmentDraftSerializer(serializers.ModelSerializer):
+    owner_id = serializers.UUIDField(read_only=True)
+    startup_profile_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
+    completion_percent = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StartupAssessmentDraft
+        fields = (
+            "id",
+            "owner_id",
+            "startup_profile_id",
+            "status",
+            "current_step",
+            "data",
+            "completion_percent",
+            "submitted_at",
+            "submitted_profile_snapshot",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = fields
+
+    def get_completion_percent(self, instance):
+        return assessment_completion_percent(instance.data)
+
+
+class StartupAssessmentDraftCreateSerializer(serializers.Serializer):
+    startup_profile_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+    )
+    current_step = serializers.IntegerField(
+        min_value=1,
+        max_value=8,
+        default=1,
+    )
+    data = serializers.JSONField(
+        required=False,
+        default=dict,
+    )
+
+    def validate_data(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Assessment draft data must be a JSON object.")
+        return value
+
+    def validate(self, attrs):
+        request = self.context["request"]
+        startup_profile_id = attrs.get("startup_profile_id")
+        startup_profile = None
+
+        if startup_profile_id is not None:
+            startup_profile = (
+                StartupProfile.objects.filter(
+                    pk=startup_profile_id,
+                    owner=request.user,
+                )
+                .select_related("owner")
+                .first()
+            )
+            if startup_profile is None:
+                raise serializers.ValidationError(
+                    {"startup_profile_id": ("The startup profile was not found for this user.")}
+                )
+
+            existing = StartupAssessmentDraft.objects.filter(
+                owner=request.user,
+                startup_profile=startup_profile,
+                status=StartupAssessmentDraft.Status.DRAFT,
+            ).exists()
+            if existing:
+                raise serializers.ValidationError(
+                    {
+                        "startup_profile_id": (
+                            "An open assessment draft already exists for this startup profile."
+                        )
+                    }
+                )
+
+        attrs["startup_profile"] = startup_profile
+        return attrs
+
+    def create(self, validated_data):
+        request = self.context["request"]
+        startup_profile = validated_data.pop("startup_profile")
+        validated_data.pop("startup_profile_id", None)
+        supplied_data = validated_data.pop("data", {})
+
+        data = (
+            startup_profile_to_assessment_data(startup_profile)
+            if startup_profile is not None
+            else {}
+        )
+        data.update(supplied_data)
+
+        return StartupAssessmentDraft.objects.create(
+            owner=request.user,
+            startup_profile=startup_profile,
+            data=data,
+            **validated_data,
+        )
+
+
+class StartupAssessmentDraftUpdateSerializer(serializers.Serializer):
+    current_step = serializers.IntegerField(
+        min_value=1,
+        max_value=8,
+        required=False,
+    )
+    data = serializers.JSONField(required=False)
+
+    def validate_data(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Assessment draft data must be a JSON object.")
+        return value
+
+    def update(self, instance, validated_data):
+        if instance.status != StartupAssessmentDraft.Status.DRAFT:
+            raise serializers.ValidationError("Submitted assessment drafts cannot be changed.")
+
+        if "current_step" in validated_data:
+            instance.current_step = validated_data["current_step"]
+        if "data" in validated_data:
+            instance.data = {
+                **instance.data,
+                **validated_data["data"],
+            }
+        instance.save()
+        return instance
+
+
+class StartupAssessmentDraftSubmitRequestSerializer(serializers.Serializer):
+    confirm = serializers.BooleanField(
+        required=False,
+        default=True,
+    )
+
+    def validate_confirm(self, value):
+        if not value:
+            raise serializers.ValidationError("Submission confirmation is required.")
+        return value
+
+
+class StartupAssessmentSubmissionSerializer(serializers.Serializer):
+    startup_name = serializers.CharField(max_length=255)
+    legal_name = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+    )
+    description = serializers.CharField(
+        required=False,
+        allow_blank=True,
+    )
+    incorporation_type = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+    )
+    incorporation_date = serializers.DateField(
+        required=False,
+        allow_null=True,
+    )
+    state = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+    )
+    district = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+    )
+    stage = serializers.ChoiceField(
+        choices=StartupProfile.Stage.choices,
+    )
+    sectors = serializers.ListField(
+        child=serializers.CharField(max_length=150),
+        required=False,
+        allow_empty=True,
+    )
+    technologies = serializers.ListField(
+        child=serializers.CharField(max_length=150),
+        required=False,
+        allow_empty=True,
+    )
+    founder_categories = serializers.ListField(
+        child=serializers.CharField(max_length=150),
+        required=False,
+        allow_empty=True,
+    )
+    founder_gender = serializers.CharField(
+        max_length=50,
+        required=False,
+        allow_blank=True,
+    )
+    dpiit_recognized = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+    )
+    udyam_registered = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+    )
+    annual_turnover = serializers.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+        allow_null=True,
+    )
+    revenue_stage = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+    )
+    funding_required = serializers.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+        allow_null=True,
+    )
+    funding_purpose = serializers.CharField(
+        required=False,
+        allow_blank=True,
+    )
+    team_size = serializers.IntegerField(
+        min_value=1,
+        required=False,
+        allow_null=True,
+    )
+
+    founder_role = serializers.CharField(
+        max_length=150,
+        required=False,
+        allow_blank=True,
+    )
+    founder_experience_years = serializers.IntegerField(
+        min_value=0,
+        required=False,
+        allow_null=True,
+    )
+    founder_education = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+    )
+    number_of_founders = serializers.IntegerField(
+        min_value=1,
+        required=False,
+        allow_null=True,
+    )
+    business_model = serializers.CharField(
+        max_length=150,
+        required=False,
+        allow_blank=True,
+    )
+    customer_status = serializers.CharField(
+        max_length=150,
+        required=False,
+        allow_blank=True,
+    )
+    target_customer = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+    )
+    traction_summary = serializers.CharField(
+        required=False,
+        allow_blank=True,
+    )
+    monthly_revenue = serializers.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+        allow_null=True,
+    )
+    funding_stage = serializers.CharField(
+        max_length=150,
+        required=False,
+        allow_blank=True,
+    )
+    capital_raised = serializers.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+        allow_null=True,
+    )
+    runway_months = serializers.IntegerField(
+        min_value=0,
+        required=False,
+        allow_null=True,
+    )
+    preferred_funding_type = serializers.CharField(
+        max_length=150,
+        required=False,
+        allow_blank=True,
+    )
+    team_roles = serializers.ListField(
+        child=serializers.CharField(max_length=150),
+        required=False,
+        allow_empty=True,
+    )
+    skills_needs = serializers.ListField(
+        child=serializers.CharField(max_length=150),
+        required=False,
+        allow_empty=True,
+    )
+    incubator_affiliation = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+    )
+    mentor_access = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+    )
+    cloud_credits = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+    )
+    certification_needs = serializers.ListField(
+        child=serializers.CharField(max_length=255),
+        required=False,
+        allow_empty=True,
+    )
+    compliance_support_needs = serializers.ListField(
+        child=serializers.CharField(max_length=255),
+        required=False,
+        allow_empty=True,
+    )
+    resource_needs = serializers.ListField(
+        child=serializers.CharField(max_length=255),
+        required=False,
+        allow_empty=True,
+    )
+    entity_types = serializers.ListField(
+        child=serializers.CharField(max_length=150),
+        required=False,
+        allow_empty=True,
+    )
+    regulatory_registrations = serializers.ListField(
+        child=serializers.CharField(max_length=150),
+        required=False,
+        allow_empty=True,
+    )
+    contact_email = serializers.EmailField(
+        required=False,
+        allow_blank=True,
+    )
+    website = serializers.URLField(
+        required=False,
+        allow_blank=True,
+    )
 
 
 class StartupReadinessEvaluationRequestSerializer(serializers.Serializer):

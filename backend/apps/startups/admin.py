@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import (
     StartupAdvisorBriefing,
     StartupAdvisorSnapshot,
+    StartupAssessmentDraft,
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
@@ -30,6 +31,46 @@ class StartupProfileAdmin(admin.ModelAdmin):
         "legal_name",
         "description",
     )
+
+
+@admin.register(StartupAssessmentDraft)
+class StartupAssessmentDraftAdmin(admin.ModelAdmin):
+    list_display = (
+        "owner",
+        "startup_profile",
+        "status",
+        "current_step",
+        "submitted_at",
+        "updated_at",
+    )
+    list_filter = (
+        "status",
+        "current_step",
+        "submitted_at",
+    )
+    search_fields = (
+        "owner__username",
+        "owner__email",
+        "startup_profile__startup_name",
+        "startup_profile__legal_name",
+    )
+    readonly_fields = (
+        "owner",
+        "startup_profile",
+        "status",
+        "current_step",
+        "data",
+        "submitted_at",
+        "submitted_profile_snapshot",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(StartupReadinessAssessment)
