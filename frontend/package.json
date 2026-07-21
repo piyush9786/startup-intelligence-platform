@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node -e \"console.log('Frontend test suite placeholder')\""
+    "test": "node --test"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.4.1",
