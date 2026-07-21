@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 import {
   briefingCounts,
@@ -12,10 +11,10 @@ import {
 test("normalizeCollection supports paginated and plain API responses", () => {
   const profiles = [{ id: "one" }, { id: "two" }];
 
-  assert.deepEqual(normalizeCollection(profiles), profiles);
-  assert.deepEqual(normalizeCollection({ results: profiles, count: 2 }), profiles);
-  assert.deepEqual(normalizeCollection({ detail: "unexpected" }), []);
-  assert.deepEqual(normalizeCollection(null), []);
+  expect(normalizeCollection(profiles)).toEqual(profiles);
+  expect(normalizeCollection({ results: profiles, count: 2 })).toEqual(profiles);
+  expect(normalizeCollection({ detail: "unexpected" })).toEqual([]);
+  expect(normalizeCollection(null)).toEqual([]);
 });
 
 test("humanizeApiError prioritizes DRF detail messages", () => {
@@ -27,10 +26,7 @@ test("humanizeApiError prioritizes DRF detail messages", () => {
     },
   };
 
-  assert.equal(
-    humanizeApiError(error),
-    "The local model is unavailable.",
-  );
+  expect(humanizeApiError(error)).toBe("The local model is unavailable.");
 });
 
 test("humanizeApiError flattens field validation errors", () => {
@@ -43,35 +39,31 @@ test("humanizeApiError flattens field validation errors", () => {
     },
   };
 
-  assert.equal(
-    humanizeApiError(error),
+  expect(humanizeApiError(error)).toBe(
     "username: This field is required. password: This field may not be blank.",
   );
 });
 
 test("humanizeApiError explains timeout and network failures", () => {
-  assert.equal(
-    humanizeApiError({ code: "ECONNABORTED" }),
+  expect(humanizeApiError({ code: "ECONNABORTED" })).toBe(
     "The request timed out. The local model may still be loading.",
   );
-  assert.equal(
-    humanizeApiError({ message: "Network Error" }),
+  expect(humanizeApiError({ message: "Network Error" })).toBe(
     "The platform API could not be reached.",
   );
 });
 
 test("sourceReferenceLabel renders source type and JSON Pointer path", () => {
-  assert.equal(
+  expect(
     sourceReferenceLabel({
       source_type: "recommendation_generation",
       field_path: "/status",
     }),
-    "recommendation generation · /status",
-  );
+  ).toBe("recommendation generation · /status");
 });
 
 test("briefingCounts handles complete and missing briefing payloads", () => {
-  assert.deepEqual(
+  expect(
     briefingCounts({
       briefing: {
         top_priorities: [{}, {}],
@@ -80,15 +72,14 @@ test("briefingCounts handles complete and missing briefing payloads", () => {
         questions_for_founder: ["Question"],
       },
     }),
-    {
-      priorities: 2,
-      schemes: 1,
-      risks: 3,
-      questions: 1,
-    },
-  );
+  ).toEqual({
+    priorities: 2,
+    schemes: 1,
+    risks: 3,
+    questions: 1,
+  });
 
-  assert.deepEqual(briefingCounts(null), {
+  expect(briefingCounts(null)).toEqual({
     priorities: 0,
     schemes: 0,
     risks: 0,
@@ -97,10 +88,7 @@ test("briefingCounts handles complete and missing briefing payloads", () => {
 });
 
 test("formatDateTime safely handles missing and invalid values", () => {
-  assert.equal(formatDateTime(null), "Time unavailable");
-  assert.equal(formatDateTime("not-a-date"), "Time unavailable");
-  assert.notEqual(
-    formatDateTime("2026-07-21T08:31:31Z"),
-    "Time unavailable",
-  );
+  expect(formatDateTime(null)).toBe("Time unavailable");
+  expect(formatDateTime("not-a-date")).toBe("Time unavailable");
+  expect(formatDateTime("2026-07-21T08:31:31Z")).not.toBe("Time unavailable");
 });
