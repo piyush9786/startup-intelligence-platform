@@ -59,6 +59,72 @@ class StartupProfile(TimeStampedModel):
         return self.startup_name
 
 
+class StartupAssessmentDraft(TimeStampedModel):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        SUBMITTED = "submitted", "Submitted"
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="startup_assessment_drafts",
+    )
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="assessment_drafts",
+        null=True,
+        blank=True,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+    )
+    current_step = models.PositiveSmallIntegerField(default=1)
+    data = models.JSONField(default=dict, blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    submitted_profile_snapshot = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["owner", "-updated_at"],
+                name="startup_draft_owner_updated",
+            ),
+            models.Index(
+                fields=["startup_profile", "-updated_at"],
+                name="startup_draft_profile_updated",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    current_step__gte=1,
+                    current_step__lte=8,
+                ),
+                name="startup_draft_step_range",
+            ),
+            models.UniqueConstraint(
+                fields=["owner", "startup_profile"],
+                condition=models.Q(
+                    status="draft",
+                    startup_profile__isnull=False,
+                ),
+                name="startup_one_draft_per_profile",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        profile_name = (
+            self.startup_profile.startup_name
+            if self.startup_profile_id
+            else self.data.get("startup_name", "New startup")
+        )
+        return f"{profile_name} assessment ({self.status})"
+
+
 class StartupReadinessAssessment(TimeStampedModel):
     class Status(models.TextChoices):
         BLOCKED = "blocked", "Blocked"

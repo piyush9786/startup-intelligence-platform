@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 
 import pytest
@@ -13,6 +14,7 @@ from apps.startups.services import (
     create_startup_advisor_snapshot,
     validate_startup_advisor_briefing,
 )
+from apps.startups.services.briefing_schema import _canonicalize_model_field_path
 
 pytestmark = pytest.mark.django_db
 
@@ -106,6 +108,31 @@ def test_unknown_source_identifier_is_rejected():
         )
 
 
+def test_model_field_path_is_canonicalized_to_json_pointer():
+    assert (
+        _canonicalize_model_field_path(
+            "/readiness/blocking_findings[0].reason",
+            source_type="readiness",
+        )
+        == "/blocking_findings/0/reason"
+    )
+
+
+def test_redundant_source_prefix_is_canonicalized():
+    _owner, profile, snapshot = make_snapshot()
+    payload = valid_payload(profile)
+
+    reference = payload["top_priorities"][0]["source_references"][0]
+    reference["field_path"] = "/profile/startup_name"
+
+    result = validate_startup_advisor_briefing(
+        payload=payload,
+        source_snapshot=snapshot,
+    )
+
+    assert result["top_priorities"][0]["source_references"][0]["field_path"] == "/startup_name"
+
+
 def test_missing_source_field_path_is_rejected():
     _owner, profile, snapshot = make_snapshot()
     payload = valid_payload(profile)
@@ -157,7 +184,7 @@ def test_scheme_guidance_must_cite_recommendation():
 
     with pytest.raises(
         BriefingOutputValidationError,
-        match="must cite a persisted recommendation",
+        match="must be empty when the advisor snapshot contains no persisted recommendations",
     ):
         validate_startup_advisor_briefing(
             payload=payload,
@@ -176,4 +203,10 @@ def test_prompt_contains_schema_and_immutable_snapshot():
     assert prompt["source_input"]["profile"]["id"] == str(profile.id)
     assert prompt["response_schema"]["type"] == "object"
     assert prompt["messages"][0]["role"] == "system"
+    assert "Keep the briefing concise:" in prompt["messages"][0]["content"]
+
+    user_payload = json.loads(prompt["messages"][1]["content"])
+
+    assert "response_schema" not in user_payload
+    assert user_payload["startup_advisor_snapshot"]["advisor_snapshot_id"] == str(snapshot.id)
     assert str(snapshot.id) in prompt["messages"][1]["content"]

@@ -65,7 +65,7 @@ export function expireSession(
 
 const client = axios.create({
   baseURL: apiRoot,
-  timeout: 360000,
+  timeout: 900000,
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
@@ -150,6 +150,48 @@ export async function login({ username, password }) {
 export async function listStartupProfiles() {
   const response = await client.get("/startup-profiles/");
   return normalizeCollection(response.data);
+}
+
+export async function listStartupAssessmentDrafts({
+  startupProfileId = null,
+  status = "draft",
+} = {}) {
+  const response = await client.get("/startup-assessment-drafts/", {
+    params: {
+      status,
+      ...(startupProfileId
+        ? { startup_profile: startupProfileId }
+        : {}),
+    },
+  });
+  return normalizeCollection(response.data);
+}
+
+export async function createStartupAssessmentDraft({
+  startupProfileId = null,
+} = {}) {
+  const response = await client.post("/startup-assessment-drafts/", {
+    startup_profile_id: startupProfileId,
+    current_step: 1,
+    data: {},
+  });
+  return response.data;
+}
+
+export async function updateStartupAssessmentDraft(draftId, payload) {
+  const response = await client.patch(
+    `/startup-assessment-drafts/${draftId}/`,
+    payload,
+  );
+  return response.data;
+}
+
+export async function submitStartupAssessmentDraft(draftId) {
+  const response = await client.post(
+    `/startup-assessment-drafts/${draftId}/submit/`,
+    { confirm: true },
+  );
+  return response.data;
 }
 
 export async function getStartupAdvisorCurrent(startupProfileId) {
