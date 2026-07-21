@@ -152,6 +152,33 @@ export async function listStartupProfiles() {
   return normalizeCollection(response.data);
 }
 
+export async function getStartupAdvisorCurrent(startupProfileId) {
+  const response = await client.get("/startup-advisor/current/", {
+    params: { startup_profile_id: startupProfileId },
+  });
+  return response.data;
+}
+
+export async function listSchemes() {
+  const schemes = [];
+  let nextUrl = "/schemes/";
+  let params = {
+    lifecycle_status: "active",
+    ordering: "canonical_name",
+  };
+  let pageCount = 0;
+
+  while (nextUrl && pageCount < 100) {
+    const response = await client.get(nextUrl, { params });
+    schemes.push(...normalizeCollection(response.data));
+    nextUrl = response.data?.next || null;
+    params = undefined;
+    pageCount += 1;
+  }
+
+  return schemes;
+}
+
 export async function getCurrentBriefing(startupProfileId) {
   const response = await client.get("/startup-advisor/briefings/current/", {
     params: { startup_profile_id: startupProfileId },
