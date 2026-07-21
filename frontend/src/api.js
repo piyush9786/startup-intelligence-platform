@@ -2,8 +2,26 @@ import axios from "axios";
 
 import { humanizeApiError, normalizeCollection } from "./advisor";
 
+const browserOrigin =
+  typeof window === "undefined" ? "http://localhost" : window.location.origin;
+
 export const apiRoot =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+
+const derivedPlatformRoot = apiRoot.replace(/\/api\/v1\/?$/, "") || "/";
+export const platformRoot =
+  import.meta.env.VITE_PLATFORM_BASE_URL || derivedPlatformRoot;
+
+export function buildPlatformUrl(pathname) {
+  const absoluteRoot = new URL(platformRoot, `${browserOrigin}/`).toString();
+  const base = `${absoluteRoot.replace(/\/+$/, "")}/`;
+  return new URL(String(pathname).replace(/^\/+/, ""), base).toString();
+}
+
+export const adminUrl = buildPlatformUrl("/admin/");
+export const apiDocsUrl = buildPlatformUrl("/api/docs/");
+export const SESSION_EXPIRED_EVENT =
+  "startup-intelligence:session-expired";
 
 const SESSION_KEY = "startup-intelligence-founder-session";
 
@@ -35,6 +53,16 @@ export function clearSession(storage = sessionStorageOrNull()) {
   storage.removeItem(SESSION_KEY);
 }
 
+export function expireSession(
+  storage = sessionStorageOrNull(),
+  target = typeof window === "undefined" ? null : window,
+) {
+  clearSession(storage);
+  if (target?.dispatchEvent && typeof target.Event === "function") {
+    target.dispatchEvent(new target.Event(SESSION_EXPIRED_EVENT));
+  }
+}
+
 const client = axios.create({
   baseURL: apiRoot,
   timeout: 360000,
@@ -59,14 +87,16 @@ client.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const session = getSession();
-    const isRefreshRequest = originalRequest?.url?.includes("/auth/token/refresh/");
+    const isRefreshRequest = originalRequest?.url?.includes(
+      "/auth/token/refresh/",
+    );
 
-    if (
-      error.response?.status !== 401 ||
-      originalRequest?._retried ||
-      isRefreshRequest ||
-      !session?.refresh
-    ) {
+    if (error.response?.status !== 401 || isRefreshRequest) {
+      throw error;
+    }
+
+    if (originalRequest?._retried || !session?.refresh) {
+      expireSession();
       throw error;
     }
 
@@ -88,7 +118,7 @@ client.interceptors.response.use(
           return nextSession.access;
         })
         .catch((refreshError) => {
-          clearSession();
+          expireSession();
           throw refreshError;
         })
         .finally(() => {
