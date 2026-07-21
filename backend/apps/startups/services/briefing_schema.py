@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from jsonschema import Draft202012Validator
@@ -36,7 +37,7 @@ SOURCE_REFERENCE_SCHEMA = {
             "type": "string",
             "minLength": 1,
             "maxLength": 500,
-            "pattern": "^/",
+            "pattern": "^/.*$",
         },
     },
     "required": [
@@ -247,6 +248,34 @@ def _source_documents(
     return documents
 
 
+def _canonicalize_model_field_path(
+    pointer: str,
+    *,
+    source_type: str,
+) -> str:
+    """Convert common model path notation to an RFC 6901 pointer."""
+    candidate = pointer.strip()
+
+    # /items[0].reason -> /items/0/reason
+    candidate = re.sub(
+        r"\[(\d+)\]",
+        r"/\1",
+        candidate,
+    )
+    candidate = re.sub(
+        r"\.([A-Za-z_][A-Za-z0-9_]*)",
+        r"/\1",
+        candidate,
+    )
+
+    # /readiness/blocking_findings/0 -> /blocking_findings/0
+    source_prefix = f"/{source_type}/"
+    if candidate.startswith(source_prefix):
+        candidate = "/" + candidate[len(source_prefix) :]
+
+    return candidate
+
+
 def _resolve_json_pointer(document: Any, pointer: str) -> Any:
     if not pointer.startswith("/"):
         raise KeyError(pointer)
@@ -308,6 +337,16 @@ def validate_startup_advisor_briefing(
         )
 
     documents = _source_documents(source_snapshot)
+
+    has_persisted_recommendations = any(
+        source_type == "recommendation" for source_type, _source_id in documents
+    )
+    if payload["scheme_guidance"] and not has_persisted_recommendations:
+        raise BriefingOutputValidationError(
+            "Scheme guidance must be empty when the advisor "
+            "snapshot contains no persisted recommendations."
+        )
+
     for group_name, references in _iter_reference_groups(payload):
         for reference in references:
             source_key = (
@@ -319,17 +358,33 @@ def validate_startup_advisor_briefing(
                 raise BriefingOutputValidationError(
                     f"{group_name} cites an unavailable source: {source_key[0]} {source_key[1]}."
                 )
-            try:
-                _resolve_json_pointer(
-                    document,
-                    reference["field_path"],
-                )
-            except KeyError as exc:
+            original_path = reference["field_path"]
+            canonical_path = _canonicalize_model_field_path(
+                original_path,
+                source_type=reference["source_type"],
+            )
+
+            candidate_paths = [original_path]
+            if canonical_path != original_path:
+                candidate_paths.append(canonical_path)
+
+            for candidate_path in candidate_paths:
+                try:
+                    _resolve_json_pointer(
+                        document,
+                        candidate_path,
+                    )
+                except KeyError:
+                    continue
+
+                reference["field_path"] = candidate_path
+                break
+            else:
                 raise BriefingOutputValidationError(
                     f"{group_name} cites a missing field path "
-                    f"{reference['field_path']} in "
+                    f"{original_path} in "
                     f"{source_key[0]} {source_key[1]}."
-                ) from exc
+                )
 
     for item in payload["scheme_guidance"]:
         if not any(

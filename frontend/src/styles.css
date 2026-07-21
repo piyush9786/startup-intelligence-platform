@@ -2517,3 +2517,343 @@ body {
     flex-direction: column;
   }
 }
+
+/* Phase 4G.3B.2 founder assessment wizard */
+
+.assessment-wizard {
+  display: grid;
+  gap: 24px;
+}
+
+.assessment-wizard-header {
+  align-items: flex-start;
+  background:
+    radial-gradient(circle at 90% 20%, rgba(99, 77, 255, 0.16), transparent 35%),
+    linear-gradient(135deg, #ffffff, #f6f4ff);
+  border: 1px solid #ddd8ff;
+  border-radius: 24px;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  padding: clamp(24px, 4vw, 42px);
+}
+
+.assessment-wizard-header h1 {
+  margin: 8px 0 12px;
+  max-width: 760px;
+}
+
+.assessment-wizard-header p {
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 0;
+  max-width: 760px;
+}
+
+.assessment-completion {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #ded9ff;
+  border-radius: 18px;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  min-width: 142px;
+  padding: 18px;
+  text-align: center;
+}
+
+.assessment-completion strong {
+  color: #5640e8;
+  font-size: 2rem;
+}
+
+.assessment-completion span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.assessment-layout {
+  align-items: start;
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+}
+
+.assessment-stepper {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  position: sticky;
+  top: 88px;
+}
+
+.assessment-stepper button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 14px;
+  color: var(--text);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 34px 1fr;
+  padding: 12px;
+  text-align: left;
+}
+
+.assessment-stepper button:hover,
+.assessment-stepper button:focus-visible {
+  background: #f6f4ff;
+}
+
+.assessment-stepper button > span {
+  align-items: center;
+  background: #f1effb;
+  border-radius: 999px;
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 800;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.assessment-stepper button div {
+  display: grid;
+  gap: 3px;
+}
+
+.assessment-stepper button small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.assessment-stepper .assessment-step-active {
+  background: #eeeaff;
+  color: #4933df;
+}
+
+.assessment-stepper .assessment-step-active > span {
+  background: #5f49ef;
+  color: #ffffff;
+}
+
+.assessment-panel {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  min-width: 0;
+  padding: clamp(22px, 4vw, 36px);
+}
+
+.assessment-panel-heading {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  margin-bottom: 26px;
+  padding-bottom: 20px;
+}
+
+.assessment-panel-heading h2 {
+  margin: 6px 0;
+}
+
+.assessment-panel-heading p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.draft-status {
+  background: #f0f9f5;
+  border: 1px solid #cce9da;
+  border-radius: 999px;
+  color: #17603f;
+  flex: 0 0 auto;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.assessment-form-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.assessment-field {
+  display: grid;
+  gap: 8px;
+}
+
+.assessment-field > span {
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.assessment-field b {
+  color: #b42318;
+}
+
+.assessment-field input,
+.assessment-field select,
+.assessment-field textarea {
+  background: #fbfbfe;
+  border: 1px solid #d9dbe8;
+  border-radius: 12px;
+  color: var(--text);
+  font: inherit;
+  min-width: 0;
+  padding: 12px 13px;
+  width: 100%;
+}
+
+.assessment-field textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.assessment-field input:focus,
+.assessment-field select:focus,
+.assessment-field textarea:focus {
+  border-color: #6a55ed;
+  box-shadow: 0 0 0 3px rgba(106, 85, 237, 0.14);
+  outline: 0;
+}
+
+.assessment-field small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.assessment-field-wide {
+  grid-column: 1 / -1;
+}
+
+.assessment-review {
+  background: #f8f7ff;
+  border: 1px solid #ded9ff;
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.assessment-review h3 {
+  margin-top: 0;
+}
+
+.assessment-review dl {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.assessment-review dl div {
+  background: #ffffff;
+  border: 1px solid #e6e3f7;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.assessment-review dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.assessment-review dd {
+  font-weight: 700;
+  margin: 5px 0 0;
+}
+
+.assessment-review p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+.assessment-actions {
+  align-items: center;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: 30px;
+  padding-top: 22px;
+}
+
+.assessment-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.empty-state-page .empty-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.empty-state-page .empty-state-primary {
+  min-width: 210px;
+}
+
+@media (max-width: 980px) {
+  .assessment-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .assessment-stepper {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    position: static;
+  }
+
+  .assessment-stepper button {
+    grid-template-columns: 34px 1fr;
+  }
+
+  .assessment-stepper button small {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .assessment-wizard-header,
+  .assessment-panel-heading,
+  .assessment-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .assessment-completion {
+    align-self: stretch;
+  }
+
+  .assessment-stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .assessment-form-grid,
+  .assessment-review dl {
+    grid-template-columns: 1fr;
+  }
+
+  .assessment-field-wide {
+    grid-column: auto;
+  }
+
+  .assessment-actions > div {
+    width: 100%;
+  }
+
+  .assessment-actions .button {
+    flex: 1 1 auto;
+  }
+}
