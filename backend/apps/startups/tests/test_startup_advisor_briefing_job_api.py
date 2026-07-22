@@ -1,6 +1,8 @@
 import uuid
+from datetime import timedelta
 
 import pytest
+from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -202,3 +204,108 @@ def test_job_endpoints_require_authentication():
 
     assert detail_response.status_code == status.HTTP_401_UNAUTHORIZED
     assert current_response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_current_job_reconciles_stale_queued_job():
+    owner, profile, snapshot = create_source(
+        username="briefing-job-current-stale-queued",
+    )
+    job = create_queued_job(
+        owner=owner,
+        profile=profile,
+        snapshot=snapshot,
+    )
+    StartupAdvisorBriefingJob.objects.filter(
+        pk=job.pk,
+    ).update(
+        created_at=(
+            timezone.now()
+            - timedelta(
+                seconds=(settings.STARTUP_ADVISOR_JOB_QUEUE_TIMEOUT_SECONDS + 1),
+            )
+        ),
+    )
+
+    response = authenticated_client(owner).get(
+        current_job_url(),
+        {"startup_profile_id": str(profile.id)},
+    )
+
+    job.refresh_from_db()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["has_job"] is True
+    assert response.data["job"]["id"] == str(job.id)
+    assert response.data["job"]["status"] == "failed"
+    assert response.data["job"]["error_code"] == "queue_timeout"
+    assert response.data["job"]["is_terminal"] is True
+    assert "celery_task_id" not in response.data["job"]
+    assert job.status == StartupAdvisorBriefingJob.Status.FAILED
+    assert job.completed_at is not None
+
+
+def test_detail_reconciles_stale_running_job():
+    owner, profile, snapshot = create_source(
+        username="briefing-job-detail-stale-running",
+    )
+    job = create_queued_job(
+        owner=owner,
+        profile=profile,
+        snapshot=snapshot,
+    )
+    StartupAdvisorBriefingJob.objects.filter(
+        pk=job.pk,
+    ).update(
+        status=StartupAdvisorBriefingJob.Status.RUNNING,
+        started_at=(
+            timezone.now()
+            - timedelta(
+                seconds=(settings.STARTUP_ADVISOR_JOB_RUNNING_TIMEOUT_SECONDS + 1),
+            )
+        ),
+    )
+
+    response = authenticated_client(owner).get(
+        detail_job_url(job),
+    )
+
+    job.refresh_from_db()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["status"] == "failed"
+    assert response.data["error_code"] == "worker_interrupted"
+    assert response.data["is_terminal"] is True
+    assert "celery_task_id" not in response.data
+    assert job.status == StartupAdvisorBriefingJob.Status.FAILED
+    assert job.completed_at is not None
+
+
+def test_detail_keeps_fresh_running_job_active():
+    owner, profile, snapshot = create_source(
+        username="briefing-job-detail-fresh-running",
+    )
+    job = create_queued_job(
+        owner=owner,
+        profile=profile,
+        snapshot=snapshot,
+    )
+    started_at = timezone.now()
+    StartupAdvisorBriefingJob.objects.filter(
+        pk=job.pk,
+    ).update(
+        status=StartupAdvisorBriefingJob.Status.RUNNING,
+        started_at=started_at,
+    )
+
+    response = authenticated_client(owner).get(
+        detail_job_url(job),
+    )
+
+    job.refresh_from_db()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["status"] == "running"
+    assert response.data["error_code"] == ""
+    assert response.data["is_terminal"] is False
+    assert job.status == StartupAdvisorBriefingJob.Status.RUNNING
+    assert job.completed_at is None
