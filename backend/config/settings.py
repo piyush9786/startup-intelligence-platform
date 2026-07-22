@@ -147,6 +147,50 @@ EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "1025"))
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@startup.local")
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://qdrant:6333")
+STARTUP_ADVISOR_RAG_ENABLED = (
+    os.environ.get("STARTUP_ADVISOR_RAG_ENABLED", "false").lower()
+    == "true"
+)
+STARTUP_ADVISOR_QDRANT_COLLECTION = os.environ.get(
+    "STARTUP_ADVISOR_QDRANT_COLLECTION",
+    "startup_document_chunks_v1",
+)
+STARTUP_ADVISOR_QDRANT_TIMEOUT_SECONDS = float(
+    os.environ.get(
+        "STARTUP_ADVISOR_QDRANT_TIMEOUT_SECONDS",
+        "30",
+    )
+)
+STARTUP_ADVISOR_EMBEDDING_MODEL = os.environ.get(
+    "STARTUP_ADVISOR_EMBEDDING_MODEL",
+    "embeddinggemma",
+)
+STARTUP_ADVISOR_EMBEDDING_VERSION = os.environ.get(
+    "STARTUP_ADVISOR_EMBEDDING_VERSION",
+    "ollama-embedding-v1",
+)
+STARTUP_ADVISOR_EMBEDDING_TIMEOUT_SECONDS = float(
+    os.environ.get(
+        "STARTUP_ADVISOR_EMBEDDING_TIMEOUT_SECONDS",
+        "120",
+    )
+)
+STARTUP_ADVISOR_EMBEDDING_BATCH_SIZE = int(
+    os.environ.get(
+        "STARTUP_ADVISOR_EMBEDDING_BATCH_SIZE",
+        "32",
+    )
+)
+STARTUP_ADVISOR_EMBEDDING_KEEP_ALIVE = os.environ.get(
+    "STARTUP_ADVISOR_EMBEDDING_KEEP_ALIVE",
+    "5m",
+)
+STARTUP_ADVISOR_RAG_TOP_K = int(
+    os.environ.get("STARTUP_ADVISOR_RAG_TOP_K", "6")
+)
+STARTUP_ADVISOR_RAG_MIN_SCORE = float(
+    os.environ.get("STARTUP_ADVISOR_RAG_MIN_SCORE", "0.35")
+)
 NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://neo4j:7687")
 NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "")
