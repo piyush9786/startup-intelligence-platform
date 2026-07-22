@@ -2,7 +2,11 @@ import { expect, test } from "vitest";
 
 import {
   briefingCounts,
+  buildEvidenceById,
+  evidenceExcerpt,
+  evidenceTitle,
   formatDateTime,
+  formatEvidenceScore,
   humanizeApiError,
   normalizeCollection,
   sourceReferenceLabel,
@@ -91,4 +95,34 @@ test("formatDateTime safely handles missing and invalid values", () => {
   expect(formatDateTime(null)).toBe("Time unavailable");
   expect(formatDateTime("not-a-date")).toBe("Time unavailable");
   expect(formatDateTime("2026-07-21T08:31:31Z")).not.toBe("Time unavailable");
+});
+
+
+
+test("evidence helpers expose readable official-source metadata", () => {
+  const briefing = {
+    prompt_snapshot: {
+      retrieved_evidence: [
+        {
+          id: "chunk-1",
+          score: 0.371235,
+          title:
+            "https://example.gov.in/Startup-Schemes-Playbook-June-2026.pdf",
+          source_url:
+            "https://example.gov.in/Startup-Schemes-Playbook-June-2026.pdf",
+          text: "A long official evidence excerpt ".repeat(20),
+        },
+      ],
+    },
+  };
+
+  const evidence = buildEvidenceById(briefing)["chunk-1"];
+  expect(evidenceTitle(evidence)).toBe(
+    "Startup Schemes Playbook June 2026",
+  );
+  expect(formatEvidenceScore(evidence.score)).toBe(
+    "37% semantic match",
+  );
+  expect(evidenceExcerpt(evidence, 40).endsWith("…")).toBe(true);
+  expect(buildEvidenceById(null)).toEqual({});
 });

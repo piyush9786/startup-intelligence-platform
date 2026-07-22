@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from copy import deepcopy
 from typing import Any
 
@@ -27,7 +28,7 @@ from .llm_provider import (
     get_startup_advisor_llm_provider,
 )
 
-BRIEFING_PROMPT_VERSION = "startup-advisor-briefing-prompt-v2"
+BRIEFING_PROMPT_VERSION = "startup-advisor-briefing-prompt-v3"
 
 SYSTEM_PROMPT = """
 You are a grounded startup advisor for Indian founders.
@@ -39,6 +40,8 @@ government requirements, scores, or founder facts.
 Every top priority, scheme-guidance item, and risk must cite one or more
 exact source references. Each field_path must use RFC 6901 JSON Pointer
 syntax, begin with "/", and resolve inside the cited source object.
+Array indexes are zero-based. For an array containing N items, valid indexes
+are 0 through N-1; never cite N as an array index.
 
 Use paths such as "/blocking_findings/0/reason".
 Never use JavaScript notation such as "/blocking_findings[0].reason".
@@ -57,6 +60,12 @@ Retrieved evidence chunks are supporting official-source context. They never
 override deterministic eligibility, readiness, recommendation or deadline
 records. Cite a retrieved chunk with its listed chunk ID and a path such as
 "/text", "/source_url", "/page_number" or "/title".
+
+When citation_contract.evidence_citation_expected is true, cite at least one
+retrieved evidence chunk if it directly supports a briefing item. Keep the
+deterministic source citation as well when the statement concerns eligibility,
+readiness, ranking, deadlines or founder facts. Never cite retrieved evidence
+merely to satisfy the contract when it does not support the specific item.
 
 Use only source IDs listed in citation_contract.source_ids_by_type.
 The source_id must exactly match an ID listed for its source_type.
@@ -261,6 +270,246 @@ def _build_citation_contract(
     return {
         "source_ids_by_type": source_ids_by_type,
         "scheme_guidance_must_be_empty": (not recommendation_ids),
+        "evidence_citation_expected": bool(
+            source_ids_by_type["evidence_chunk"]
+        ),
+    }
+
+
+_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
+_STOPWORDS = frozenset(
+    {
+        "about",
+        "after",
+        "against",
+        "application",
+        "apply",
+        "available",
+        "before",
+        "briefing",
+        "business",
+        "complete",
+        "current",
+        "document",
+        "eligible",
+        "eligibility",
+        "evidence",
+        "founder",
+        "founders",
+        "funding",
+        "government",
+        "guidance",
+        "india",
+        "official",
+        "provide",
+        "recommendation",
+        "requirements",
+        "scheme",
+        "startup",
+        "startups",
+        "status",
+        "support",
+        "verify",
+        "with",
+    }
+)
+_HIGH_SIGNAL_TERMS = frozenset(
+    {
+        "cgss",
+        "collateral",
+        "dpiit",
+        "incubator",
+        "recognised",
+        "recognition",
+        "sisfs",
+        "udyam",
+    }
+)
+
+
+def _meaningful_terms(*values: Any) -> set[str]:
+    combined = " ".join(
+        str(value)
+        for value in values
+        if value is not None
+    ).lower()
+    return {
+        token
+        for token in _TOKEN_PATTERN.findall(combined)
+        if len(token) >= 4 and token not in _STOPWORDS
+    }
+
+
+def _briefing_item_candidates(payload: dict[str, Any]):
+    field_names = {
+        "top_priorities": (
+            "title",
+            "reason",
+            "recommended_action",
+        ),
+        "scheme_guidance": (
+            "scheme_name",
+            "guidance",
+        ),
+        "risks": (
+            "title",
+            "reason",
+            "mitigation",
+        ),
+    }
+    for section, fields in field_names.items():
+        for index, item in enumerate(payload.get(section) or []):
+            if not isinstance(item, dict):
+                continue
+            yield {
+                "section": section,
+                "index": index,
+                "item": item,
+                "terms": _meaningful_terms(
+                    *(item.get(field) for field in fields)
+                ),
+            }
+
+
+def _existing_evidence_references(
+    payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    references: list[dict[str, Any]] = []
+    for candidate in _briefing_item_candidates(payload):
+        references.extend(
+            reference
+            for reference in (
+                candidate["item"].get("source_references")
+                or []
+            )
+            if reference.get("source_type") == "evidence_chunk"
+        )
+    return references
+
+
+def _best_item_evidence_match(
+    payload: dict[str, Any],
+    evidence_documents: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    best: dict[str, Any] | None = None
+
+    for candidate in _briefing_item_candidates(payload):
+        item_terms = candidate["terms"]
+        if not item_terms:
+            continue
+
+        for evidence in evidence_documents:
+            if not isinstance(evidence, dict) or not evidence.get("id"):
+                continue
+
+            evidence_terms = _meaningful_terms(
+                evidence.get("title"),
+                evidence.get("heading"),
+                evidence.get("text"),
+            )
+            overlap = item_terms & evidence_terms
+            has_high_signal = bool(overlap & _HIGH_SIGNAL_TERMS)
+            if len(overlap) < 2 and not has_high_signal:
+                continue
+
+            match_score = (
+                len(overlap) * 100
+                + sum(len(term) for term in overlap)
+                + int(float(evidence.get("score") or 0) * 10)
+            )
+            if best is None or match_score > best["match_score"]:
+                best = {
+                    **candidate,
+                    "evidence": evidence,
+                    "matched_terms": sorted(overlap),
+                    "match_score": match_score,
+                }
+
+    return best
+
+
+def _apply_retrieved_evidence_usage(
+    *,
+    payload: Any,
+    source_snapshot: StartupAdvisorSnapshot,
+    evidence_documents: list[dict[str, Any]],
+    retrieval: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    validated = validate_startup_advisor_briefing(
+        payload=payload,
+        source_snapshot=source_snapshot,
+        evidence_documents=evidence_documents,
+    )
+
+    existing = _existing_evidence_references(validated)
+    if existing:
+        return validated, {
+            "status": "model_cited",
+            "reason": "The model cited retrieved evidence directly.",
+            "citation_count": len(existing),
+            "evidence_source_ids": sorted(
+                {
+                    reference["source_id"]
+                    for reference in existing
+                }
+            ),
+        }
+
+    if not evidence_documents:
+        return validated, {
+            "status": "not_available",
+            "reason": (
+                "No retrieved evidence document was available; "
+                f"retrieval status was {retrieval.get('status', 'unknown')}."
+            ),
+            "citation_count": 0,
+            "evidence_source_ids": [],
+        }
+
+    match = _best_item_evidence_match(
+        validated,
+        evidence_documents,
+    )
+    if match is None:
+        return validated, {
+            "status": "not_used",
+            "reason": (
+                "Retrieved evidence was available, but no briefing item "
+                "had sufficient item-level term overlap."
+            ),
+            "citation_count": 0,
+            "evidence_source_ids": [],
+        }
+
+    reference = {
+        "source_type": "evidence_chunk",
+        "source_id": str(match["evidence"]["id"]),
+        "field_path": "/text",
+    }
+    match["item"].setdefault(
+        "source_references",
+        [],
+    ).append(reference)
+
+    validated = validate_startup_advisor_briefing(
+        payload=validated,
+        source_snapshot=source_snapshot,
+        evidence_documents=evidence_documents,
+        require_evidence_citation=True,
+    )
+    return validated, {
+        "status": "deterministic_attachment",
+        "reason": (
+            "A retrieved evidence citation was attached after a "
+            "deterministic item-level relevance match."
+        ),
+        "citation_count": 1,
+        "evidence_source_ids": [
+            str(match["evidence"]["id"]),
+        ],
+        "section": match["section"],
+        "item_index": match["index"],
+        "matched_terms": match["matched_terms"],
     }
 
 
@@ -318,6 +567,7 @@ def build_startup_advisor_briefing_prompt(
         "messages": messages,
         "response_schema": response_schema,
         "source_input": input_payload,
+        "citation_contract": citation_contract,
         "retrieved_evidence": evidence_documents,
         "retrieval": retrieval_snapshot,
     }
@@ -350,10 +600,24 @@ def generate_startup_advisor_briefing(
         messages=prompt_snapshot["messages"],
         response_schema=prompt_snapshot["response_schema"],
     )
-    briefing_payload = validate_startup_advisor_briefing(
-        payload=generation_result.payload,
-        source_snapshot=source_snapshot,
-        evidence_documents=prompt_snapshot["retrieved_evidence"],
+    briefing_payload, evidence_usage = (
+        _apply_retrieved_evidence_usage(
+            payload=generation_result.payload,
+            source_snapshot=source_snapshot,
+            evidence_documents=prompt_snapshot[
+                "retrieved_evidence"
+            ],
+            retrieval=prompt_snapshot["retrieval"],
+        )
+    )
+    prompt_snapshot["evidence_usage"] = deepcopy(
+        evidence_usage,
+    )
+    response_metadata = deepcopy(
+        generation_result.response_metadata or {},
+    )
+    response_metadata["evidence_usage"] = deepcopy(
+        evidence_usage,
     )
 
     with transaction.atomic():
@@ -384,8 +648,6 @@ def generate_startup_advisor_briefing(
             prompt_token_count=(generation_result.prompt_token_count),
             output_token_count=(generation_result.output_token_count),
             total_duration_ns=(generation_result.total_duration_ns),
-            response_metadata=deepcopy(
-                generation_result.response_metadata,
-            ),
+            response_metadata=response_metadata,
             completed_at=timezone.now(),
         )

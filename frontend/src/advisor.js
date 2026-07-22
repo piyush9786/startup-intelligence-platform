@@ -83,3 +83,67 @@ export function briefingCounts(briefingRecord) {
       : 0,
   };
 }
+
+
+export function buildEvidenceById(briefingRecord) {
+  const evidence =
+    briefingRecord?.prompt_snapshot?.retrieved_evidence;
+  if (!Array.isArray(evidence)) return {};
+
+  return Object.fromEntries(
+    evidence
+      .filter((item) => item?.id)
+      .map((item) => [String(item.id), item]),
+  );
+}
+
+function isHttpUrl(value) {
+  return /^https?:\/\//i.test(String(value || "").trim());
+}
+
+export function evidenceTitle(evidence = {}) {
+  const supplied = String(evidence.title || "").trim();
+  if (supplied && !isHttpUrl(supplied)) {
+    return supplied;
+  }
+
+  const sourceUrl = String(
+    evidence.source_url || supplied || "",
+  ).trim();
+
+  try {
+    const url = new URL(sourceUrl);
+    const encodedFilename =
+      url.pathname.split("/").filter(Boolean).at(-1) || "";
+    const filename = decodeURIComponent(encodedFilename);
+    const cleaned = filename
+      .replace(/\.(pdf|html?|aspx?)$/i, "")
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (cleaned) return cleaned;
+  } catch {
+    // Fall through to the stable generic label.
+  }
+
+  return "Official source document";
+}
+
+export function evidenceExcerpt(
+  evidence = {},
+  maxLength = 320,
+) {
+  const text = String(evidence.text || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
+export function formatEvidenceScore(value) {
+  const score = Number(value);
+  if (!Number.isFinite(score)) return "Score unavailable";
+  return `${Math.round(score * 100)}% semantic match`;
+}

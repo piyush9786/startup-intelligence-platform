@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import unquote, urlparse
 from uuid import NAMESPACE_URL, uuid5
 
 from django.conf import settings
@@ -144,6 +146,45 @@ def _delete_existing_extraction_points(
         ) from exc
 
 
+
+def _readable_document_title(
+    extraction: DocumentExtraction,
+    document,
+) -> str:
+    supplied = (
+        extraction.detected_title
+        or document.title
+        or ""
+    ).strip()
+    if supplied and not supplied.lower().startswith(
+        ("http://", "https://")
+    ):
+        return supplied
+
+    source_url = (
+        document.final_url
+        or document.source_url
+        or supplied
+    )
+    try:
+        filename = unquote(
+            urlparse(source_url).path.rsplit("/", 1)[-1]
+        )
+    except ValueError:
+        filename = ""
+
+    cleaned = re.sub(
+        r"\.(pdf|html?|aspx?)$",
+        "",
+        filename,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"[_-]+", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" .")
+
+    return cleaned or "Official source document"
+
+
 def _point_for_chunk(
     *,
     chunk: DocumentChunk,
@@ -162,10 +203,9 @@ def _point_for_chunk(
             "document_id": str(document.id),
             "source_id": str(document.source_id),
             "source_url": document.final_url or document.source_url,
-            "title": (
-                extraction.detected_title
-                or document.title
-                or document.source_url
+            "title": _readable_document_title(
+                extraction,
+                document,
             ),
             "page_number": chunk.page_number,
             "heading": chunk.heading,
