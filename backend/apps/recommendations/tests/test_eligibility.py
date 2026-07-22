@@ -221,3 +221,22 @@ def test_unknown_application_status_does_not_block_eligibility():
     )
 
     assert result.result == "eligible"
+
+
+def test_empty_rule_set_requires_manual_verification():
+    result = evaluate_rules(
+        startup_profile=profile(),
+        rules=[],
+        application_status="unknown",
+        as_of_date=date(2026, 1, 15),
+    )
+
+    assert result.result == "verification_required"
+    assert result.engine_version == "rules-v2"
+    assert not result.matched_rules
+    assert not result.failed_rules
+    assert not result.unknown_rules
+    assert result.explanation == (
+        "Manual verification is required because the verified scheme version "
+        "has no executable eligibility rules."
+    )

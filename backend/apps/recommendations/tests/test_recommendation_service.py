@@ -269,3 +269,38 @@ def test_only_active_verified_current_versions_are_assessed():
     assert len(generation.assessments) == 1
     assert len(generation.recommendations) == 1
     assert EligibilityAssessment.objects.count() == 1
+
+
+def test_scheme_without_rules_requires_verification_and_is_excluded():
+    user = make_user(username="no-rules-owner")
+    profile = make_profile(owner=user)
+    scheme = make_scheme(
+        key="no-rules",
+        name="Scheme Without Rules",
+        with_rule=False,
+    )
+
+    generation = generate_recommendations(
+        startup_profile=profile,
+        requested_by=user,
+        assessment_date=date(2026, 7, 20),
+    )
+
+    assert len(generation.assessments) == 1
+    assert not generation.recommendations
+    assert len(generation.excluded_schemes) == 1
+
+    assessment = generation.assessments[0]
+    assert assessment.scheme_version == scheme.current_version
+    assert assessment.result == EligibilityAssessment.Result.VERIFY
+    assert assessment.engine_version == "rules-v2"
+    assert not assessment.matched_rules
+    assert not assessment.failed_rules
+    assert not assessment.unknown_rules
+
+    exclusion = generation.excluded_schemes[0]
+    assert exclusion["scheme_id"] == str(scheme.id)
+    assert exclusion["result"] == "verification_required"
+    assert exclusion["reason"] == (
+        "eligibility_result:verification_required"
+    )
