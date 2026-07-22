@@ -23,6 +23,8 @@ const api = vi.hoisted(() => ({
   getStartupAdvisorBriefing: vi.fn(),
   getStartupAdvisorBriefingJob: vi.fn(),
   getStartupAdvisorCurrent: vi.fn(),
+  listExternalCapitalSupport: vi.fn(),
+  listExternalCertificationRequirements: vi.fn(),
   listExternalSchemes: vi.fn(),
   listSchemes: vi.fn(),
   listStartupAssessmentDrafts: vi.fn(),
@@ -138,6 +140,64 @@ const externalScheme = {
   verification_label: "Needs review",
   disclaimer:
     "Information supplied by an external dataset. Verify details on the official source before applying.",
+};
+
+const externalCapitalSupport = {
+  id: "external-capital-one",
+  external_id: "CAP001",
+  support_name: "Climate Startup Growth Grant",
+  support_type: "Grant",
+  scheme_name: "",
+  ministry: "Ministry of Green Industry",
+  implementing_agency: "Climate Innovation Agency",
+  funding_category: "Grant",
+  minimum_amount: "100000",
+  maximum_amount: "1000000",
+  raw_minimum_amount: "INR 1 lakh",
+  raw_maximum_amount: "INR 10 lakh",
+  currency: "INR",
+  interest_rate_text: "",
+  collateral_required_text: "Not required",
+  repayment_required_text: "No repayment",
+  startup_stage: ["Early stage"],
+  industry: ["Climate technology"],
+  eligible_entity: "DPIIT-recognised startup",
+  state: "All India",
+  funding_purpose: "Product development",
+  claimed_scheme_status: "Open",
+  review_status: "needs_review",
+  source_type: "external",
+  record_type: "capital_support",
+  verification_label: "Needs review",
+  disclaimer:
+    "Verify funding terms with the responsible authority before applying.",
+};
+
+const externalCertificationRequirement = {
+  id: "external-certification-one",
+  external_id: "CERT001",
+  certificate_name: "Environmental Compliance Registration",
+  certificate_type: "Registration",
+  description:
+    "Registration reference for eligible climate-sector businesses.",
+  industry: ["Climate technology"],
+  startup_stage: ["Early stage"],
+  requirement_level: "Conditional",
+  eligibility: "Businesses operating regulated facilities",
+  benefits: "Supports regulatory compliance evidence",
+  validity: "Three years",
+  renewal_period: "Renew before expiry",
+  issuing_authority: "Environmental Standards Authority",
+  official_document_text: "Environmental registration guidance",
+  official_apply_url:
+    "https://external.example/environment-registration",
+  review_status: "needs_review",
+  display_eligible: true,
+  source_type: "external",
+  record_type: "certification_requirement",
+  verification_label: "Needs review",
+  disclaimer:
+    "Confirm the requirement and application process with the issuing authority.",
 };
 
 function makeBriefing({
@@ -266,6 +326,8 @@ function configureAuthenticatedWorkspace({
   api.listStartupProfiles.mockResolvedValue(profiles);
   api.listSchemes.mockResolvedValue([grantScheme, loanScheme]);
   api.listExternalSchemes.mockResolvedValue([externalScheme]);
+  api.listExternalCapitalSupport.mockResolvedValue([]);
+  api.listExternalCertificationRequirements.mockResolvedValue([]);
   api.getStartupAdvisorCurrent.mockResolvedValue(dashboard);
   api.getCurrentBriefing.mockResolvedValue({
     startup_profile_id: profile.id,
@@ -465,6 +527,94 @@ describe("functional user dashboard", () => {
     expect(
       screen.queryByRole("heading", {
         name: "Women Founder Innovation Grant",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("shows external certification records separately from verified requirements", async () => {
+    api.listExternalCertificationRequirements.mockResolvedValue([
+      externalCertificationRequirement,
+    ]);
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Requirements",
+      }),
+    );
+
+    const externalCard = screen
+      .getByRole("heading", {
+        name: "Environmental Compliance Registration",
+      })
+      .closest("article");
+
+    expect(externalCard).not.toBeNull();
+    expect(
+      within(externalCard).getByText("Needs review"),
+    ).toBeInTheDocument();
+    expect(
+      within(externalCard).getByText("External dataset"),
+    ).toBeInTheDocument();
+    expect(externalCard).toHaveTextContent(
+      "Environmental Standards Authority",
+    );
+    expect(externalCard).toHaveTextContent(
+      "Confirm the requirement and application process",
+    );
+
+    expect(
+      within(externalCard).getByRole("link", {
+        name: "Official source →",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://external.example/environment-registration",
+    );
+  });
+
+  test("shows external capital support without inventing an application link", async () => {
+    api.listExternalCapitalSupport.mockResolvedValue([
+      externalCapitalSupport,
+    ]);
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Funding & loans",
+      }),
+    );
+
+    const externalCard = screen
+      .getByRole("heading", {
+        name: "Climate Startup Growth Grant",
+      })
+      .closest("article");
+
+    expect(externalCard).not.toBeNull();
+    expect(
+      within(externalCard).getByText("Needs review"),
+    ).toBeInTheDocument();
+    expect(
+      within(externalCard).getByText("External dataset"),
+    ).toBeInTheDocument();
+    expect(externalCard).toHaveTextContent(
+      "Climate Innovation Agency",
+    );
+    expect(externalCard).toHaveTextContent(
+      "INR 1 lakh – INR 10 lakh",
+    );
+    expect(externalCard).toHaveTextContent(
+      "Official application link unavailable",
+    );
+
+    expect(
+      within(externalCard).queryByRole("link", {
+        name: /application/i,
       }),
     ).not.toBeInTheDocument();
   });

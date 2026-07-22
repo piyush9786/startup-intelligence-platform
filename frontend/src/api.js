@@ -221,6 +221,47 @@ export async function listExternalSchemes() {
 }
 
 
+export async function listExternalCapitalSupport() {
+  const records = [];
+  let nextUrl = "/knowledge/external-capital-support/";
+  let params = {
+    ordering: "support_name",
+  };
+  let pageCount = 0;
+
+  while (nextUrl && pageCount < 100) {
+    const response = await client.get(nextUrl, { params });
+    records.push(...normalizeCollection(response.data));
+    nextUrl = response.data?.next || null;
+    params = undefined;
+    pageCount += 1;
+  }
+
+  return records;
+}
+
+
+export async function listExternalCertificationRequirements() {
+  const records = [];
+  let nextUrl =
+    "/knowledge/external-certification-requirements/";
+  let params = {
+    ordering: "certificate_name",
+  };
+  let pageCount = 0;
+
+  while (nextUrl && pageCount < 100) {
+    const response = await client.get(nextUrl, { params });
+    records.push(...normalizeCollection(response.data));
+    nextUrl = response.data?.next || null;
+    params = undefined;
+    pageCount += 1;
+  }
+
+  return records;
+}
+
+
 export async function listSchemes() {
   const schemes = [];
   let nextUrl = "/schemes/";
