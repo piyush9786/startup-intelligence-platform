@@ -9,7 +9,7 @@ from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from typing import Any
 
-ENGINE_VERSION = "rules-v1"
+ENGINE_VERSION = "rules-v2"
 _MISSING = object()
 _TOKEN_RE = re.compile(r"[^a-z0-9]+")
 
@@ -429,6 +429,12 @@ def evaluate_rules(
     if str(application_status).strip().casefold() == "closed":
         result = "application_closed"
         explanation = "The scheme is currently marked as closed for applications."
+    elif not evaluations:
+        result = "verification_required"
+        explanation = (
+            "Manual verification is required because the verified scheme version "
+            "has no executable eligibility rules."
+        )
     elif any(item.requires_verification for item in evaluations):
         result = "verification_required"
         explanation = (

@@ -45,6 +45,10 @@ Editing the startup profile later does not mutate an existing assessment.
 
 A scheme with no current version returns HTTP `409` and creates no assessment.
 
+A verified scheme version with no executable eligibility rules returns
+`verification_required`. It is assessed and persisted for auditability but is
+excluded from automatic recommendations until verified rules are available.
+
 ## Response
 
 ```json
@@ -61,7 +65,7 @@ A scheme with no current version returns HTTP `409` and creates no assessment.
   "failed_rules": [],
   "unknown_rules": [],
   "explanation": "All mandatory eligibility rules passed.",
-  "engine_version": "rules-v1",
+  "engine_version": "rules-v2",
   "created_at": "2026-07-20T12:00:00Z"
 }
 ```
