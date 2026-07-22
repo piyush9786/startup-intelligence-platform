@@ -7,7 +7,7 @@ from jsonschema import Draft202012Validator
 
 from apps.startups.models import StartupAdvisorSnapshot
 
-BRIEFING_SCHEMA_VERSION = "startup-advisor-briefing-schema-v2"
+BRIEFING_SCHEMA_VERSION = "startup-advisor-briefing-schema-v3"
 BRIEFING_DISCLAIMER = (
     "AI-generated guidance grounded in the cited persisted snapshot and "
     "retrieved official evidence; verify official requirements before acting."
@@ -312,6 +312,64 @@ def _resolve_json_pointer(document: Any, pointer: str) -> Any:
     return current
 
 
+def _repair_one_based_boundary_pointer(
+    document: Any,
+    pointer: str,
+) -> str | None:
+    """Repair only an array index equal to the array length.
+
+    Models sometimes count a final array item as N instead of the valid
+    zero-based index N - 1. Exact in-range pointers remain unchanged, and
+    indexes beyond the one-based boundary remain invalid.
+    """
+    if not pointer.startswith("/"):
+        return None
+
+    current = document
+    raw_tokens = pointer[1:].split("/")
+    repaired_tokens: list[str] = []
+    repaired = False
+
+    for raw_token in raw_tokens:
+        token = raw_token.replace("~1", "/").replace("~0", "~")
+
+        if isinstance(current, dict):
+            if token not in current:
+                return None
+            current = current[token]
+            repaired_tokens.append(raw_token)
+            continue
+
+        if isinstance(current, list):
+            if not token.isdigit():
+                return None
+
+            index = int(token)
+            if index < len(current):
+                current = current[index]
+                repaired_tokens.append(raw_token)
+                continue
+
+            if (
+                not repaired
+                and index > 0
+                and index == len(current)
+            ):
+                repaired = True
+                repaired_index = index - 1
+                current = current[repaired_index]
+                repaired_tokens.append(str(repaired_index))
+                continue
+
+            return None
+
+        return None
+
+    if not repaired:
+        return None
+    return "/" + "/".join(repaired_tokens)
+
+
 def _iter_reference_groups(payload: dict[str, Any]):
     for item in payload["top_priorities"]:
         yield "top priority", item["source_references"]
@@ -326,6 +384,7 @@ def validate_startup_advisor_briefing(
     payload: Any,
     source_snapshot: StartupAdvisorSnapshot,
     evidence_documents: list[dict[str, Any]] | None = None,
+    require_evidence_citation: bool = False,
 ) -> dict[str, Any]:
     errors = sorted(
         Draft202012Validator(
@@ -383,6 +442,18 @@ def validate_startup_advisor_briefing(
             if canonical_path != original_path:
                 candidate_paths.append(canonical_path)
 
+            repaired_boundary_path = (
+                _repair_one_based_boundary_pointer(
+                    document,
+                    canonical_path,
+                )
+            )
+            if (
+                repaired_boundary_path is not None
+                and repaired_boundary_path not in candidate_paths
+            ):
+                candidate_paths.append(repaired_boundary_path)
+
             for candidate_path in candidate_paths:
                 try:
                     _resolve_json_pointer(
@@ -403,10 +474,22 @@ def validate_startup_advisor_briefing(
 
     for item in payload["scheme_guidance"]:
         if not any(
-            reference["source_type"] == "recommendation" for reference in item["source_references"]
+            reference["source_type"] == "recommendation"
+            for reference in item["source_references"]
         ):
             raise BriefingOutputValidationError(
                 "Each scheme-guidance item must cite a persisted recommendation."
             )
+
+    has_evidence_citation = any(
+        reference["source_type"] == "evidence_chunk"
+        for _group_name, references in _iter_reference_groups(payload)
+        for reference in references
+    )
+    if require_evidence_citation and not has_evidence_citation:
+        raise BriefingOutputValidationError(
+            "At least one briefing item must cite a relevant "
+            "retrieved evidence chunk."
+        )
 
     return payload
