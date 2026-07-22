@@ -791,3 +791,136 @@ class PublishedEvidence(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.publication_id} - {self.evidence_type} - page {self.page_number or '-'}"
+
+class ExternalSchemeDataset(TimeStampedModel):
+    dataset_key = models.CharField(
+        max_length=150,
+        unique=True,
+    )
+    dataset_name = models.CharField(max_length=500)
+    source_filename = models.CharField(max_length=500)
+    source_sheet = models.CharField(max_length=250, blank=True)
+    source_row_count = models.PositiveIntegerField(default=0)
+    record_count = models.PositiveIntegerField(default=0)
+    normalization_version = models.CharField(max_length=100)
+    content_sha256 = models.CharField(
+        max_length=64,
+        db_index=True,
+    )
+    is_active = models.BooleanField(default=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["dataset_key"]
+
+    def __str__(self) -> str:
+        return self.dataset_name
+
+
+class ExternalSchemeRecord(TimeStampedModel):
+    class ReviewStatus(models.TextChoices):
+        NEEDS_REVIEW = "needs_review", "Needs review"
+        VERIFIED = "verified", "Verified"
+        REJECTED = "rejected", "Rejected"
+
+    dataset = models.ForeignKey(
+        ExternalSchemeDataset,
+        on_delete=models.CASCADE,
+        related_name="records",
+    )
+    external_id = models.CharField(max_length=150)
+    scheme_name = models.CharField(max_length=500)
+    normalized_name = models.CharField(
+        max_length=500,
+        db_index=True,
+    )
+
+    ministry = models.TextField(blank=True)
+    department = models.TextField(blank=True)
+    sector = models.TextField(blank=True)
+    startup_stage = models.JSONField(default=list, blank=True)
+    startup_type = models.TextField(blank=True)
+    industry = models.JSONField(default=list, blank=True)
+    central_state = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=250, blank=True)
+
+    funding_type = models.TextField(blank=True)
+    funding_amount = models.TextField(blank=True)
+    financial_instrument = models.TextField(blank=True)
+    eligibility = models.TextField(blank=True)
+    women_eligible = models.CharField(max_length=100, blank=True)
+    sc_st_eligible = models.CharField(max_length=100, blank=True)
+    dpiit_required = models.CharField(max_length=100, blank=True)
+    startup_age_limit = models.TextField(blank=True)
+    revenue_criteria = models.TextField(blank=True)
+    tax_benefits = models.TextField(blank=True)
+
+    documents_required = models.JSONField(default=list, blank=True)
+    application_process = models.TextField(blank=True)
+    official_website_label = models.TextField(blank=True)
+    official_application_url = models.TextField(blank=True)
+    source_portal = models.TextField(blank=True)
+    claimed_last_updated = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    source_row_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    quality_warnings = models.JSONField(default=list, blank=True)
+    raw_row = models.JSONField(default=dict, blank=True)
+    source_rows = models.JSONField(default=list, blank=True)
+    external_ids = models.JSONField(default=list, blank=True)
+    record_sha256 = models.CharField(
+        max_length=64,
+        db_index=True,
+    )
+
+    review_status = models.CharField(
+        max_length=30,
+        choices=ReviewStatus.choices,
+        default=ReviewStatus.NEEDS_REVIEW,
+    )
+    review_notes = models.TextField(blank=True)
+
+    matched_candidate = models.ForeignKey(
+        SchemeCandidate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="external_scheme_matches",
+    )
+    matched_scheme = models.ForeignKey(
+        "schemes.Scheme",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="external_scheme_matches",
+    )
+
+    class Meta:
+        ordering = [
+            "scheme_name",
+            "dataset",
+            "external_id",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["dataset", "external_id"],
+                name="unique_external_scheme_dataset_id",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "dataset",
+                    "review_status",
+                    "normalized_name",
+                ],
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.scheme_name} ({self.dataset.dataset_key})"
