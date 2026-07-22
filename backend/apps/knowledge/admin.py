@@ -8,6 +8,9 @@ from .models import (
     CandidatePublication,
     CandidateResolution,
     EligibilityRuleCandidate,
+    ExternalCapitalSupportRecord,
+    ExternalCertificationRequirementRecord,
+    ExternalKnowledgeDataset,
     ExternalSchemeDataset,
     ExternalSchemeRecord,
     KnowledgeExtractionRun,
@@ -329,6 +332,204 @@ class ExternalSchemeRecordAdmin(admin.ModelAdmin):
         "external_ids",
         "created_at",
         "updated_at",
+    )
+
+    @admin.display(description="Warnings")
+    def warning_count(self, obj):
+        return len(obj.quality_warnings or [])
+
+@admin.register(ExternalKnowledgeDataset)
+class ExternalKnowledgeDatasetAdmin(admin.ModelAdmin):
+    list_display = (
+        "dataset_key",
+        "dataset_kind",
+        "record_count",
+        "normalization_version",
+        "is_active",
+        "updated_at",
+    )
+    list_filter = (
+        "dataset_kind",
+        "is_active",
+        "normalization_version",
+    )
+    search_fields = (
+        "dataset_key",
+        "dataset_name",
+        "source_filename",
+    )
+    readonly_fields = (
+        "dataset_kind",
+        "dataset_key",
+        "dataset_name",
+        "source_filename",
+        "source_sheet",
+        "source_row_count",
+        "record_count",
+        "normalization_version",
+        "content_sha256",
+        "metadata",
+        "created_at",
+        "updated_at",
+    )
+
+
+@admin.register(ExternalCapitalSupportRecord)
+class ExternalCapitalSupportRecordAdmin(
+    admin.ModelAdmin,
+):
+    list_display = (
+        "support_name",
+        "support_type",
+        "dataset",
+        "review_status",
+        "maximum_amount",
+        "warning_count",
+        "external_scheme_match_count",
+        "matched_scheme",
+    )
+    list_filter = (
+        "dataset",
+        "review_status",
+        "support_type",
+        "funding_category",
+        "state",
+    )
+    search_fields = (
+        "external_id",
+        "support_name",
+        "scheme_name",
+        "normalized_name",
+        "ministry",
+        "implementing_agency",
+        "eligible_entity",
+        "funding_purpose",
+    )
+    raw_id_fields = (
+        "matched_scheme",
+    )
+    filter_horizontal = (
+        "matched_external_schemes",
+    )
+    readonly_fields = (
+        "dataset",
+        "external_id",
+        "support_name",
+        "support_type",
+        "scheme_name",
+        "normalized_name",
+        "ministry",
+        "implementing_agency",
+        "funding_category",
+        "implementing_agency",
+        "funding_category",
+        "minimum_amount",
+        "maximum_amount",
+        "raw_minimum_amount",
+        "raw_maximum_amount",
+        "currency",
+        "interest_rate_text",
+        "collateral_required_text",
+        "repayment_required_text",
+        "startup_stage",
+        "industry",
+        "eligible_entity",
+        "state",
+        "funding_purpose",
+        "claimed_scheme_status",
+        "source_priority_score",
+        "source_ai_recommendation_weight",
+        "remarks",
+        "matched_external_scheme_ids",
+        "quality_warnings",
+        "source_row_number",
+        "raw_row",
+        "record_sha256",
+        "created_at",
+        "updated_at",
+    )
+    list_select_related = (
+        "dataset",
+        "matched_scheme",
+    )
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .prefetch_related(
+                "matched_external_schemes",
+            )
+        )
+
+    @admin.display(description="Warnings")
+    def warning_count(self, obj):
+        return len(obj.quality_warnings or [])
+
+    @admin.display(description="Scheme matches")
+    def external_scheme_match_count(self, obj):
+        return obj.matched_external_schemes.count()
+
+
+@admin.register(
+    ExternalCertificationRequirementRecord
+)
+class ExternalCertificationRequirementRecordAdmin(
+    admin.ModelAdmin,
+):
+    list_display = (
+        "certificate_name",
+        "certificate_type",
+        "dataset",
+        "review_status",
+        "display_eligible",
+        "issuing_authority",
+        "warning_count",
+    )
+    list_filter = (
+        "dataset",
+        "review_status",
+        "display_eligible",
+        "certificate_type",
+        "requirement_level",
+    )
+    search_fields = (
+        "external_id",
+        "certificate_name",
+        "normalized_name",
+        "description",
+        "eligibility",
+        "benefits",
+        "issuing_authority",
+    )
+    readonly_fields = (
+        "dataset",
+        "external_id",
+        "certificate_name",
+        "normalized_name",
+        "certificate_type",
+        "description",
+        "industry",
+        "startup_stage",
+        "requirement_level",
+        "eligibility",
+        "benefits",
+        "validity",
+        "renewal_period",
+        "issuing_authority",
+        "official_document_text",
+        "official_apply_url",
+        "source_priority_score",
+        "display_eligible",
+        "quality_warnings",
+        "source_row_number",
+        "raw_row",
+        "record_sha256",
+        "created_at",
+        "updated_at",
+    )
+    list_select_related = (
+        "dataset",
     )
 
     @admin.display(description="Warnings")
