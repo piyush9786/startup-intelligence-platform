@@ -205,7 +205,31 @@ STARTUP_ADVISOR_LLM_MODEL = os.environ.get(
 STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS = float(
     os.environ.get(
         "STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS",
-        "300",
+        "900",
+    )
+)
+STARTUP_ADVISOR_JOB_QUEUE_TIMEOUT_SECONDS = int(
+    os.environ.get(
+        "STARTUP_ADVISOR_JOB_QUEUE_TIMEOUT_SECONDS",
+        "900",
+    )
+)
+STARTUP_ADVISOR_TASK_SOFT_TIME_LIMIT_SECONDS = int(
+    os.environ.get(
+        "STARTUP_ADVISOR_TASK_SOFT_TIME_LIMIT_SECONDS",
+        "960",
+    )
+)
+STARTUP_ADVISOR_TASK_TIME_LIMIT_SECONDS = int(
+    os.environ.get(
+        "STARTUP_ADVISOR_TASK_TIME_LIMIT_SECONDS",
+        "1020",
+    )
+)
+STARTUP_ADVISOR_JOB_RUNNING_TIMEOUT_SECONDS = int(
+    os.environ.get(
+        "STARTUP_ADVISOR_JOB_RUNNING_TIMEOUT_SECONDS",
+        "1200",
     )
 )
 STARTUP_ADVISOR_LLM_TEMPERATURE = float(
