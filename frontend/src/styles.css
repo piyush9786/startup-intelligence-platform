@@ -2955,3 +2955,43 @@ body {
 .scheme-card-footer a:hover {
   text-decoration: underline;
 }
+
+/* Eligibility explanation and application-deadline indicators */
+.application-badge.deadline-open,
+.application-badge.deadline-rolling {
+  background: #e5f5ea;
+  color: #17603a;
+}
+
+.application-badge.deadline-soon {
+  background: #fff3cd;
+  color: #765500;
+}
+
+.application-badge.deadline-urgent {
+  background: #ffe5d6;
+  color: #9b3b0d;
+}
+
+.application-badge.deadline-closed {
+  background: #f6dfdd;
+  color: #8c2d27;
+}
+
+.application-badge.deadline-upcoming,
+.application-badge.deadline-neutral {
+  background: #e8ebf1;
+  color: #465165;
+}
+
+.recommendation-evidence small + small {
+  margin-top: 0.2rem;
+}
+
+.scheme-detail-summary small {
+  color: var(--muted);
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  margin-top: 0.25rem;
+}

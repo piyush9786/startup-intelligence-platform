@@ -6,6 +6,7 @@ from .models import (
     Recommendation,
     RecommendationGenerationRun,
 )
+from .services.explanation import build_eligibility_explanation
 
 
 class EligibilityRequestSerializer(serializers.Serializer):
@@ -43,6 +44,7 @@ class EligibilityAssessmentSerializer(serializers.ModelSerializer):
         source="scheme_version.scheme.canonical_name",
         read_only=True,
     )
+    eligibility_explanation = serializers.SerializerMethodField()
 
     class Meta:
         model = EligibilityAssessment
@@ -59,10 +61,14 @@ class EligibilityAssessmentSerializer(serializers.ModelSerializer):
             "failed_rules",
             "unknown_rules",
             "explanation",
+            "eligibility_explanation",
             "engine_version",
             "created_at",
         )
         read_only_fields = fields
+
+    def get_eligibility_explanation(self, instance):
+        return build_eligibility_explanation(instance)
 
 
 class RecommendationGenerationRequestSerializer(serializers.Serializer):
@@ -114,6 +120,7 @@ class RecommendationSerializer(serializers.ModelSerializer):
         source="scheme_version.application_status",
         read_only=True,
     )
+    eligibility_explanation = serializers.SerializerMethodField()
 
     class Meta:
         model = Recommendation
@@ -132,9 +139,13 @@ class RecommendationSerializer(serializers.ModelSerializer):
             "score",
             "score_breakdown",
             "evidence_snapshot",
+            "eligibility_explanation",
             "created_at",
         )
         read_only_fields = fields
+
+    def get_eligibility_explanation(self, instance):
+        return build_eligibility_explanation(instance.assessment)
 
 
 class RecommendationGenerationRunListSerializer(serializers.ModelSerializer):

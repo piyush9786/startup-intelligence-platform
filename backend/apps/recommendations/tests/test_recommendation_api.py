@@ -134,6 +134,11 @@ def test_owner_can_generate_recommendations():
     assert recommendation["scheme_id"] == str(scheme.id)
     assert recommendation["rank"] == 1
     assert recommendation["score"] == "0.950000"
+    assert recommendation["eligibility_explanation"]["result"] == "eligible"
+    assert recommendation["eligibility_explanation"]["summary"] == (
+        "You meet all mandatory eligibility requirements currently "
+        "available for this scheme."
+    )
     assert EligibilityAssessment.objects.count() == 1
     assert Recommendation.objects.count() == 1
 
