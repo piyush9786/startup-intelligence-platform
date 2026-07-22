@@ -2917,3 +2917,41 @@ body {
     text-align: left;
   }
 }
+
+/* External scheme discovery records */
+
+.scheme-card-external {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 249, 237, 0.82),
+      #fff 44%
+    );
+  border-style: dashed;
+}
+
+.scheme-card-external:hover {
+  border-color: #d0a35a;
+}
+
+.external-scheme-disclaimer {
+  background: #fff7e8;
+  border: 1px solid #f1d7a7;
+  border-radius: 10px;
+  color: #76521d;
+  font-size: 0.64rem;
+  line-height: 1.5;
+  margin: 0.8rem 0 0;
+  padding: 0.6rem;
+}
+
+.scheme-card-footer a {
+  color: #5537ce;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.scheme-card-footer a:hover {
+  text-decoration: underline;
+}

@@ -23,6 +23,7 @@ const api = vi.hoisted(() => ({
   getStartupAdvisorBriefing: vi.fn(),
   getStartupAdvisorBriefingJob: vi.fn(),
   getStartupAdvisorCurrent: vi.fn(),
+  listExternalSchemes: vi.fn(),
   listSchemes: vi.fn(),
   listStartupAssessmentDrafts: vi.fn(),
   listStartupAdvisorBriefings: vi.fn(),
@@ -104,6 +105,39 @@ const grantScheme = {
     benefits: ["Proof-of-concept grant"],
     eligibility_rules: [],
   },
+};
+
+
+const externalScheme = {
+  id: "external-women-grant",
+  external_id: "EXT001",
+  scheme_name: "Women Founder Innovation Grant",
+  normalized_name: "women founder innovation grant",
+  ministry: "Ministry of Innovation",
+  department: "Startup Support Department",
+  sector: "Technology",
+  startup_stage: ["Idea", "Early stage"],
+  startup_type: "Startup",
+  industry: ["Climate technology"],
+  central_state: "Central",
+  state: "All India",
+  funding_type: "Grant",
+  funding_amount: "Up to INR 10 lakh",
+  financial_instrument: "Grant",
+  eligibility:
+    "Women-led DPIIT-recognised startups may apply.",
+  tax_benefits: "",
+  application_process: "Apply through the official portal.",
+  official_application_url:
+    "https://external.example/women-grant",
+  source_portal: "External startup scheme dataset",
+  quality_warnings: [],
+  review_status: "needs_review",
+  matched_scheme_id: null,
+  source_type: "external",
+  verification_label: "Needs review",
+  disclaimer:
+    "Information supplied by an external dataset. Verify details on the official source before applying.",
 };
 
 function makeBriefing({
@@ -231,6 +265,7 @@ function configureAuthenticatedWorkspace({
   api.getSession.mockReturnValue({ access: "access-token", refresh: "refresh-token" });
   api.listStartupProfiles.mockResolvedValue(profiles);
   api.listSchemes.mockResolvedValue([grantScheme, loanScheme]);
+  api.listExternalSchemes.mockResolvedValue([externalScheme]);
   api.getStartupAdvisorCurrent.mockResolvedValue(dashboard);
   api.getCurrentBriefing.mockResolvedValue({
     startup_profile_id: profile.id,
@@ -329,9 +364,109 @@ describe("functional user dashboard", () => {
     await user.click(await screen.findByRole("button", { name: /Explore schemes/ }));
 
     expect(api.listSchemes).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("heading", { name: "Explore schemes" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Startup India Seed Fund Scheme/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Startup Working Capital Loan/ })).toBeInTheDocument();
+    expect(api.listExternalSchemes).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("heading", {
+        name: "Explore schemes",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /Startup India Seed Fund Scheme/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /Startup Working Capital Loan/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Women Founder Innovation Grant",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "External dataset",
+      ),
+    ).toBeInTheDocument();
+  });
+
+
+  test("separates verified and needs-review scheme filters", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Explore schemes/,
+      }),
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Verified",
+      }),
+    );
+
+    expect(
+      screen.queryByRole("heading", {
+        name: "Women Founder Innovation Grant",
+      }),
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.getByRole("button", {
+        name: /Startup India Seed Fund Scheme/,
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Needs review",
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Women Founder Innovation Grant",
+      }),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByRole("button", {
+        name: /Startup India Seed Fund Scheme/,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("keeps external schemes out of canonical requirements and funding pages", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Requirements",
+      }),
+    );
+
+    expect(
+      screen.queryByRole("heading", {
+        name: "Women Founder Innovation Grant",
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Funding & loans",
+      }),
+    );
+
+    expect(
+      screen.queryByRole("heading", {
+        name: "Women Founder Innovation Grant",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   test("opens explicit document and certification requirements", async () => {
