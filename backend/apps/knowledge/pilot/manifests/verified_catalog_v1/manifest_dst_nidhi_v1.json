@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "manifest_key": "verified-catalog-dst-nidhi-v1",
+  "extractor_version": "v4",
+  "source_document": {
+    "content_hash": "26740889858fa7b14d271329703065f8f7d2a980697d0eafd99fc42dbe529c80",
+    "source_name": "Startup India"
+  },
+  "authority": {
+    "canonical_name": "Department of Science and Technology",
+    "authority_type": "central_government_department",
+    "department": "Department of Science and Technology",
+    "aliases": [
+      "DST",
+      "Department of Science & Technology",
+      "Department of Science and Technology (DST)"
+    ]
+  },
+  "candidates": [
+    {
+      "pilot_key": "nidhi_eir",
+      "candidate_id": "68fc4bd1-e13c-493c-99d5-b343a8f38a1e",
+      "expected_title": "NIDHI – Entrepreneur in Residence (EIR)",
+      "canonical_title": "NIDHI Entrepreneur-in-Residence (NIDHI-EIR)",
+      "classification": "canonical",
+      "curation": {
+        "canonical_summary": "NIDHI Entrepreneur-in-Residence is a fellowship programme that supports eligible aspiring technology entrepreneurs with monthly financial assistance, workspace, incubation, and mentoring while they develop a startup idea.",
+        "canonical_objective": "Encourage graduating students and other eligible individuals to pursue entrepreneurship by supporting promising technology business ideas through selected NIDHI Technology Business Incubators.",
+        "canonical_eligibility_text": "The applicant must be an Indian citizen and must have either at least four years of full-time undergraduate or postgraduate education in science or engineering, or a three-year science or engineering degree or diploma followed by two years of full-time work experience. The applicant must pursue a scalable technology business idea full time, cannot concurrently receive another remuneration or fellowship, and must remain registered with the selected TBI for the support period.",
+        "official_url": "https://nidhi.dst.gov.in/nidhieir/",
+        "application_url": "https://www.nidhi-eir.in/",
+        "canonical_support_types": [
+          "fellowship",
+          "incubation_support",
+          "workspace",
+          "mentoring"
+        ],
+        "canonical_categories": [
+          "ideation",
+          "technology_entrepreneurship"
+        ],
+        "canonical_benefits": [
+          {
+            "type": "fellowship",
+            "description": "Monthly fellowship support ranging from INR 10,000 to INR 30,000 for 12 months, extendable up to 18 months for deserving candidates subject to approval by the selection committee at the relevant NIDHI-TBI.",
+            "amount_min": "10000.00",
+            "amount_max": "30000.00",
+            "currency": "INR"
+          },
+          {
+            "type": "incubation_support",
+            "description": "Office or co-working space, administrative support, mentoring, technical and financial guidance, and industry connections through the participating TBI.",
+            "amount_min": null,
+            "amount_max": null,
+            "currency": "INR"
+          }
+        ],
+        "canonical_required_documents": [],
+        "canonical_application_steps": [
+          {
+            "step_number": 1,
+            "instruction": "Review the current eligibility requirements, participating Programme Executing Partners, and open calls on the official NIDHI-EIR programme website.",
+            "url": "https://www.nidhi-eir.in/"
+          },
+          {
+            "step_number": 2,
+            "instruction": "Apply in the prescribed format through a participating NIDHI-TBI when that incubator announces a local call.",
+            "url": "https://www.nidhi-eir.in/"
+          }
+        ]
+      },
+      "eligibility_rules": {
+        "approve": [],
+        "reject": [
+          "e1b13ba0-5671-4158-b6e7-3b3fa5cdb318"
+        ]
+      },
+      "structured_reviews": {
+        "benefits": {
+          "approve": [],
+          "reject": [
+            "3399757b-867d-4a82-a490-3078631ae764",
+            "44f04dc1-6941-48a3-9082-eef79c5ee696",
+            "47ec567b-1b28-4996-acd2-a25d09212593",
+            "72583be6-fd4a-45ff-9c24-4745485b2c27",
+            "d24b75b6-4837-4151-839b-b2439095055a",
+            "dc072709-4021-40ff-932e-1dfc1f1060a1",
+            "e4e96b48-3049-4f39-a24e-811f01ea633a"
+          ]
+        },
+        "required_documents": {
+          "approve": [],
+          "reject": []
+        },
+        "application_steps": {
+          "approve": [],
+          "reject": [
+            "68571fb6-586a-4ae6-8271-5338b8219df7",
+            "a9150f98-5f22-4022-8de2-6c998b0c2e47",
+            "ca9c6206-a1b9-43b0-8ece-f01663f904ac",
+            "eb29d029-1138-482e-af4a-d9b8928e2ad8"
+          ]
+        }
+      }
+    },
+    {
+      "pilot_key": "nidhi_ssp",
+      "candidate_id": "4a576eb2-01a4-4e29-8f4b-a4ece82438dd",
+      "expected_title": "NIDHI – Seed Support Program (SSP)",
+      "canonical_title": "NIDHI Seed Support Programme (NIDHI-SSP)",
+      "classification": "canonical",
+      "curation": {
+        "canonical_summary": "The NIDHI Seed Support Programme provides seed-stage support to deserving incubatee startups through participating NIDHI Science and Technology Entrepreneurs Parks and Technology Business Incubators.",
+        "canonical_objective": "Help incubated startups develop and validate products, conduct testing and trials, enter test markets, obtain mentoring and professional support, and address intellectual-property needs.",
+        "canonical_eligibility_text": "The applicant must be a company registered in India and should have completed at least three months of association with the participating incubator through its resident or virtual incubation programme. DPIIT registration or an application for DPIIT registration is preferred rather than mandatory. The startup should have customer-validated clarity on its unique selling proposition, must not be an Indian subsidiary of a foreign company or multinational corporation, and Indian promoters must hold at least 51 percent of its shareholding.",
+        "official_url": "https://nidhi.dst.gov.in/nidhissp/",
+        "application_url": "https://nidhi.dst.gov.in/nidhissp/",
+        "canonical_support_types": [
+          "seed_support",
+          "soft_loan",
+          "equity",
+          "equity_linked_instrument",
+          "mentoring",
+          "professional_support"
+        ],
+        "canonical_categories": [
+          "seed_funding",
+          "post_incubation",
+          "product_validation"
+        ],
+        "canonical_benefits": [
+          {
+            "type": "seed_support",
+            "description": "Seed support may be provided up to INR 100 lakh per startup in exceptional cases. The official guidelines note that incubators have typically invested INR 10 lakh to INR 25 lakh per startup.",
+            "amount_min": null,
+            "amount_max": "10000000.00",
+            "currency": "INR"
+          },
+          {
+            "type": "eligible_uses",
+            "description": "Support may be used for technology development and de-risking, scale-up, market entry, product development, mentoring, professional consultancy, intellectual-property matters, and related startup activities approved by the incubator.",
+            "amount_min": null,
+            "amount_max": null,
+            "currency": "INR"
+          }
+        ],
+        "canonical_required_documents": [],
+        "canonical_application_steps": [
+          {
+            "step_number": 1,
+            "instruction": "Review current programme information and application announcements on the official NIDHI Seed Support Programme page.",
+            "url": "https://nidhi.dst.gov.in/nidhissp/"
+          },
+          {
+            "step_number": 2,
+            "instruction": "Apply through the participating STEP or TBI according to its current seed-support call and selection process.",
+            "url": "https://nidhi.dst.gov.in/nidhissp/"
+          }
+        ]
+      },
+      "eligibility_rules": {
+        "approve": [],
+        "reject": [
+          "0b0b698d-afcc-4c6d-babf-1f401159ac36",
+          "a311d50d-85fd-4b96-b262-22c93c73ae79",
+          "b90be1db-dc3b-4be8-b85f-b2a0cfa263d2"
+        ]
+      },
+      "structured_reviews": {
+        "benefits": {
+          "approve": [],
+          "reject": [
+            "18fb89cd-416e-486d-b6b6-189f3edc2132",
+            "50c706e4-7a4a-4242-aa01-98517e356777",
+            "826cada7-b6f5-4292-ace1-be40833f4800",
+            "a4a03c2e-11e1-4216-8248-21a71b34f836",
+            "ef0eed24-11f0-4492-bfcb-3b7ec642c0bd",
+            "fc2f31e4-be0c-473c-a065-8c237030a583"
+          ]
+        },
+        "required_documents": {
+          "approve": [],
+          "reject": []
+        },
+        "application_steps": {
+          "approve": [],
+          "reject": [
+            "1c1af175-c52f-4638-a79c-f81cdf27eb6f",
+            "1f998ef5-7c26-47ae-834b-5c30f5e2c47b",
+            "2ca77316-6b74-401d-a5ad-de8166bc13a1"
+          ]
+        }
+      }
+    }
+  ]
+}
