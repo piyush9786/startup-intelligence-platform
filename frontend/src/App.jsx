@@ -521,15 +521,127 @@ function MetricAction({ detail, icon, label, onClick, tone, value }) {
   );
 }
 
-function RecommendationList({ onOpenScheme, query, recommendations, schemes }) {
+function evaluatedSchemeStatusLabel(result) {
+  const labels = {
+    eligible: "Eligible",
+    ineligible: "Not eligible",
+    likely_eligible: "Likely eligible",
+    conditionally_eligible: "Conditionally eligible",
+    insufficient_information: "More information needed",
+    verification_required: "Verification required",
+    application_closed: "Applications closed",
+  };
+
+  return labels[result] || readinessStatusLabel(result || "not matched");
+}
+
+function evaluatedSchemeReason(evaluation = {}) {
+  const resultMessages = {
+    ineligible:
+      "One or more mandatory eligibility requirements were not met.",
+    likely_eligible:
+      "The profile appears relevant, but eligibility is not yet confirmed.",
+    conditionally_eligible:
+      "Additional conditions must be completed before applying.",
+    insufficient_information:
+      "Complete the missing startup information to check eligibility.",
+    verification_required:
+      "Supporting evidence must be verified before eligibility is confirmed.",
+    application_closed:
+      "The scheme was relevant, but applications are currently closed.",
+  };
+
+  if (resultMessages[evaluation.result]) {
+    return resultMessages[evaluation.result];
+  }
+
+  const reason = String(evaluation.reason || "");
+
+  if (reason === "no_evaluated_rules") {
+    return "No verified eligibility rules were available for evaluation.";
+  }
+
+  if (reason.startsWith("application_status:")) {
+    const status = reason.split(":", 2)[1];
+    return `Application status is ${readinessStatusLabel(status)}.`;
+  }
+
+  return reason
+    ? readinessStatusLabel(reason.replace(":", " "))
+    : "This scheme was evaluated but was not included in the ranked matches.";
+}
+
+function filterEvaluatedSchemes(evaluatedSchemes, query) {
+  const collection = Array.isArray(evaluatedSchemes)
+    ? evaluatedSchemes
+    : [];
+  const normalized = String(query || "").trim().toLowerCase();
+
+  if (!normalized) return collection;
+
+  return collection.filter((evaluation) =>
+    [
+      evaluation.scheme_name,
+      evaluation.application_status,
+      evaluation.result,
+      evaluation.reason,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(normalized),
+  );
+}
+
+function RecommendationList({
+  assessedSchemeCount = 0,
+  evaluatedSchemes = [],
+  hasGeneration = false,
+  onOpenScheme,
+  query,
+  recommendations = [],
+  schemes,
+}) {
   const visible = filterRecommendations(recommendations, query).slice(0, 5);
+  const evaluated = Array.isArray(evaluatedSchemes)
+    ? evaluatedSchemes
+    : [];
+  const visibleEvaluated = filterEvaluatedSchemes(
+    evaluated,
+    query,
+  ).slice(0, 5);
+
+  const assessedCount =
+    Number(assessedSchemeCount) ||
+    recommendations.length + evaluated.length;
+
+  const emptyTitle = query
+    ? "No matched scheme found"
+    : hasGeneration
+      ? "No eligible scheme matches yet"
+      : "No recommendations yet";
+
+  const emptyMessage = query
+    ? "Try another search term."
+    : hasGeneration
+      ? `${assessedCount} ${
+          assessedCount === 1 ? "scheme was" : "schemes were"
+        } evaluated. Review the unmatched schemes and their eligibility requirements below.`
+      : "Complete the startup assessment to generate ranked scheme matches.";
 
   return (
-    <section className="dashboard-card recommendations-card" aria-labelledby="recommendations-title">
+    <section
+      className="dashboard-card recommendations-card"
+      aria-labelledby="recommendations-title"
+    >
       <div className="dashboard-card-heading">
         <div>
-          <span className="section-kicker">Eligibility and ranking output</span>
-          <h2 id="recommendations-title">Recommended for your startup</h2>
+          <span className="section-kicker">
+            Eligibility and ranking output
+          </span>
+          <h2 id="recommendations-title">
+            Recommended for your startup
+          </h2>
         </div>
         <span className="count-badge">{recommendations.length}</span>
       </div>
@@ -537,14 +649,17 @@ function RecommendationList({ onOpenScheme, query, recommendations, schemes }) {
       {visible.length ? (
         <div className="recommendation-list">
           {visible.map((recommendation) => {
-            const scheme = recommendationScheme(recommendation, schemes) || {
-              id: recommendation.scheme_id,
-              canonical_name: recommendation.scheme_name,
-              authority_name: "Authority details unavailable",
-              current_version_detail: {
-                application_status: recommendation.application_status,
-              },
-            };
+            const scheme =
+              recommendationScheme(recommendation, schemes) || {
+                id: recommendation.scheme_id,
+                canonical_name: recommendation.scheme_name,
+                authority_name: "Authority details unavailable",
+                current_version_detail: {
+                  application_status:
+                    recommendation.application_status,
+                },
+              };
+
             return (
               <button
                 className="recommendation-row recommendation-row-button"
@@ -552,28 +667,136 @@ function RecommendationList({ onOpenScheme, query, recommendations, schemes }) {
                 onClick={() => onOpenScheme(scheme, "overview")}
                 type="button"
               >
-                <span className="recommendation-mark" aria-hidden="true">◇</span>
+                <span
+                  className="recommendation-mark"
+                  aria-hidden="true"
+                >
+                  ◇
+                </span>
+
                 <div className="recommendation-copy">
                   <strong>{recommendation.scheme_name}</strong>
-                  <span>{recommendation.application_status || "Status not published"}</span>
+                  <span>
+                    {readinessStatusLabel(
+                      recommendation.application_status ||
+                        "status not published",
+                    )}
+                  </span>
                 </div>
+
                 <div className="recommendation-evidence">
                   <span className="status-pill">
                     {recommendationStatusLabel(recommendation)}
                   </span>
-                  <small>Ranking score {formatRankingScore(recommendation.score)}</small>
+                  <small>
+                    Ranking score{" "}
+                    {formatRankingScore(recommendation.score)}
+                  </small>
                 </div>
-                <span className="row-arrow" aria-hidden="true">›</span>
+
+                <span className="row-arrow" aria-hidden="true">
+                  ›
+                </span>
               </button>
             );
           })}
         </div>
       ) : (
-        <EmptyPanel title={query ? "No matched scheme found" : "No recommendations yet"}>
-          {query
-            ? "Try another search term."
-            : "Generate recommendations for this startup profile to see matched support."}
-        </EmptyPanel>
+        <EmptyPanel title={emptyTitle}>{emptyMessage}</EmptyPanel>
+      )}
+
+      {hasGeneration && evaluated.length > 0 && (
+        <div className="evaluated-schemes-section">
+          <div className="evaluated-schemes-heading">
+            <div>
+              <span className="section-kicker">
+                Eligibility review
+              </span>
+              <h3>Evaluated but not matched</h3>
+            </div>
+            <span className="count-badge">{evaluated.length}</span>
+          </div>
+
+          {visibleEvaluated.length ? (
+            <div className="recommendation-list">
+              {visibleEvaluated.map((evaluation) => {
+                const scheme =
+                  recommendationScheme(evaluation, schemes) || {
+                    id: evaluation.scheme_id,
+                    canonical_name: evaluation.scheme_name,
+                    authority_name: "Authority details unavailable",
+                    current_version_detail: {
+                      application_status:
+                        evaluation.application_status,
+                    },
+                  };
+
+                return (
+                  <button
+                    className={[
+                      "recommendation-row",
+                      "recommendation-row-button",
+                      "evaluated-scheme-row",
+                    ].join(" ")}
+                    key={
+                      evaluation.assessment_id ||
+                      evaluation.scheme_version_id ||
+                      evaluation.scheme_id
+                    }
+                    onClick={() =>
+                      onOpenScheme(scheme, "overview")
+                    }
+                    type="button"
+                  >
+                    <span
+                      className={[
+                        "recommendation-mark",
+                        "recommendation-mark-muted",
+                      ].join(" ")}
+                      aria-hidden="true"
+                    >
+                      !
+                    </span>
+
+                    <div className="recommendation-copy">
+                      <strong>{evaluation.scheme_name}</strong>
+                      <span>
+                        {readinessStatusLabel(
+                          evaluation.application_status ||
+                            "status not published",
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="recommendation-evidence">
+                      <span
+                        className={[
+                          "status-pill",
+                          "status-pill-negative",
+                        ].join(" ")}
+                      >
+                        {evaluatedSchemeStatusLabel(
+                          evaluation.result,
+                        )}
+                      </span>
+                      <small>
+                        {evaluatedSchemeReason(evaluation)}
+                      </small>
+                    </div>
+
+                    <span className="row-arrow" aria-hidden="true">
+                      ›
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <EmptyPanel title="No evaluated scheme matches this search">
+              Try another search term.
+            </EmptyPanel>
+          )}
+        </div>
       )}
     </section>
   );
@@ -641,8 +864,14 @@ function DashboardHome({
   schemes,
 }) {
   const metrics = dashboardMetrics(dashboardData, briefing);
-  const recommendations = dashboardData?.recommendations?.recommendations || [];
-  const location = [profile?.district, profile?.state].filter(Boolean).join(", ");
+  const recommendationSection = dashboardData?.recommendations || {};
+  const recommendationGeneration = recommendationSection.generation;
+  const recommendations = recommendationSection.recommendations || [];
+  const evaluatedSchemes =
+    recommendationGeneration?.excluded_schemes || [];
+  const location = [profile?.district, profile?.state]
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <div className="dashboard-page">
@@ -720,6 +949,13 @@ function DashboardHome({
 
       <div className="dashboard-content-grid">
         <RecommendationList
+          assessedSchemeCount={
+            recommendationGeneration?.assessed_scheme_count || 0
+          }
+          evaluatedSchemes={evaluatedSchemes}
+          hasGeneration={Boolean(
+            recommendationSection.has_generation,
+          )}
           onOpenScheme={onOpenScheme}
           query={query}
           recommendations={recommendations}
@@ -1426,9 +1662,15 @@ function Workspace({ onSignOut }) {
       recommendations: {
         has_generation: true,
         generation: {
-          id: recommendationPayload.generation_id,
+          generation_id: recommendationPayload.generation_id,
           ranking_version: recommendationPayload.ranking_version,
           assessment_date: recommendationPayload.assessment_date,
+          assessed_scheme_count:
+            recommendationPayload.assessed_scheme_count || 0,
+          excluded_scheme_count:
+            recommendationPayload.excluded_scheme_count || 0,
+          excluded_schemes:
+            recommendationPayload.excluded_schemes || [],
         },
         recommendation_count:
           recommendationPayload.recommendation_count ||
