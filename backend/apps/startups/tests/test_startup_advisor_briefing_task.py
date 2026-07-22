@@ -1,6 +1,9 @@
+from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
+from billiard.exceptions import SoftTimeLimitExceeded
+from django.conf import settings
 from django.utils import timezone
 
 from apps.startups.models import StartupAdvisorBriefingJob
@@ -255,3 +258,241 @@ def test_completed_task_is_idempotent(monkeypatch):
     assert first_result == second_result
     assert second_result["status"] == "succeeded"
     assert second_result["briefing_id"] == str(briefing.id)
+
+
+def test_queue_replaces_stale_queued_job(monkeypatch):
+    owner, _profile, snapshot = create_source(
+        username="briefing-job-stale-queued",
+    )
+    dispatched_job_ids = []
+
+    def fake_delay(job_id):
+        dispatched_job_ids.append(job_id)
+        return SimpleNamespace(
+            id=f"celery-{len(dispatched_job_ids)}",
+        )
+
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing_task.delay",
+        fake_delay,
+    )
+
+    stale_job, _created = queue_startup_advisor_briefing_job(
+        source_snapshot=snapshot,
+        requested_by=owner,
+    )
+    StartupAdvisorBriefingJob.objects.filter(
+        pk=stale_job.pk,
+    ).update(
+        created_at=(
+            timezone.now()
+            - timedelta(
+                seconds=(settings.STARTUP_ADVISOR_JOB_QUEUE_TIMEOUT_SECONDS + 1),
+            )
+        ),
+    )
+
+    replacement, created = queue_startup_advisor_briefing_job(
+        source_snapshot=snapshot,
+        requested_by=owner,
+    )
+
+    stale_job.refresh_from_db()
+
+    assert created is True
+    assert replacement.id != stale_job.id
+    assert stale_job.status == "failed"
+    assert stale_job.error_code == "queue_timeout"
+    assert stale_job.completed_at is not None
+    assert dispatched_job_ids == [
+        str(stale_job.id),
+        str(replacement.id),
+    ]
+
+
+def test_queue_replaces_stale_running_job(monkeypatch):
+    owner, _profile, snapshot = create_source(
+        username="briefing-job-stale-running",
+    )
+
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing_task.delay",
+        lambda job_id: SimpleNamespace(
+            id=f"celery-{job_id}",
+        ),
+    )
+
+    stale_job, _created = queue_startup_advisor_briefing_job(
+        source_snapshot=snapshot,
+        requested_by=owner,
+    )
+    StartupAdvisorBriefingJob.objects.filter(
+        pk=stale_job.pk,
+    ).update(
+        status=StartupAdvisorBriefingJob.Status.RUNNING,
+        started_at=(
+            timezone.now()
+            - timedelta(
+                seconds=(settings.STARTUP_ADVISOR_JOB_RUNNING_TIMEOUT_SECONDS + 1),
+            )
+        ),
+    )
+
+    replacement, created = queue_startup_advisor_briefing_job(
+        source_snapshot=snapshot,
+        requested_by=owner,
+    )
+
+    stale_job.refresh_from_db()
+
+    assert created is True
+    assert replacement.id != stale_job.id
+    assert stale_job.status == "failed"
+    assert stale_job.error_code == "worker_interrupted"
+    assert stale_job.completed_at is not None
+
+
+def test_task_records_soft_timeout_failure(monkeypatch):
+    owner, _profile, snapshot = create_source(
+        username="briefing-job-soft-timeout",
+    )
+
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing_task.delay",
+        lambda _job_id: SimpleNamespace(
+            id="celery-soft-timeout",
+        ),
+    )
+
+    job, _created = queue_startup_advisor_briefing_job(
+        source_snapshot=snapshot,
+        requested_by=owner,
+    )
+
+    def timed_out_generation(**_kwargs):
+        raise SoftTimeLimitExceeded()
+
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing",
+        timed_out_generation,
+    )
+
+    result = generate_startup_advisor_briefing_task.run(
+        str(job.id),
+    )
+
+    job.refresh_from_db()
+
+    assert result["status"] == "failed"
+    assert result["error_code"] == "task_timeout"
+    assert job.status == "failed"
+    assert job.error_code == "task_timeout"
+    assert job.completed_at is not None
+
+
+def test_redelivered_task_reclaims_running_job(monkeypatch):
+    owner, profile, snapshot = create_source(
+        username="briefing-job-redelivery",
+    )
+
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing_task.delay",
+        lambda _job_id: SimpleNamespace(
+            id="celery-redelivery",
+        ),
+    )
+
+    job, _created = queue_startup_advisor_briefing_job(
+        source_snapshot=snapshot,
+        requested_by=owner,
+    )
+    original_started_at = timezone.now() - timedelta(minutes=2)
+    StartupAdvisorBriefingJob.objects.filter(
+        pk=job.pk,
+    ).update(
+        status=StartupAdvisorBriefingJob.Status.RUNNING,
+        started_at=original_started_at,
+    )
+
+    briefing = create_briefing(
+        profile=profile,
+        snapshot=snapshot,
+        requested_by=owner,
+        marker="redelivered-success",
+        completed_at=timezone.now(),
+    )
+
+    monkeypatch.setattr(
+        "apps.startups.tasks._request_was_redelivered",
+        lambda _task: True,
+    )
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing",
+        lambda **_kwargs: briefing,
+    )
+
+    result = generate_startup_advisor_briefing_task.run(
+        str(job.id),
+    )
+
+    job.refresh_from_db()
+
+    assert result["status"] == "succeeded"
+    assert job.status == "succeeded"
+    assert job.briefing_id == briefing.id
+    assert job.started_at > original_started_at
+
+
+def test_late_redelivery_becomes_task_timeout(monkeypatch):
+    owner, _profile, snapshot = create_source(
+        username="briefing-job-late-redelivery",
+    )
+
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing_task.delay",
+        lambda _job_id: SimpleNamespace(
+            id="celery-late-redelivery",
+        ),
+    )
+
+    job, _created = queue_startup_advisor_briefing_job(
+        source_snapshot=snapshot,
+        requested_by=owner,
+    )
+    StartupAdvisorBriefingJob.objects.filter(
+        pk=job.pk,
+    ).update(
+        status=StartupAdvisorBriefingJob.Status.RUNNING,
+        started_at=(
+            timezone.now()
+            - timedelta(
+                seconds=(settings.STARTUP_ADVISOR_TASK_SOFT_TIME_LIMIT_SECONDS + 1),
+            )
+        ),
+    )
+
+    monkeypatch.setattr(
+        "apps.startups.tasks._request_was_redelivered",
+        lambda _task: True,
+    )
+
+    def unexpected_generation(**_kwargs):
+        raise AssertionError(
+            "An expired redelivery must not invoke generation.",
+        )
+
+    monkeypatch.setattr(
+        "apps.startups.tasks.generate_startup_advisor_briefing",
+        unexpected_generation,
+    )
+
+    result = generate_startup_advisor_briefing_task.run(
+        str(job.id),
+    )
+
+    job.refresh_from_db()
+
+    assert result["status"] == "failed"
+    assert result["error_code"] == "task_timeout"
+    assert job.status == "failed"
+    assert job.error_code == "task_timeout"
