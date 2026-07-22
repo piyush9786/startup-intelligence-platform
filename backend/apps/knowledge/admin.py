@@ -8,6 +8,7 @@ from .models import (
     CandidatePublication,
     CandidateResolution,
     EligibilityRuleCandidate,
+    EmbeddingRun,
     ExternalCapitalSupportRecord,
     ExternalCertificationRequirementRecord,
     ExternalKnowledgeDataset,
@@ -535,3 +536,36 @@ class ExternalCertificationRequirementRecordAdmin(
     @admin.display(description="Warnings")
     def warning_count(self, obj):
         return len(obj.quality_warnings or [])
+
+@admin.register(EmbeddingRun)
+class EmbeddingRunAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "extraction",
+        "model_name",
+        "embedding_version",
+        "status",
+        "embedded_count",
+        "vector_size",
+        "finished_at",
+    )
+    list_filter = (
+        "status",
+        "provider",
+        "model_name",
+        "embedding_version",
+    )
+    search_fields = (
+        "extraction__source_document__title",
+        "extraction__source_document__source_url",
+        "collection_name",
+        "error_message",
+    )
+    readonly_fields = (
+        "started_at",
+        "finished_at",
+        "error_message",
+        "metadata",
+        "created_at",
+        "updated_at",
+    )

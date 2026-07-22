@@ -1307,3 +1307,68 @@ class ExternalCertificationRequirementRecord(
             f"{self.certificate_name} "
             f"({self.dataset.dataset_key})"
         )
+
+class EmbeddingRun(TimeStampedModel):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        SUCCEEDED = "succeeded", "Succeeded"
+        FAILED = "failed", "Failed"
+        SKIPPED = "skipped", "Skipped"
+
+    extraction = models.ForeignKey(
+        DocumentExtraction,
+        on_delete=models.CASCADE,
+        related_name="embedding_runs",
+    )
+    provider = models.CharField(
+        max_length=64,
+        default="ollama",
+    )
+    model_name = models.CharField(max_length=255)
+    embedding_version = models.CharField(max_length=64)
+    collection_name = models.CharField(max_length=255)
+    vector_size = models.PositiveIntegerField(default=0)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    chunk_count = models.PositiveIntegerField(default=0)
+    embedded_count = models.PositiveIntegerField(default=0)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "extraction",
+                    "model_name",
+                    "embedding_version",
+                ],
+                name="unique_embedding_run_version",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["status", "-created_at"],
+                name="knowledge_e_status_6d40ef_idx",
+            ),
+            models.Index(
+                fields=[
+                    "model_name",
+                    "embedding_version",
+                ],
+                name="knowledge_e_model_n_314329_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.extraction_id} - "
+            f"{self.model_name} - {self.status}"
+        )

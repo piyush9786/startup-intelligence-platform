@@ -7,10 +7,10 @@ from jsonschema import Draft202012Validator
 
 from apps.startups.models import StartupAdvisorSnapshot
 
-BRIEFING_SCHEMA_VERSION = "startup-advisor-briefing-schema-v1"
+BRIEFING_SCHEMA_VERSION = "startup-advisor-briefing-schema-v2"
 BRIEFING_DISCLAIMER = (
-    "AI-generated guidance grounded only in the cited persisted snapshot; "
-    "verify official requirements before acting."
+    "AI-generated guidance grounded in the cited persisted snapshot and "
+    "retrieved official evidence; verify official requirements before acting."
 )
 
 SOURCE_TYPES = (
@@ -19,6 +19,7 @@ SOURCE_TYPES = (
     "action_plan",
     "recommendation_generation",
     "recommendation",
+    "evidence_chunk",
 )
 
 SOURCE_REFERENCE_SCHEMA = {
@@ -204,6 +205,7 @@ class BriefingOutputValidationError(ValueError):
 
 def _source_documents(
     snapshot: StartupAdvisorSnapshot,
+    evidence_documents: list[dict[str, Any]] | None = None,
 ) -> dict[tuple[str, str], Any]:
     documents: dict[tuple[str, str], Any] = {
         (
@@ -244,6 +246,15 @@ def _source_documents(
                     str(recommendation["id"]),
                 )
             ] = recommendation
+
+    for evidence in evidence_documents or []:
+        if isinstance(evidence, dict) and evidence.get("id"):
+            documents[
+                (
+                    "evidence_chunk",
+                    str(evidence["id"]),
+                )
+            ] = evidence
 
     return documents
 
@@ -314,6 +325,7 @@ def validate_startup_advisor_briefing(
     *,
     payload: Any,
     source_snapshot: StartupAdvisorSnapshot,
+    evidence_documents: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     errors = sorted(
         Draft202012Validator(
@@ -336,7 +348,10 @@ def validate_startup_advisor_briefing(
             "LLM briefing priorities must be ordered and contiguous from 1."
         )
 
-    documents = _source_documents(source_snapshot)
+    documents = _source_documents(
+        source_snapshot,
+        evidence_documents=evidence_documents,
+    )
 
     has_persisted_recommendations = any(
         source_type == "recommendation" for source_type, _source_id in documents
