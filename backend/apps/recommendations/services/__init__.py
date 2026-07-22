@@ -13,6 +13,10 @@ from .eligibility import (
     evaluate_scheme_eligibility,
     resolve_profile_field,
 )
+from .explanation import (
+    EXPLANATION_VERSION,
+    build_eligibility_explanation,
+)
 from .recommendations import (
     RANKING_VERSION,
     RecommendationGeneration,
@@ -26,6 +30,7 @@ from .retrieval import (
 
 __all__ = [
     "ENGINE_VERSION",
+    "EXPLANATION_VERSION",
     "PROFILE_SNAPSHOT_FIELDS",
     "RANKING_VERSION",
     "CurrentRecommendationSet",
@@ -34,6 +39,7 @@ __all__ = [
     "RecommendationSetIntegrityError",
     "RuleEvaluation",
     "RuleOutcome",
+    "build_eligibility_explanation",
     "create_eligibility_assessment",
     "evaluate_rule",
     "evaluate_rules",

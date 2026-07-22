@@ -13,6 +13,7 @@ import {
   isFundingScheme,
   isLoanScheme,
   recommendationScheme,
+  schemeDeadlineStatus,
   schemeApplicationSteps,
   schemeEligibilityRules,
   schemeRequirements,
@@ -30,6 +31,8 @@ const loanScheme = {
     currency: "INR",
     interest_rate_min: "8.5",
     interest_rate_max: "11",
+    application_status: "open",
+    deadline: "2026-07-23",
     required_documents: [
       "Certificate of incorporation",
       "Bank statement",
@@ -66,6 +69,41 @@ describe("scheme discovery helpers", () => {
     expect(filterSchemes([loanScheme], "working capital")).toEqual([loanScheme]);
     expect(filterSchemes([loanScheme], "example bank")).toEqual([loanScheme]);
     expect(filterSchemes([loanScheme], "grant")).toEqual([]);
+  });
+
+  test("shows deadline urgency without changing application status", () => {
+    expect(
+      schemeDeadlineStatus(loanScheme, new Date(2026, 6, 20)),
+    ).toMatchObject({
+      tone: "urgent",
+      label: "Closes in 3 days",
+      daysRemaining: 3,
+    });
+
+    expect(
+      schemeDeadlineStatus(loanScheme, new Date(2026, 6, 24)),
+    ).toMatchObject({
+      tone: "closed",
+      label: "Deadline passed",
+      daysRemaining: -1,
+    });
+  });
+
+  test("handles rolling schemes without inventing a deadline", () => {
+    expect(
+      schemeDeadlineStatus({
+        current_version_detail: {
+          application_status: "rolling",
+          deadline: null,
+        },
+      }),
+    ).toEqual({
+      tone: "rolling",
+      label: "Rolling applications",
+      detail: "No fixed deadline is published.",
+      deadline: null,
+      daysRemaining: null,
+    });
   });
 });
 
