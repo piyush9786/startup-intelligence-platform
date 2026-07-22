@@ -1,10 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from .assessment_schema import (
-    assessment_completion_percent,
-    startup_profile_to_assessment_data,
-)
+from .assessment_schema import assessment_completion_percent
 from .models import (
     StartupAdvisorBriefing,
     StartupAdvisorBriefingJob,
@@ -13,6 +10,9 @@ from .models import (
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
+)
+from .services.assessment_drafts import (
+    get_or_create_startup_assessment_draft,
 )
 
 
@@ -96,20 +96,6 @@ class StartupAssessmentDraftCreateSerializer(serializers.Serializer):
                     {"startup_profile_id": ("The startup profile was not found for this user.")}
                 )
 
-            existing = StartupAssessmentDraft.objects.filter(
-                owner=request.user,
-                startup_profile=startup_profile,
-                status=StartupAssessmentDraft.Status.DRAFT,
-            ).exists()
-            if existing:
-                raise serializers.ValidationError(
-                    {
-                        "startup_profile_id": (
-                            "An open assessment draft already exists for this startup profile."
-                        )
-                    }
-                )
-
         attrs["startup_profile"] = startup_profile
         return attrs
 
@@ -118,20 +104,16 @@ class StartupAssessmentDraftCreateSerializer(serializers.Serializer):
         startup_profile = validated_data.pop("startup_profile")
         validated_data.pop("startup_profile_id", None)
         supplied_data = validated_data.pop("data", {})
+        current_step = validated_data.pop("current_step", 1)
 
-        data = (
-            startup_profile_to_assessment_data(startup_profile)
-            if startup_profile is not None
-            else {}
-        )
-        data.update(supplied_data)
-
-        return StartupAssessmentDraft.objects.create(
+        draft, created = get_or_create_startup_assessment_draft(
             owner=request.user,
             startup_profile=startup_profile,
-            data=data,
-            **validated_data,
+            current_step=current_step,
+            supplied_data=supplied_data,
         )
+        self.created = created
+        return draft
 
 
 class StartupAssessmentDraftUpdateSerializer(serializers.Serializer):

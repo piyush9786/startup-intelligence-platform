@@ -63,6 +63,7 @@ class StartupAssessmentDraft(TimeStampedModel):
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
         SUBMITTED = "submitted", "Submitted"
+        SUPERSEDED = "superseded", "Superseded"
 
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -113,6 +114,14 @@ class StartupAssessmentDraft(TimeStampedModel):
                     startup_profile__isnull=False,
                 ),
                 name="startup_one_draft_per_profile",
+            ),
+            models.UniqueConstraint(
+                fields=["owner"],
+                condition=models.Q(
+                    status="draft",
+                    startup_profile__isnull=True,
+                ),
+                name="startup_one_onboarding_draft",
             ),
         ]
 
