@@ -67,6 +67,11 @@ import {
   humanizeApiError,
   sourceReferenceLabel,
 } from "./advisor";
+import {
+  loadCatalogData,
+  loadFounderWorkspaceData,
+  partialLoadWarning,
+} from "./workspaceLoad";
 
 const ACTIVE_ADVISOR_JOB_STATUSES = new Set(["queued", "running"]);
 
@@ -2054,34 +2059,30 @@ function Workspace({ onSignOut }) {
       setLoadingProfiles(true);
       setError("");
       try {
-        const [
-          nextProfiles,
-          nextSchemes,
-          nextExternalSchemes,
-          nextExternalCapitalSupport,
-          nextExternalCertificationRequirements,
-        ] = await Promise.all([
-          listStartupProfiles(),
-          listSchemes(),
-          listExternalSchemes(),
-          listExternalCapitalSupport(),
-          listExternalCertificationRequirements(),
-        ]);
+        const result = await loadCatalogData({
+          listStartupProfiles,
+          listSchemes,
+          listExternalSchemes,
+          listExternalCapitalSupport,
+          listExternalCertificationRequirements,
+        });
         if (!active) return;
-        setProfiles(nextProfiles);
-        setSchemes(nextSchemes);
-        setExternalSchemes(nextExternalSchemes);
-        setExternalCapitalSupport(
-          nextExternalCapitalSupport,
-        );
+
+        setProfiles(result.profiles);
+        setSchemes(result.schemes);
+        setExternalSchemes(result.externalSchemes);
+        setExternalCapitalSupport(result.externalCapitalSupport);
         setExternalCertificationRequirements(
-          nextExternalCertificationRequirements,
+          result.externalCertificationRequirements,
         );
         setSelectedProfileId((currentId) =>
-          nextProfiles.some((profile) => profile.id === currentId)
+          result.profiles.some(
+            (profile) => profile.id === currentId,
+          )
             ? currentId
-            : nextProfiles[0]?.id || "",
+            : result.profiles[0]?.id || "",
         );
+        setError(partialLoadWarning(result.warningLabels));
       } catch (requestError) {
         if (active) handleRequestError(requestError);
       } finally {
@@ -2113,25 +2114,24 @@ function Workspace({ onSignOut }) {
       setSuccess("");
 
       try {
-        const [
-          advisorCurrent,
-          current,
-          historyResponse,
-          currentJobResponse,
-        ] = await Promise.all([
-          getStartupAdvisorCurrent(selectedProfileId),
-          getCurrentBriefing(selectedProfileId),
-          listStartupAdvisorBriefings(selectedProfileId),
-          getCurrentStartupAdvisorBriefingJob(selectedProfileId),
-        ]);
+        const result = await loadFounderWorkspaceData(
+          selectedProfileId,
+          {
+            getStartupAdvisorCurrent,
+            getCurrentBriefing,
+            listStartupAdvisorBriefings,
+            getCurrentStartupAdvisorBriefingJob,
+          },
+        );
 
         if (!active) return;
 
-        setDashboardData(advisorCurrent);
-        setCurrentBriefing(current.briefing);
-        setHistory(historyResponse.briefings || []);
+        setDashboardData(result.dashboardData);
+        setCurrentBriefing(result.currentBriefing.briefing);
+        setHistory(result.history.briefings || []);
+        setError(partialLoadWarning(result.warningLabels));
 
-        const latestJob = currentJobResponse.job;
+        const latestJob = result.currentJob.job;
         if (isActiveAdvisorJob(latestJob)) {
           setGenerationJob(latestJob);
           setGenerationStep(advisorJobProgress(latestJob));
