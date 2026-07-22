@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 import {
+  autofillStartupProfileFromDocument,
   createStartupAssessmentDraft,
   describeApiFailure,
   listStartupAssessmentDrafts,
@@ -12,7 +13,9 @@ import {
   INITIAL_ASSESSMENT_FORM,
   assessmentDraftData,
   assessmentFormFromDraft,
+  assessmentFormWithAutofillSuggestions,
   assessmentStepErrors,
+  autofillSuggestionFieldsForEmptyForm,
   firstInvalidAssessmentStep,
 } from "./assessment";
 
@@ -122,6 +125,129 @@ function ReviewItem({ label, value }) {
     </div>
   );
 }
+
+
+
+function DocumentAutofillPanel({
+  file,
+  loading,
+  onApply,
+  onFileChange,
+  onToggle,
+  onUpload,
+  result,
+  selectedFields,
+}) {
+  const suggestions = result?.suggestions || [];
+
+  return (
+    <section className="document-autofill" aria-labelledby="document-autofill-title">
+      <div className="document-autofill-heading">
+        <div>
+          <span className="section-kicker">Optional document assistance</span>
+          <h3 id="document-autofill-title">Suggest fields from a certificate</h3>
+          <p>
+            Upload a text-based incorporation certificate or Udyam certificate.
+            Nothing is saved until you review, select and apply suggestions.
+          </p>
+        </div>
+        <span className="verification-badge verification-review_required">
+          Confirmation required
+        </span>
+      </div>
+
+      <div className="document-autofill-controls">
+        <input
+          accept=".pdf,.txt,application/pdf,text/plain"
+          aria-label="Certificate document"
+          onChange={(event) => onFileChange(event.target.files?.[0] || null)}
+          type="file"
+        />
+        <button
+          className="button button-secondary"
+          disabled={!file || loading}
+          onClick={onUpload}
+          type="button"
+        >
+          {loading ? "Reading document…" : "Find profile suggestions"}
+        </button>
+      </div>
+
+      {result && (
+        <div className="document-autofill-results">
+          <div className="document-autofill-summary">
+            <strong>
+              {suggestions.length}{" "}
+              {suggestions.length === 1 ? "suggestion" : "suggestions"} found
+            </strong>
+            <span>
+              Detected:{" "}
+              {String(result.document_type?.value || "unknown").replaceAll("_", " ")}
+              {" · "}
+              {result.document_type?.confidence || 0}% confidence
+            </span>
+          </div>
+
+          {result.warnings?.map((warning) => (
+            <p className="document-autofill-warning" key={warning}>
+              {warning}
+            </p>
+          ))}
+
+          {suggestions.length > 0 && (
+            <>
+              <div className="document-autofill-suggestions">
+                {suggestions.map((suggestion) => (
+                  <label
+                    className="document-autofill-suggestion"
+                    key={suggestion.field}
+                  >
+                    <input
+                      checked={selectedFields.includes(suggestion.field)}
+                      onChange={() => onToggle(suggestion.field)}
+                      type="checkbox"
+                    />
+                    <span>
+                      <strong>
+                        {suggestion.field.replaceAll("_", " ")}
+                        <b>{suggestion.confidence}%</b>
+                      </strong>
+                      <span>
+                        {Array.isArray(suggestion.value)
+                          ? suggestion.value.join(", ")
+                          : String(suggestion.value)}
+                      </span>
+                      <small>{suggestion.reason}</small>
+                      {suggestion.evidence?.text && (
+                        <small>
+                          Evidence
+                          {suggestion.evidence.page_number
+                            ? ` · page ${suggestion.evidence.page_number}`
+                            : ""}
+                          : “{suggestion.evidence.text}”
+                        </small>
+                      )}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              <button
+                className="button button-primary"
+                disabled={!selectedFields.length}
+                onClick={onApply}
+                type="button"
+              >
+                Apply selected suggestions
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 
 function StepFields({ form, onChange, step }) {
   if (step === 1) {
@@ -577,6 +703,10 @@ export default function AssessmentWizard({
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [autofillFile, setAutofillFile] = useState(null);
+  const [autofillResult, setAutofillResult] = useState(null);
+  const [autofilling, setAutofilling] = useState(false);
+  const [selectedAutofillFields, setSelectedAutofillFields] = useState([]);
 
   const stepMeta = useMemo(
     () => ASSESSMENT_STEPS.find((item) => item.id === step),
@@ -632,6 +762,71 @@ export default function AssessmentWizard({
     setNotice("");
     setError("");
   }
+
+
+
+  function handleAutofillFileChange(file) {
+    setAutofillFile(file);
+    setAutofillResult(null);
+    setSelectedAutofillFields([]);
+    setNotice("");
+    setError("");
+  }
+
+  async function handleAutofillUpload() {
+    if (!autofillFile) {
+      setError("Choose an incorporation or Udyam certificate first.");
+      return;
+    }
+
+    setAutofilling(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await autofillStartupProfileFromDocument(autofillFile);
+      setAutofillResult(result);
+      setSelectedAutofillFields(
+        autofillSuggestionFieldsForEmptyForm(form, result.suggestions),
+      );
+      setNotice(
+        result.suggestions?.length
+          ? "Review the extracted suggestions before applying them."
+          : "The document was read, but no supported fields were found.",
+      );
+    } catch (requestError) {
+      setError(describeApiFailure(requestError));
+    } finally {
+      setAutofilling(false);
+    }
+  }
+
+  function handleToggleAutofillField(field) {
+    setSelectedAutofillFields((current) =>
+      current.includes(field)
+        ? current.filter((item) => item !== field)
+        : [...current, field],
+    );
+  }
+
+  function handleApplyAutofillSuggestions() {
+    if (!selectedAutofillFields.length) {
+      setError("Select at least one document suggestion.");
+      return;
+    }
+
+    setForm((current) =>
+      assessmentFormWithAutofillSuggestions(
+        current,
+        autofillResult?.suggestions || [],
+        selectedAutofillFields,
+      ),
+    );
+    setNotice(
+      "Selected suggestions were added to the form. Review them, then save.",
+    );
+    setError("");
+  }
+
 
   async function persist(nextStep = step) {
     if (!draft) return null;
@@ -762,6 +957,20 @@ export default function AssessmentWizard({
               {saving ? "Saving…" : notice || "Draft saved on this account"}
             </span>
           </div>
+
+
+
+          <DocumentAutofillPanel
+            file={autofillFile}
+            loading={autofilling}
+            onApply={handleApplyAutofillSuggestions}
+            onFileChange={handleAutofillFileChange}
+            onToggle={handleToggleAutofillField}
+            onUpload={handleAutofillUpload}
+            result={autofillResult}
+            selectedFields={selectedAutofillFields}
+          />
+
 
           {error && (
             <div className="notice notice-danger" role="alert">

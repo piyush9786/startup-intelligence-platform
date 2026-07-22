@@ -2995,3 +2995,110 @@ body {
   line-height: 1.4;
   margin-top: 0.25rem;
 }
+
+/* Phase 36: founder document autofill */
+.document-autofill {
+  background: rgba(246, 248, 252, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+}
+
+.document-autofill-heading,
+.document-autofill-summary {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.document-autofill-heading h3 {
+  margin: 0.25rem 0;
+}
+
+.document-autofill-heading p,
+.document-autofill-summary span,
+.document-autofill-suggestion small {
+  color: var(--muted);
+}
+
+.document-autofill-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.document-autofill-controls input[type="file"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  flex: 1 1 320px;
+  padding: 0.7rem;
+}
+
+.document-autofill-results {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.document-autofill-summary span {
+  text-transform: capitalize;
+}
+
+.document-autofill-warning {
+  background: #fff3cd;
+  border-radius: 10px;
+  color: #765500;
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.75rem;
+}
+
+.document-autofill-suggestions {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1rem 0;
+}
+
+.document-autofill-suggestion {
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.8rem;
+}
+
+.document-autofill-suggestion > span {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.document-autofill-suggestion strong {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  text-transform: capitalize;
+}
+
+.document-autofill-suggestion strong b {
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+
+.document-autofill-suggestion small:last-child {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .document-autofill-heading,
+  .document-autofill-summary {
+    display: grid;
+  }
+}

@@ -3,7 +3,9 @@ import { describe, expect, test } from "vitest";
 import {
   assessmentDraftData,
   assessmentFormFromDraft,
+  assessmentFormWithAutofillSuggestions,
   assessmentStepErrors,
+  autofillSuggestionFieldsForEmptyForm,
   firstInvalidAssessmentStep,
 } from "./assessment";
 
@@ -54,6 +56,52 @@ describe("startup assessment helpers", () => {
 
     expect(errors).toHaveLength(3);
   });
+
+
+
+  test("selects document suggestions only for empty fields by default", () => {
+    const selected = autofillSuggestionFieldsForEmptyForm(
+      {
+        startup_name: "Existing name",
+        legal_name: "",
+        udyam_registered: "",
+      },
+      [
+        { field: "startup_name", value: "Suggested name" },
+        { field: "legal_name", value: "Suggested Legal Private Limited" },
+        { field: "udyam_registered", value: true },
+      ],
+    );
+
+    expect(selected).toEqual(["legal_name", "udyam_registered"]);
+  });
+
+  test("applies only founder-confirmed document suggestions", () => {
+    const form = assessmentFormWithAutofillSuggestions(
+      {
+        startup_name: "Existing name",
+        legal_name: "",
+        udyam_registered: "",
+        regulatory_registrations: "",
+      },
+      [
+        { field: "startup_name", value: "Suggested name" },
+        { field: "legal_name", value: "Suggested Legal Private Limited" },
+        { field: "udyam_registered", value: true },
+        {
+          field: "regulatory_registrations",
+          value: ["UDYAM-KA-03-0123456"],
+        },
+      ],
+      ["legal_name", "udyam_registered", "regulatory_registrations"],
+    );
+
+    expect(form.startup_name).toBe("Existing name");
+    expect(form.legal_name).toBe("Suggested Legal Private Limited");
+    expect(form.udyam_registered).toBe("yes");
+    expect(form.regulatory_registrations).toBe("UDYAM-KA-03-0123456");
+  });
+
 
   test("returns the first incomplete assessment step", () => {
     expect(firstInvalidAssessmentStep({ startup_name: "" })).toBe(1);
