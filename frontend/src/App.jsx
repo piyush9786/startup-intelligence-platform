@@ -12,6 +12,7 @@ import {
   getStartupAdvisorBriefing,
   getStartupAdvisorBriefingJob,
   getStartupAdvisorCurrent,
+  listExternalSchemes,
   listSchemes,
   listStartupAdvisorBriefings,
   listStartupProfiles,
@@ -39,6 +40,15 @@ import {
   schemeEligibilityRules,
   schemeRequirements,
 } from "./dashboard";
+import {
+  dedupeExternalSchemes,
+  externalSchemeAuthority,
+  externalSchemeDescription,
+  externalSchemeTags,
+  filterExternalSchemes,
+  isExternalFundingScheme,
+  isExternalLoanScheme,
+} from "./externalSchemes";
 import {
   briefingCounts,
   formatDateTime,
@@ -1016,33 +1026,153 @@ function SchemeCard({ onOpen, scheme }) {
   );
 }
 
-function SchemeExplorer({ onOpenScheme, query, schemes }) {
+function ExternalSchemeCard({ scheme }) {
+  const tags = externalSchemeTags(scheme);
+  const applicationUrl = scheme.official_application_url;
+
+  return (
+    <article className="scheme-card scheme-card-external">
+      <div className="scheme-card-topline">
+        <span className="verification-badge verification-review_required">
+          {scheme.verification_label || "Needs review"}
+        </span>
+        <span className="application-badge">
+          External dataset
+        </span>
+      </div>
+
+      <h3>{scheme.scheme_name}</h3>
+
+      <p className="scheme-authority">
+        {externalSchemeAuthority(scheme)}
+      </p>
+
+      <p className="scheme-description">
+        {externalSchemeDescription(scheme)}
+      </p>
+
+      <div className="scheme-tags">
+        {tags.length ? (
+          tags.map((item) => (
+            <span key={String(item)}>
+              {String(item)}
+            </span>
+          ))
+        ) : (
+          <span>Classification pending</span>
+        )}
+      </div>
+
+      <p className="external-scheme-disclaimer">
+        {scheme.disclaimer ||
+          "Information supplied by an external dataset. Verify details on the official source before applying."}
+      </p>
+
+      <div className="scheme-card-footer">
+        <span>
+          {scheme.funding_amount || "Amount not published"}
+        </span>
+
+        {applicationUrl ? (
+          <a
+            href={applicationUrl}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Official source →
+          </a>
+        ) : (
+          <strong>Official link unavailable</strong>
+        )}
+      </div>
+    </article>
+  );
+}
+
+
+function SchemeExplorer({
+  externalSchemes,
+  onOpenScheme,
+  query,
+  schemes,
+}) {
   const [filter, setFilter] = useState("all");
-  const searched = filterSchemes(schemes, query);
-  const filtered = searched.filter((scheme) => {
-    if (filter === "funding") return isFundingScheme(scheme);
-    if (filter === "loans") return isLoanScheme(scheme);
-    if (filter === "verified") return currentSchemeVersion(scheme)?.verification_status === "verified";
-    return true;
-  });
+
+  const discoveredExternalSchemes = useMemo(
+    () => dedupeExternalSchemes(
+      schemes,
+      externalSchemes,
+    ),
+    [externalSchemes, schemes],
+  );
+
+  const searchedCanonical = filterSchemes(
+    schemes,
+    query,
+  );
+  const searchedExternal = filterExternalSchemes(
+    discoveredExternalSchemes,
+    query,
+  );
+
+  let visibleCanonical = searchedCanonical;
+  let visibleExternal = searchedExternal;
+
+  if (filter === "verified") {
+    visibleCanonical = searchedCanonical.filter(
+      (scheme) =>
+        currentSchemeVersion(scheme)?.verification_status ===
+        "verified",
+    );
+    visibleExternal = [];
+  } else if (filter === "needs-review") {
+    visibleCanonical = [];
+  } else if (filter === "funding") {
+    visibleCanonical = searchedCanonical.filter(
+      isFundingScheme,
+    );
+    visibleExternal = searchedExternal.filter(
+      isExternalFundingScheme,
+    );
+  } else if (filter === "loans") {
+    visibleCanonical = searchedCanonical.filter(
+      isLoanScheme,
+    );
+    visibleExternal = searchedExternal.filter(
+      isExternalLoanScheme,
+    );
+  }
+
+  const resultCount =
+    visibleCanonical.length + visibleExternal.length;
 
   return (
     <div className="page-stack">
       <PageHeader
         eyebrow="DISCOVER SUPPORT"
         title="Explore schemes"
-        description="Browse verified and versioned schemes, understand the support offered, and open the official application route."
+        description="Browse verified platform schemes and external schemes awaiting review. External records are discovery-only and are not used for startup recommendations."
       />
-      <div className="filter-tabs" role="group" aria-label="Scheme filters">
+
+      <div
+        className="filter-tabs"
+        role="group"
+        aria-label="Scheme filters"
+      >
         {[
-          ["all", "All schemes"],
+          ["all", "All discovered"],
           ["verified", "Verified"],
+          ["needs-review", "Needs review"],
           ["funding", "Funding support"],
           ["loans", "Loans & credit"],
         ].map(([id, label]) => (
           <button
             aria-pressed={filter === id}
-            className={filter === id ? "filter-tab-active" : ""}
+            className={
+              filter === id
+                ? "filter-tab-active"
+                : ""
+            }
             key={id}
             onClick={() => setFilter(id)}
             type="button"
@@ -1051,13 +1181,31 @@ function SchemeExplorer({ onOpenScheme, query, schemes }) {
           </button>
         ))}
       </div>
-      <p className="result-count">{filtered.length} scheme{filtered.length === 1 ? "" : "s"} shown</p>
-      {filtered.length ? (
+
+      <p className="result-count">
+        {resultCount} scheme
+        {resultCount === 1 ? "" : "s"} shown
+        {" · "}
+        {visibleCanonical.length} verified/platform
+        {" · "}
+        {visibleExternal.length} external
+      </p>
+
+      {resultCount ? (
         <div className="scheme-grid">
-          {filtered.map((scheme) => (
+          {visibleCanonical.map((scheme) => (
             <SchemeCard
-              key={scheme.id}
-              onOpen={(selected) => onOpenScheme(selected, "schemes")}
+              key={`canonical-${scheme.id}`}
+              onOpen={(selected) =>
+                onOpenScheme(selected, "schemes")
+              }
+              scheme={scheme}
+            />
+          ))}
+
+          {visibleExternal.map((scheme) => (
+            <ExternalSchemeCard
+              key={`external-${scheme.id}`}
               scheme={scheme}
             />
           ))}
@@ -1070,6 +1218,7 @@ function SchemeExplorer({ onOpenScheme, query, schemes }) {
     </div>
   );
 }
+
 
 function RequirementsPage({ onOpenScheme, query, schemes }) {
   const applicable = filterSchemes(schemes, query).filter((scheme) =>
@@ -1371,6 +1520,7 @@ function Workspace({ onSignOut }) {
   const [selectedProfileId, setSelectedProfileId] = useState("");
   const [dashboardData, setDashboardData] = useState(null);
   const [schemes, setSchemes] = useState([]);
+  const [externalSchemes, setExternalSchemes] = useState([]);
   const [currentBriefing, setCurrentBriefing] = useState(null);
   const [history, setHistory] = useState([]);
   const [activeView, setActiveView] = useState("overview");
@@ -1408,13 +1558,19 @@ function Workspace({ onSignOut }) {
       setLoadingProfiles(true);
       setError("");
       try {
-        const [nextProfiles, nextSchemes] = await Promise.all([
+        const [
+          nextProfiles,
+          nextSchemes,
+          nextExternalSchemes,
+        ] = await Promise.all([
           listStartupProfiles(),
           listSchemes(),
+          listExternalSchemes(),
         ]);
         if (!active) return;
         setProfiles(nextProfiles);
         setSchemes(nextSchemes);
+        setExternalSchemes(nextExternalSchemes);
         setSelectedProfileId((currentId) =>
           nextProfiles.some((profile) => profile.id === currentId)
             ? currentId
@@ -1713,7 +1869,14 @@ function Workspace({ onSignOut }) {
       />
     );
   } else if (activeView === "schemes") {
-    page = <SchemeExplorer onOpenScheme={handleOpenScheme} query={query} schemes={schemes} />;
+    page = (
+      <SchemeExplorer
+        externalSchemes={externalSchemes}
+        onOpenScheme={handleOpenScheme}
+        query={query}
+        schemes={schemes}
+      />
+    );
   } else if (activeView === "requirements") {
     page = <RequirementsPage onOpenScheme={handleOpenScheme} query={query} schemes={schemes} />;
   } else if (activeView === "funding") {
