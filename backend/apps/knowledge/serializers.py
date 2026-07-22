@@ -5,6 +5,7 @@ from .models import (
     BenefitCandidate,
     CandidateEvidence,
     EligibilityRuleCandidate,
+    ExternalSchemeRecord,
     KnowledgeExtractionRun,
     RequiredDocumentCandidate,
     SchemeCandidate,
@@ -66,3 +67,74 @@ class SchemeCandidateSerializer(serializers.ModelSerializer):
     class Meta:
         model = SchemeCandidate
         fields = "__all__"
+
+class ExternalSchemeRecordSerializer(serializers.ModelSerializer):
+    dataset_key = serializers.CharField(
+        source="dataset.dataset_key",
+        read_only=True,
+    )
+    dataset_name = serializers.CharField(
+        source="dataset.dataset_name",
+        read_only=True,
+    )
+    source_type = serializers.SerializerMethodField()
+    verification_label = serializers.SerializerMethodField()
+    disclaimer = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ExternalSchemeRecord
+        fields = (
+            "id",
+            "external_id",
+            "scheme_name",
+            "normalized_name",
+            "ministry",
+            "department",
+            "sector",
+            "startup_stage",
+            "startup_type",
+            "industry",
+            "central_state",
+            "state",
+            "funding_type",
+            "funding_amount",
+            "financial_instrument",
+            "eligibility",
+            "women_eligible",
+            "sc_st_eligible",
+            "dpiit_required",
+            "startup_age_limit",
+            "revenue_criteria",
+            "tax_benefits",
+            "documents_required",
+            "application_process",
+            "official_website_label",
+            "official_application_url",
+            "source_portal",
+            "claimed_last_updated",
+            "quality_warnings",
+            "review_status",
+            "matched_scheme_id",
+            "dataset_key",
+            "dataset_name",
+            "source_type",
+            "verification_label",
+            "disclaimer",
+            "updated_at",
+        )
+        read_only_fields = fields
+
+    def get_source_type(self, obj) -> str:
+        return "external"
+
+    def get_verification_label(self, obj) -> str:
+        if obj.review_status == ExternalSchemeRecord.ReviewStatus.VERIFIED:
+            return "Verified"
+
+        return "Needs review"
+
+    def get_disclaimer(self, obj) -> str:
+        return (
+            "Information supplied by an external dataset. "
+            "Verify details on the official source before applying."
+        )
