@@ -125,7 +125,7 @@ def test_profile_owner_can_create_persisted_assessment():
     assert response.data["scheme_id"] == str(scheme.id)
     assert response.data["scheme_version_id"] == str(scheme.current_version_id)
     assert response.data["result"] == "eligible"
-    assert response.data["engine_version"] == "rules-v1"
+    assert response.data["engine_version"] == "rules-v2"
     assert response.data["assessment_date"] == "2026-07-20"
     assert response.data["profile_snapshot"]["id"] == str(profile.id)
     assert EligibilityAssessment.objects.count() == 1
