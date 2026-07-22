@@ -12,6 +12,8 @@ import {
   getStartupAdvisorBriefing,
   getStartupAdvisorBriefingJob,
   getStartupAdvisorCurrent,
+  listExternalCapitalSupport,
+  listExternalCertificationRequirements,
   listExternalSchemes,
   listSchemes,
   listStartupAdvisorBriefings,
@@ -49,6 +51,15 @@ import {
   isExternalFundingScheme,
   isExternalLoanScheme,
 } from "./externalSchemes";
+import {
+  externalCapitalAmount,
+  externalCapitalAuthority,
+  externalCapitalTags,
+  externalCertificationTags,
+  filterExternalCapitalSupport,
+  filterExternalCertificationRequirements,
+  isExternalCapitalLoan,
+} from "./externalKnowledge";
 import {
   briefingCounts,
   formatDateTime,
@@ -1220,11 +1231,22 @@ function SchemeExplorer({
 }
 
 
-function RequirementsPage({ onOpenScheme, query, schemes }) {
-  const applicable = filterSchemes(schemes, query).filter((scheme) =>
-    schemeRequirements(scheme).length ||
-    schemeEligibilityRules(scheme).length ||
-    schemeApplicationSteps(scheme).length,
+function RequirementsPage({
+  externalRequirements,
+  onOpenScheme,
+  query,
+  schemes,
+}) {
+  const applicable = filterSchemes(schemes, query).filter(
+    (scheme) =>
+      schemeRequirements(scheme).length ||
+      schemeEligibilityRules(scheme).length ||
+      schemeApplicationSteps(scheme).length,
+  );
+
+  const external = filterExternalCertificationRequirements(
+    externalRequirements,
+    query,
   );
 
   return (
@@ -1232,55 +1254,296 @@ function RequirementsPage({ onOpenScheme, query, schemes }) {
       <PageHeader
         eyebrow="APPLICATION READINESS"
         title="Requirements and certifications"
-        description="See the documents, eligibility rules, registration or certification evidence, and application steps captured for each scheme."
+        description="Review verified scheme requirements separately from external certification records awaiting verification."
       />
-      {applicable.length ? (
-        <div className="requirements-list">
-          {applicable.map((scheme) => {
-            const documents = schemeRequirements(scheme);
-            const certifications = certificationRequirements(scheme);
-            const rules = schemeEligibilityRules(scheme);
-            return (
-              <article className="requirement-card" key={scheme.id}>
-                <div className="requirement-card-heading">
-                  <div>
-                    <span className="section-kicker">{scheme.authority_name || "Authority"}</span>
-                    <h2>{scheme.canonical_name}</h2>
-                  </div>
-                  <button onClick={() => onOpenScheme(scheme, "requirements")} type="button">Open scheme →</button>
-                </div>
-                <div className="requirement-columns">
-                  <section>
-                    <h3>Required documents</h3>
-                    {documents.length ? <ul>{documents.slice(0, 6).map((item) => <li key={item}>{item}</li>)}</ul> : <p>No document list has been captured.</p>}
-                  </section>
-                  <section>
-                    <h3>Certification / registration evidence</h3>
-                    {certifications.length ? <ul>{certifications.slice(0, 6).map((item) => <li key={item}>{item}</li>)}</ul> : <p>No explicit certification requirement is present in the current verified fields.</p>}
-                  </section>
-                  <section>
-                    <h3>Eligibility rules</h3>
-                    {rules.length ? <ul>{rules.slice(0, 6).map((rule, index) => <li key={rule.id || `${rule.label}-${index}`}><span className={rule.mandatory ? "mandatory-dot" : "optional-dot"} />{rule.label}</li>)}</ul> : <p>No structured eligibility rules have been captured.</p>}
-                  </section>
-                </div>
-              </article>
-            );
-          })}
+
+      <section className="page-stack">
+        <div className="overview-heading">
+          <div>
+            <span className="section-kicker">
+              Verified platform records
+            </span>
+            <h2>Scheme-specific requirements</h2>
+          </div>
+          <span className="count-badge">{applicable.length}</span>
         </div>
-      ) : (
-        <EmptyPanel title="No requirement records found">
-          Requirements appear when a current scheme version contains documents, eligibility rules, or application steps.
-        </EmptyPanel>
-      )}
+
+        {applicable.length ? (
+          <div className="requirements-list">
+            {applicable.map((scheme) => {
+              const documents = schemeRequirements(scheme);
+              const certifications =
+                certificationRequirements(scheme);
+              const rules = schemeEligibilityRules(scheme);
+
+              return (
+                <article
+                  className="requirement-card"
+                  key={scheme.id}
+                >
+                  <div className="requirement-card-heading">
+                    <div>
+                      <span className="section-kicker">
+                        {scheme.authority_name || "Authority"}
+                      </span>
+                      <h2>{scheme.canonical_name}</h2>
+                    </div>
+                    <button
+                      onClick={() =>
+                        onOpenScheme(
+                          scheme,
+                          "requirements",
+                        )
+                      }
+                      type="button"
+                    >
+                      Open scheme →
+                    </button>
+                  </div>
+
+                  <div className="requirement-columns">
+                    <section>
+                      <h3>Required documents</h3>
+                      {documents.length ? (
+                        <ul>
+                          {documents
+                            .slice(0, 6)
+                            .map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                        </ul>
+                      ) : (
+                        <p>
+                          No document list has been captured.
+                        </p>
+                      )}
+                    </section>
+
+                    <section>
+                      <h3>
+                        Certification / registration evidence
+                      </h3>
+                      {certifications.length ? (
+                        <ul>
+                          {certifications
+                            .slice(0, 6)
+                            .map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                        </ul>
+                      ) : (
+                        <p>
+                          No explicit certification requirement
+                          is present in the current verified
+                          fields.
+                        </p>
+                      )}
+                    </section>
+
+                    <section>
+                      <h3>Eligibility rules</h3>
+                      {rules.length ? (
+                        <ul>
+                          {rules
+                            .slice(0, 6)
+                            .map((rule, index) => (
+                              <li
+                                key={
+                                  rule.id ||
+                                  `${rule.label}-${index}`
+                                }
+                              >
+                                <span
+                                  className={
+                                    rule.mandatory
+                                      ? "mandatory-dot"
+                                      : "optional-dot"
+                                  }
+                                />
+                                {rule.label}
+                              </li>
+                            ))}
+                        </ul>
+                      ) : (
+                        <p>
+                          No structured eligibility rules have
+                          been captured.
+                        </p>
+                      )}
+                    </section>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyPanel title="No verified requirement records found">
+            Requirements appear when a current scheme version
+            contains documents, eligibility rules, or application
+            steps.
+          </EmptyPanel>
+        )}
+      </section>
+
+      <section className="page-stack">
+        <div className="overview-heading">
+          <div>
+            <span className="section-kicker">
+              External discovery records
+            </span>
+            <h2>Certification and registration references</h2>
+          </div>
+          <span className="count-badge">{external.length}</span>
+        </div>
+
+        <InlineNotice>
+          External records are discovery-only, require verification,
+          and are not used for recommendations or readiness scoring.
+        </InlineNotice>
+
+        {external.length ? (
+          <div className="requirements-list">
+            {external.map((record) => {
+              const tags =
+                externalCertificationTags(record);
+
+              return (
+                <article
+                  className="requirement-card scheme-card-external"
+                  key={`external-requirement-${record.id}`}
+                >
+                  <div className="requirement-card-heading">
+                    <div>
+                      <div className="scheme-card-topline">
+                        <span className="verification-badge verification-review_required">
+                          {record.verification_label ||
+                            "Needs review"}
+                        </span>
+                        <span className="application-badge">
+                          External dataset
+                        </span>
+                      </div>
+
+                      <span className="section-kicker">
+                        {record.issuing_authority ||
+                          "Issuing authority not published"}
+                      </span>
+                      <h2>{record.certificate_name}</h2>
+                    </div>
+
+                    {record.official_apply_url && (
+                      <a
+                        className="button button-ghost"
+                        href={record.official_apply_url}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        Official source →
+                      </a>
+                    )}
+                  </div>
+
+                  {record.description && (
+                    <p>{record.description}</p>
+                  )}
+
+                  <div className="scheme-tags">
+                    {tags.length ? (
+                      tags.map((tag) => (
+                        <span key={tag}>{tag}</span>
+                      ))
+                    ) : (
+                      <span>Classification pending</span>
+                    )}
+                  </div>
+
+                  <div className="requirement-columns">
+                    <section>
+                      <h3>Who may need it</h3>
+                      <p>
+                        {record.eligibility ||
+                          "Eligibility details require confirmation."}
+                      </p>
+                    </section>
+
+                    <section>
+                      <h3>Validity and renewal</h3>
+                      <p>
+                        {[
+                          record.validity,
+                          record.renewal_period,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") ||
+                          "Validity details are not published."}
+                      </p>
+                    </section>
+
+                    <section>
+                      <h3>Potential benefit</h3>
+                      <p>
+                        {record.benefits ||
+                          "Benefits require confirmation from the issuing authority."}
+                      </p>
+                    </section>
+                  </div>
+
+                  {record.official_document_text && (
+                    <p className="external-scheme-disclaimer">
+                      Published reference:{" "}
+                      {record.official_document_text}
+                    </p>
+                  )}
+
+                  <p className="external-scheme-disclaimer">
+                    {record.disclaimer ||
+                      "Confirm this requirement and its application process with the issuing authority."}
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyPanel title="No external certification record matches this view">
+            Clear the search to review all display-eligible
+            external certification records.
+          </EmptyPanel>
+        )}
+      </section>
     </div>
   );
 }
 
-function FundingPage({ onOpenScheme, query, schemes }) {
+function FundingPage({
+  externalCapitalSupport,
+  onOpenScheme,
+  query,
+  schemes,
+}) {
   const [filter, setFilter] = useState("all");
-  const funding = filterSchemes(schemes, query).filter(isFundingScheme).filter((scheme) => {
-    if (filter === "loans") return isLoanScheme(scheme);
-    if (filter === "non-loans") return !isLoanScheme(scheme);
+
+  const funding = filterSchemes(schemes, query)
+    .filter(isFundingScheme)
+    .filter((scheme) => {
+      if (filter === "loans") {
+        return isLoanScheme(scheme);
+      }
+      if (filter === "non-loans") {
+        return !isLoanScheme(scheme);
+      }
+      return true;
+    });
+
+  const external = filterExternalCapitalSupport(
+    externalCapitalSupport,
+    query,
+  ).filter((record) => {
+    if (filter === "loans") {
+      return isExternalCapitalLoan(record);
+    }
+    if (filter === "non-loans") {
+      return !isExternalCapitalLoan(record);
+    }
     return true;
   });
 
@@ -1289,37 +1552,253 @@ function FundingPage({ onOpenScheme, query, schemes }) {
       <PageHeader
         eyebrow="CAPITAL SUPPORT"
         title="Funding and loans"
-        description="Compare grants, subsidies, equity support, loans and credit schemes using published amount, interest and application fields."
+        description="Compare verified platform schemes separately from external capital-support records awaiting review."
       />
-      <div className="filter-tabs" role="group" aria-label="Funding filters">
-        {[["all", "All funding"], ["loans", "Loans & credit"], ["non-loans", "Grants and other support"]].map(([id, label]) => (
-          <button aria-pressed={filter === id} className={filter === id ? "filter-tab-active" : ""} key={id} onClick={() => setFilter(id)} type="button">{label}</button>
+
+      <div
+        className="filter-tabs"
+        role="group"
+        aria-label="Funding filters"
+      >
+        {[
+          ["all", "All funding"],
+          ["loans", "Loans & credit"],
+          ["non-loans", "Grants and other support"],
+        ].map(([id, label]) => (
+          <button
+            aria-pressed={filter === id}
+            className={
+              filter === id ? "filter-tab-active" : ""
+            }
+            key={id}
+            onClick={() => setFilter(id)}
+            type="button"
+          >
+            {label}
+          </button>
         ))}
       </div>
-      {funding.length ? (
-        <div className="funding-grid">
-          {funding.map((scheme) => (
-            <article className="funding-card" key={scheme.id}>
-              <div className="funding-card-heading">
-                <span>{fundingTypeLabel(scheme)}</span>
-                <small>{readinessStatusLabel(currentSchemeVersion(scheme)?.application_status || "status unknown")}</small>
-              </div>
-              <h2>{scheme.canonical_name}</h2>
-              <p>{scheme.authority_name || "Authority not published"}</p>
-              <dl>
-                <div><dt>Published amount</dt><dd>{formatAmountRange(scheme)}</dd></div>
-                <div><dt>Interest</dt><dd>{isLoanScheme(scheme) ? formatInterestRange(scheme) : "Not applicable / not published"}</dd></div>
-                <div><dt>Equity required</dt><dd>{currentSchemeVersion(scheme)?.equity_required === true ? "Yes" : currentSchemeVersion(scheme)?.equity_required === false ? "No" : "Not published"}</dd></div>
-              </dl>
-              <button className="button button-secondary button-wide" onClick={() => onOpenScheme(scheme, "funding")} type="button">Review eligibility and apply</button>
-            </article>
-          ))}
+
+      <p className="result-count">
+        {funding.length + external.length} records shown
+        {" · "}
+        {funding.length} verified/platform
+        {" · "}
+        {external.length} external
+      </p>
+
+      <section className="page-stack">
+        <div className="overview-heading">
+          <div>
+            <span className="section-kicker">
+              Verified platform records
+            </span>
+            <h2>Funding schemes</h2>
+          </div>
+          <span className="count-badge">{funding.length}</span>
         </div>
-      ) : (
-        <EmptyPanel title="No funding record matches this view">
-          Funding is identified only from structured support types, amount or interest fields, and explicit funding terminology.
-        </EmptyPanel>
-      )}
+
+        {funding.length ? (
+          <div className="funding-grid">
+            {funding.map((scheme) => (
+              <article
+                className="funding-card"
+                key={scheme.id}
+              >
+                <div className="funding-card-heading">
+                  <span>{fundingTypeLabel(scheme)}</span>
+                  <small>
+                    {readinessStatusLabel(
+                      currentSchemeVersion(scheme)
+                        ?.application_status ||
+                        "status unknown",
+                    )}
+                  </small>
+                </div>
+
+                <h2>{scheme.canonical_name}</h2>
+                <p>
+                  {scheme.authority_name ||
+                    "Authority not published"}
+                </p>
+
+                <dl>
+                  <div>
+                    <dt>Published amount</dt>
+                    <dd>{formatAmountRange(scheme)}</dd>
+                  </div>
+                  <div>
+                    <dt>Interest</dt>
+                    <dd>
+                      {isLoanScheme(scheme)
+                        ? formatInterestRange(scheme)
+                        : "Not applicable / not published"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Equity required</dt>
+                    <dd>
+                      {currentSchemeVersion(scheme)
+                        ?.equity_required === true
+                        ? "Yes"
+                        : currentSchemeVersion(scheme)
+                              ?.equity_required === false
+                          ? "No"
+                          : "Not published"}
+                    </dd>
+                  </div>
+                </dl>
+
+                <button
+                  className="button button-secondary button-wide"
+                  onClick={() =>
+                    onOpenScheme(scheme, "funding")
+                  }
+                  type="button"
+                >
+                  Review eligibility and apply
+                </button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyPanel title="No verified funding record matches this view">
+            Funding is identified from structured scheme
+            support, amount, interest, and funding fields.
+          </EmptyPanel>
+        )}
+      </section>
+
+      <section className="page-stack">
+        <div className="overview-heading">
+          <div>
+            <span className="section-kicker">
+              External discovery records
+            </span>
+            <h2>Additional capital-support references</h2>
+          </div>
+          <span className="count-badge">{external.length}</span>
+        </div>
+
+        <InlineNotice>
+          External records require verification and are not
+          included in startup recommendations or ranking.
+        </InlineNotice>
+
+        {external.length ? (
+          <div className="funding-grid">
+            {external.map((record) => {
+              const tags = externalCapitalTags(record);
+              const isLoan =
+                isExternalCapitalLoan(record);
+
+              return (
+                <article
+                  className="funding-card scheme-card-external"
+                  key={`external-capital-${record.id}`}
+                >
+                  <div className="scheme-card-topline">
+                    <span className="verification-badge verification-review_required">
+                      {record.verification_label ||
+                        "Needs review"}
+                    </span>
+                    <span className="application-badge">
+                      External dataset
+                    </span>
+                  </div>
+
+                  <div className="funding-card-heading">
+                    <span>
+                      {record.support_type ||
+                        record.funding_category ||
+                        (isLoan
+                          ? "Loan / credit"
+                          : "Capital support")}
+                    </span>
+                    <small>
+                      {record.claimed_scheme_status ||
+                        "Status requires verification"}
+                    </small>
+                  </div>
+
+                  <h2>{record.support_name}</h2>
+                  <p>{externalCapitalAuthority(record)}</p>
+
+                  <div className="scheme-tags">
+                    {tags.length ? (
+                      tags.map((tag) => (
+                        <span key={tag}>{tag}</span>
+                      ))
+                    ) : (
+                      <span>Classification pending</span>
+                    )}
+                  </div>
+
+                  <dl>
+                    <div>
+                      <dt>Published amount</dt>
+                      <dd>
+                        {externalCapitalAmount(record)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Interest</dt>
+                      <dd>
+                        {record.interest_rate_text ||
+                          (isLoan
+                            ? "Not published"
+                            : "Not applicable / not published")}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Collateral</dt>
+                      <dd>
+                        {record.collateral_required_text ||
+                          "Not published"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Repayment</dt>
+                      <dd>
+                        {record.repayment_required_text ||
+                          "Not published"}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  {record.funding_purpose && (
+                    <p>
+                      <strong>Purpose:</strong>{" "}
+                      {record.funding_purpose}
+                    </p>
+                  )}
+
+                  {record.eligible_entity && (
+                    <p>
+                      <strong>Eligible entity:</strong>{" "}
+                      {record.eligible_entity}
+                    </p>
+                  )}
+
+                  <p className="external-scheme-disclaimer">
+                    {record.disclaimer ||
+                      "Verify all funding terms with the responsible authority before applying."}
+                  </p>
+
+                  <strong>
+                    Official application link unavailable
+                  </strong>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyPanel title="No external capital-support record matches this view">
+            Clear the search or choose another funding
+            category.
+          </EmptyPanel>
+        )}
+      </section>
     </div>
   );
 }
@@ -1521,6 +2000,14 @@ function Workspace({ onSignOut }) {
   const [dashboardData, setDashboardData] = useState(null);
   const [schemes, setSchemes] = useState([]);
   const [externalSchemes, setExternalSchemes] = useState([]);
+  const [
+    externalCapitalSupport,
+    setExternalCapitalSupport,
+  ] = useState([]);
+  const [
+    externalCertificationRequirements,
+    setExternalCertificationRequirements,
+  ] = useState([]);
   const [currentBriefing, setCurrentBriefing] = useState(null);
   const [history, setHistory] = useState([]);
   const [activeView, setActiveView] = useState("overview");
@@ -1562,15 +2049,25 @@ function Workspace({ onSignOut }) {
           nextProfiles,
           nextSchemes,
           nextExternalSchemes,
+          nextExternalCapitalSupport,
+          nextExternalCertificationRequirements,
         ] = await Promise.all([
           listStartupProfiles(),
           listSchemes(),
           listExternalSchemes(),
+          listExternalCapitalSupport(),
+          listExternalCertificationRequirements(),
         ]);
         if (!active) return;
         setProfiles(nextProfiles);
         setSchemes(nextSchemes);
         setExternalSchemes(nextExternalSchemes);
+        setExternalCapitalSupport(
+          nextExternalCapitalSupport,
+        );
+        setExternalCertificationRequirements(
+          nextExternalCertificationRequirements,
+        );
         setSelectedProfileId((currentId) =>
           nextProfiles.some((profile) => profile.id === currentId)
             ? currentId
@@ -1878,9 +2375,27 @@ function Workspace({ onSignOut }) {
       />
     );
   } else if (activeView === "requirements") {
-    page = <RequirementsPage onOpenScheme={handleOpenScheme} query={query} schemes={schemes} />;
+    page = (
+      <RequirementsPage
+        externalRequirements={
+          externalCertificationRequirements
+        }
+        onOpenScheme={handleOpenScheme}
+        query={query}
+        schemes={schemes}
+      />
+    );
   } else if (activeView === "funding") {
-    page = <FundingPage onOpenScheme={handleOpenScheme} query={query} schemes={schemes} />;
+    page = (
+      <FundingPage
+        externalCapitalSupport={
+          externalCapitalSupport
+        }
+        onOpenScheme={handleOpenScheme}
+        query={query}
+        schemes={schemes}
+      />
+    );
   } else if (activeView === "roadmap") {
     page = <RoadmapPage actionPlan={dashboardData?.action_plan} />;
   } else if (activeView === "advisor") {
