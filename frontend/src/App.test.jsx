@@ -374,6 +374,63 @@ describe("functional user dashboard", () => {
     );
   });
 
+  test("shows evaluated schemes when no eligible recommendation exists", async () => {
+    const dashboard = makeDashboard();
+
+    dashboard.recommendations = {
+      has_generation: true,
+      generation: {
+        generation_id:
+          "66666666-6666-6666-6666-666666666666",
+        assessed_scheme_count: 1,
+        recommendation_count: 0,
+        excluded_scheme_count: 1,
+        excluded_schemes: [
+          {
+            assessment_id: "excluded-assessment-one",
+            scheme_id: grantScheme.id,
+            scheme_version_id: "excluded-version-one",
+            scheme_name: grantScheme.canonical_name,
+            result: "ineligible",
+            application_status: "rolling",
+            reason: "eligibility_result:ineligible",
+          },
+        ],
+      },
+      recommendation_count: 0,
+      recommendations: [],
+    };
+
+    configureAuthenticatedWorkspace({ dashboard });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    expect(
+      await screen.findByText("No eligible scheme matches yet"),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Evaluated but not matched",
+      }),
+    ).toBeInTheDocument();
+
+    const evaluatedScheme = screen.getByRole("button", {
+      name: /Startup India Seed Fund Scheme.*Not eligible/,
+    });
+
+    expect(evaluatedScheme).toBeInTheDocument();
+
+    await user.click(evaluatedScheme);
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Startup India Seed Fund Scheme",
+      }),
+    ).toBeInTheDocument();
+  });
+
   test("opens a recommended scheme as a real detail page", async () => {
     const user = userEvent.setup();
     render(<App />);

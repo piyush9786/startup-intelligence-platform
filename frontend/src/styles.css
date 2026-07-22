@@ -2857,3 +2857,63 @@ body {
     flex: 1 1 auto;
   }
 }
+
+/* Scheme dashboard visibility v1 */
+
+.evaluated-schemes-section {
+  border-top: 1px solid #edf0f6;
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.evaluated-schemes-heading {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.evaluated-schemes-heading h3 {
+  font-size: 0.88rem;
+  margin: 0.18rem 0 0;
+}
+
+.evaluated-scheme-row {
+  background: #fffaf5;
+}
+
+.evaluated-scheme-row:hover {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.recommendation-mark-muted {
+  background: #fff1df;
+  color: #b45309;
+}
+
+.status-pill-negative {
+  background: #fff0ec;
+  color: #b33a24;
+}
+
+.evaluated-scheme-row .recommendation-evidence {
+  max-width: 280px;
+}
+
+.evaluated-scheme-row .recommendation-evidence small {
+  line-height: 1.35;
+  text-align: right;
+}
+
+@media (max-width: 680px) {
+  .evaluated-scheme-row .recommendation-evidence {
+    max-width: none;
+  }
+
+  .evaluated-scheme-row .recommendation-evidence small {
+    text-align: left;
+  }
+}
