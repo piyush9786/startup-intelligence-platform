@@ -1,12 +1,20 @@
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import (
+    IsAdminUser,
+    IsAuthenticatedOrReadOnly,
+)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.documents.models import DocumentExtraction
 
-from .models import KnowledgeExtractionRun, SchemeCandidate
+from .models import (
+    ExternalSchemeRecord,
+    KnowledgeExtractionRun,
+    SchemeCandidate,
+)
 from .serializers import (
+    ExternalSchemeRecordSerializer,
     KnowledgeExtractionRunSerializer,
     SchemeCandidateSerializer,
 )
@@ -51,6 +59,45 @@ class SchemeCandidateViewSet(viewsets.ModelViewSet):
         if run_id:
             queryset = queryset.filter(run_id=run_id)
         return queryset
+
+
+class ExternalSchemeRecordViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    serializer_class = ExternalSchemeRecordSerializer
+    filterset_fields = (
+        "review_status",
+        "central_state",
+        "state",
+        "funding_type",
+    )
+    search_fields = (
+        "scheme_name",
+        "ministry",
+        "department",
+        "sector",
+        "industry",
+        "eligibility",
+    )
+    ordering_fields = (
+        "scheme_name",
+        "updated_at",
+        "review_status",
+    )
+    ordering = ("scheme_name",)
+
+    queryset = (
+        ExternalSchemeRecord.objects.select_related(
+            "dataset",
+            "matched_scheme",
+        )
+        .filter(
+            dataset__is_active=True,
+            matched_scheme__isnull=True,
+        )
+        .exclude(
+            review_status=ExternalSchemeRecord.ReviewStatus.REJECTED,
+        )
+    )
 
 
 class ExtractKnowledgeView(APIView):

@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    ExternalSchemeRecordViewSet,
     ExtractKnowledgeView,
     KnowledgeExtractionRunViewSet,
     SchemeCandidateViewSet,
@@ -17,6 +18,13 @@ router.register(
     "candidates",
     SchemeCandidateViewSet,
     basename="scheme-candidate",
+)
+
+
+router.register(
+    "external-schemes",
+    ExternalSchemeRecordViewSet,
+    basename="external-scheme",
 )
 
 urlpatterns = [
