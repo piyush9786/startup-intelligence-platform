@@ -37,6 +37,7 @@ from .services import (
 from .services.advisor_briefing_jobs import (
     AdvisorBriefingJobDispatchError,
     queue_startup_advisor_briefing_job,
+    reconcile_startup_advisor_briefing_job,
 )
 
 
@@ -274,6 +275,11 @@ class StartupAdvisorBriefingJobCurrentView(APIView):
             .first()
         )
 
+        if job is not None:
+            job = reconcile_startup_advisor_briefing_job(
+                job_id=job.id,
+            )
+
         return Response(
             {
                 "startup_profile_id": str(startup_profile.id),
@@ -296,6 +302,9 @@ class StartupAdvisorBriefingJobDetailView(APIView):
                 "briefing",
             ),
             pk=job_id,
+        )
+        job = reconcile_startup_advisor_briefing_job(
+            job_id=job.id,
         )
 
         return Response(

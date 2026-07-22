@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
+from billiard.exceptions import SoftTimeLimitExceeded
 from celery import shared_task
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -22,6 +25,8 @@ from apps.startups.services.llm_provider import (
 logger = logging.getLogger(__name__)
 
 FAILURE_DETAILS = {
+    "queue_timeout": ("The advisor generation job did not start in time. Please try again."),
+    "task_timeout": ("The advisor generation job exceeded its time limit. Please try again."),
     "provider_unavailable": ("The local advisor model is temporarily unavailable."),
     "provider_response_invalid": ("The advisor model returned an invalid response."),
     "briefing_validation_failed": ("Generated guidance did not pass validation."),
@@ -41,36 +46,71 @@ def _terminal_result(
     }
 
 
+def _apply_failure(
+    job: StartupAdvisorBriefingJob,
+    *,
+    error_code: str,
+    completed_at,
+) -> None:
+    job.status = StartupAdvisorBriefingJob.Status.FAILED
+    job.briefing = None
+    job.error_code = error_code
+    job.error_message = FAILURE_DETAILS[error_code]
+    job.completed_at = completed_at
+
+
+def _save_failed_job(
+    job: StartupAdvisorBriefingJob,
+) -> None:
+    job.save(
+        update_fields=[
+            "status",
+            "briefing",
+            "error_code",
+            "error_message",
+            "completed_at",
+            "updated_at",
+        ],
+    )
+
+
 def _mark_job_failed(
     *,
     job_id: str,
     error_code: str,
 ) -> StartupAdvisorBriefingJob:
     with transaction.atomic():
-        job = StartupAdvisorBriefingJob.objects.select_for_update().get(pk=job_id)
+        job = StartupAdvisorBriefingJob.objects.select_for_update().get(
+            pk=job_id,
+        )
 
-        if job.status == StartupAdvisorBriefingJob.Status.SUCCEEDED:
+        if job.status in (
+            StartupAdvisorBriefingJob.Status.SUCCEEDED,
+            StartupAdvisorBriefingJob.Status.FAILED,
+        ):
             return job
 
-        job.status = StartupAdvisorBriefingJob.Status.FAILED
-        job.briefing = None
-        job.error_code = error_code
-        job.error_message = FAILURE_DETAILS[error_code]
-        job.completed_at = timezone.now()
-        job.save(
-            update_fields=[
-                "status",
-                "briefing",
-                "error_code",
-                "error_message",
-                "completed_at",
-                "updated_at",
-            ],
+        _apply_failure(
+            job,
+            error_code=error_code,
+            completed_at=timezone.now(),
         )
+        _save_failed_job(job)
         return job
 
 
-@shared_task(bind=True)
+def _request_was_redelivered(task) -> bool:
+    delivery_info = getattr(task.request, "delivery_info", None) or {}
+    return bool(delivery_info.get("redelivered"))
+
+
+@shared_task(
+    bind=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=(settings.STARTUP_ADVISOR_TASK_SOFT_TIME_LIMIT_SECONDS),
+    time_limit=settings.STARTUP_ADVISOR_TASK_TIME_LIMIT_SECONDS,
+)
 def generate_startup_advisor_briefing_task(
     self,
     job_id: str,
@@ -86,11 +126,39 @@ def generate_startup_advisor_briefing_task(
         ):
             return _terminal_result(job)
 
+        now = timezone.now()
+
+        if job.status == StartupAdvisorBriefingJob.Status.QUEUED:
+            queue_cutoff = now - timedelta(
+                seconds=(settings.STARTUP_ADVISOR_JOB_QUEUE_TIMEOUT_SECONDS),
+            )
+            if job.created_at <= queue_cutoff:
+                _apply_failure(
+                    job,
+                    error_code="queue_timeout",
+                    completed_at=now,
+                )
+                _save_failed_job(job)
+                return _terminal_result(job)
+
         if job.status == StartupAdvisorBriefingJob.Status.RUNNING:
-            return _terminal_result(job)
+            if not _request_was_redelivered(self):
+                return _terminal_result(job)
+
+            timeout_cutoff = now - timedelta(
+                seconds=(settings.STARTUP_ADVISOR_TASK_SOFT_TIME_LIMIT_SECONDS),
+            )
+            if job.started_at is not None and job.started_at <= timeout_cutoff:
+                _apply_failure(
+                    job,
+                    error_code="task_timeout",
+                    completed_at=now,
+                )
+                _save_failed_job(job)
+                return _terminal_result(job)
 
         job.status = StartupAdvisorBriefingJob.Status.RUNNING
-        job.started_at = timezone.now()
+        job.started_at = now
         job.error_code = ""
         job.error_message = ""
 
@@ -117,6 +185,12 @@ def generate_startup_advisor_briefing_task(
             source_snapshot=source_snapshot,
             requested_by=requested_by,
         )
+    except SoftTimeLimitExceeded:
+        failed_job = _mark_job_failed(
+            job_id=job_id,
+            error_code="task_timeout",
+        )
+        return _terminal_result(failed_job)
     except LLMProviderUnavailableError:
         failed_job = _mark_job_failed(
             job_id=job_id,
@@ -144,7 +218,9 @@ def generate_startup_advisor_briefing_task(
     except Exception:
         logger.exception(
             "Unexpected startup advisor briefing job failure",
-            extra={"advisor_briefing_job_id": job_id},
+            extra={
+                "advisor_briefing_job_id": job_id,
+            },
         )
         failed_job = _mark_job_failed(
             job_id=job_id,
@@ -153,9 +229,14 @@ def generate_startup_advisor_briefing_task(
         return _terminal_result(failed_job)
 
     with transaction.atomic():
-        job = StartupAdvisorBriefingJob.objects.select_for_update().get(pk=job_id)
+        job = StartupAdvisorBriefingJob.objects.select_for_update().get(
+            pk=job_id,
+        )
 
-        if job.status == StartupAdvisorBriefingJob.Status.SUCCEEDED:
+        if job.status in (
+            StartupAdvisorBriefingJob.Status.SUCCEEDED,
+            StartupAdvisorBriefingJob.Status.FAILED,
+        ):
             return _terminal_result(job)
 
         job.status = StartupAdvisorBriefingJob.Status.SUCCEEDED
