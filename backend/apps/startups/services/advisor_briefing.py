@@ -4,9 +4,14 @@ import json
 from copy import deepcopy
 from typing import Any
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from apps.knowledge.services import (
+    VectorSearchUnavailableError,
+    search_document_chunks,
+)
 from apps.startups.models import (
     StartupAdvisorBriefing,
     StartupAdvisorSnapshot,
@@ -22,7 +27,7 @@ from .llm_provider import (
     get_startup_advisor_llm_provider,
 )
 
-BRIEFING_PROMPT_VERSION = "startup-advisor-briefing-prompt-v1"
+BRIEFING_PROMPT_VERSION = "startup-advisor-briefing-prompt-v2"
 
 SYSTEM_PROMPT = """
 You are a grounded startup advisor for Indian founders.
@@ -46,6 +51,12 @@ Source types:
 - action_plan
 - recommendation_generation
 - recommendation
+- evidence_chunk
+
+Retrieved evidence chunks are supporting official-source context. They never
+override deterministic eligibility, readiness, recommendation or deadline
+records. Cite a retrieved chunk with its listed chunk ID and a path such as
+"/text", "/source_url", "/page_number" or "/title".
 
 Use only source IDs listed in citation_contract.source_ids_by_type.
 The source_id must exactly match an ID listed for its source_type.
@@ -124,8 +135,93 @@ def snapshot_to_llm_input(
     }
 
 
+
+
+def _build_rag_query(input_payload: dict[str, Any]) -> str:
+    profile = input_payload.get("profile") or {}
+    recommendations = input_payload.get("recommendations") or []
+
+    values: list[str] = [
+        str(profile.get("startup_name") or ""),
+        str(profile.get("description") or ""),
+        str(profile.get("stage") or ""),
+        str(profile.get("state") or ""),
+        str(profile.get("district") or ""),
+        str(profile.get("funding_purpose") or ""),
+        str(profile.get("revenue_stage") or ""),
+    ]
+    for field in ("sectors", "technologies", "resource_needs"):
+        value = profile.get(field)
+        if isinstance(value, list):
+            values.extend(str(item) for item in value)
+
+    for recommendation in recommendations[:5]:
+        if not isinstance(recommendation, dict):
+            continue
+        scheme_snapshot = recommendation.get("scheme_snapshot") or {}
+        values.extend(
+            [
+                str(scheme_snapshot.get("canonical_name") or ""),
+                str(scheme_snapshot.get("summary") or ""),
+                str(recommendation.get("reason") or ""),
+            ]
+        )
+
+    return "\n".join(
+        value.strip()
+        for value in values
+        if value and value.strip()
+    )[:12000]
+
+
+def retrieve_startup_advisor_evidence(
+    input_payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    if not settings.STARTUP_ADVISOR_RAG_ENABLED:
+        return []
+
+    query = _build_rag_query(input_payload)
+    if not query:
+        return []
+
+    return [
+        result.as_prompt_document()
+        for result in search_document_chunks(query)
+    ]
+
+
+def _retrieve_evidence(
+    input_payload: dict[str, Any],
+    retriever,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if not settings.STARTUP_ADVISOR_RAG_ENABLED:
+        return [], {
+            "status": "disabled",
+            "query": "",
+            "result_count": 0,
+        }
+
+    query = _build_rag_query(input_payload)
+    try:
+        evidence = retriever(input_payload)
+    except (VectorSearchUnavailableError, RuntimeError) as exc:
+        return [], {
+            "status": "unavailable",
+            "query": query,
+            "result_count": 0,
+            "error": str(exc)[:1000],
+        }
+
+    return evidence, {
+        "status": "succeeded",
+        "query": query,
+        "result_count": len(evidence),
+    }
+
+
 def _build_citation_contract(
     input_payload: dict[str, Any],
+    retrieved_evidence: list[dict[str, Any]],
 ) -> dict[str, Any]:
     source_ids = input_payload["source_ids"]
 
@@ -155,6 +251,11 @@ def _build_citation_contract(
             else []
         ),
         "recommendation": recommendation_ids,
+        "evidence_chunk": [
+            str(item["id"])
+            for item in retrieved_evidence
+            if isinstance(item, dict) and item.get("id")
+        ],
     }
 
     return {
@@ -166,10 +267,22 @@ def _build_citation_contract(
 def build_startup_advisor_briefing_prompt(
     *,
     source_snapshot: StartupAdvisorSnapshot,
+    retrieved_evidence: list[dict[str, Any]] | None = None,
+    retrieval: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     input_payload = snapshot_to_llm_input(source_snapshot)
+    evidence_documents = deepcopy(retrieved_evidence or [])
+    retrieval_snapshot = deepcopy(
+        retrieval
+        or {
+            "status": "disabled",
+            "query": "",
+            "result_count": 0,
+        }
+    )
     citation_contract = _build_citation_contract(
         input_payload,
+        evidence_documents,
     )
 
     response_schema = deepcopy(
@@ -181,6 +294,8 @@ def build_startup_advisor_briefing_prompt(
     user_payload = {
         "citation_contract": citation_contract,
         "startup_advisor_snapshot": input_payload,
+        "retrieved_evidence": evidence_documents,
+        "retrieval": retrieval_snapshot,
     }
     messages = [
         {
@@ -203,6 +318,8 @@ def build_startup_advisor_briefing_prompt(
         "messages": messages,
         "response_schema": response_schema,
         "source_input": input_payload,
+        "retrieved_evidence": evidence_documents,
+        "retrieval": retrieval_snapshot,
     }
 
 
@@ -211,9 +328,22 @@ def generate_startup_advisor_briefing(
     source_snapshot: StartupAdvisorSnapshot,
     requested_by: Any,
     provider: StartupAdvisorLLMProvider | None = None,
+    retriever=None,
 ) -> StartupAdvisorBriefing:
+    input_payload = snapshot_to_llm_input(source_snapshot)
+    active_retriever = (
+        retriever
+        if retriever is not None
+        else retrieve_startup_advisor_evidence
+    )
+    retrieved_evidence, retrieval = _retrieve_evidence(
+        input_payload,
+        active_retriever,
+    )
     prompt_snapshot = build_startup_advisor_briefing_prompt(
         source_snapshot=source_snapshot,
+        retrieved_evidence=retrieved_evidence,
+        retrieval=retrieval,
     )
     active_provider = provider if provider is not None else get_startup_advisor_llm_provider()
     generation_result = active_provider.generate(
@@ -223,6 +353,7 @@ def generate_startup_advisor_briefing(
     briefing_payload = validate_startup_advisor_briefing(
         payload=generation_result.payload,
         source_snapshot=source_snapshot,
+        evidence_documents=prompt_snapshot["retrieved_evidence"],
     )
 
     with transaction.atomic():
