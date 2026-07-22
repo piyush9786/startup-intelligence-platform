@@ -201,6 +201,26 @@ export async function getStartupAdvisorCurrent(startupProfileId) {
   return response.data;
 }
 
+export async function listExternalSchemes() {
+  const schemes = [];
+  let nextUrl = "/knowledge/external-schemes/";
+  let params = {
+    ordering: "scheme_name",
+  };
+  let pageCount = 0;
+
+  while (nextUrl && pageCount < 100) {
+    const response = await client.get(nextUrl, { params });
+    schemes.push(...normalizeCollection(response.data));
+    nextUrl = response.data?.next || null;
+    params = undefined;
+    pageCount += 1;
+  }
+
+  return schemes;
+}
+
+
 export async function listSchemes() {
   const schemes = [];
   let nextUrl = "/schemes/";
