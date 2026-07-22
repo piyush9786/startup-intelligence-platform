@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "manifest_key": "verified-catalog-dbt-big-v1",
+  "extractor_version": "v4",
+  "source_document": {
+    "content_hash": "26740889858fa7b14d271329703065f8f7d2a980697d0eafd99fc42dbe529c80",
+    "source_name": "Startup India"
+  },
+  "authority": {
+    "canonical_name": "Biotechnology Industry Research Assistance Council",
+    "authority_type": "government_agency",
+    "department": "Department of Biotechnology",
+    "official_url": "https://birac.nic.in",
+    "aliases": [
+      "BIRAC",
+      "Biotechnology Industry Research Assistance Council (BIRAC)"
+    ]
+  },
+  "candidates": [
+    {
+      "pilot_key": "big",
+      "candidate_id": "4aa3a99d-3772-4a36-ae10-93eaab339345",
+      "expected_title": "Biotechnology Ignition Grant Scheme (BIG)",
+      "canonical_title": "Biotechnology Ignition Grant Scheme (BIG)",
+      "classification": "canonical",
+      "curation": {
+        "canonical_summary": "The Biotechnology Ignition Grant Scheme provides early-stage funding and ecosystem support to biotechnology innovators and startups developing scientific ideas into viable products and businesses.",
+        "canonical_objective": "Support young biotechnology startups and entrepreneurial individuals in advancing promising ideas from ideation toward proof of concept and commercial viability.",
+        "canonical_eligibility_text": "Individual entrepreneurs and startups may apply. The applicant must be incubated in an incubator, which may or may not be supported by BIRAC.",
+        "official_url": "https://birac.nic.in/big.php",
+        "application_url": "https://birac.nic.in/big.php",
+        "canonical_support_types": [
+          "grant",
+          "mentoring",
+          "networking",
+          "training"
+        ],
+        "canonical_categories": [
+          "biotechnology",
+          "early_stage",
+          "proof_of_concept"
+        ],
+        "canonical_benefits": [
+          {
+            "type": "grant",
+            "description": "Grant-in-aid of up to INR 50 lakh for a project period of up to 18 months.",
+            "amount_min": null,
+            "amount_max": "5000000.00",
+            "currency": "INR"
+          },
+          {
+            "type": "ecosystem_support",
+            "description": "Networking, mentoring, peer learning, specialised training, workshops, and exposure opportunities may be provided during the BIG tenure.",
+            "amount_min": null,
+            "amount_max": null,
+            "currency": "INR"
+          }
+        ],
+        "canonical_required_documents": [],
+        "canonical_application_steps": [
+          {
+            "step_number": 1,
+            "instruction": "Review the active BIG call, guidelines, and FAQs on the official BIRAC BIG page.",
+            "url": "https://birac.nic.in/big.php"
+          },
+          {
+            "step_number": 2,
+            "instruction": "Submit the proposal online through BIRAC during an open BIG call.",
+            "url": "https://birac.nic.in"
+          }
+        ]
+      },
+      "eligibility_rules": {
+        "approve": [],
+        "reject": [
+          "3a5fdc95-7e4d-428d-9f1c-1431847bb3f2",
+          "3f23f810-83a4-4f33-aa58-c8478eb904fd",
+          "a1ba5e1d-81d0-40b6-8e00-6e95fddc0cda"
+        ]
+      },
+      "structured_reviews": {
+        "benefits": {
+          "approve": [],
+          "reject": [
+            "0e22036c-c59e-4580-be73-929b54f6e1c9",
+            "42bfbe1f-dc29-4379-a500-53b135468150",
+            "91a3a881-e059-4f27-be95-fa0d2d583f72",
+            "95c664ff-3d98-4997-b7d9-2a4c6672cb3e",
+            "e341a930-4f9f-4b63-b317-5efd5c2d918c"
+          ]
+        },
+        "required_documents": {
+          "approve": [],
+          "reject": []
+        },
+        "application_steps": {
+          "approve": [],
+          "reject": [
+            "2b1fdc28-a8ef-4658-9ef4-4345d11f751e",
+            "55e3e0ec-073d-4eee-bf8f-8a6f762cff15",
+            "8e11d354-6f75-4c9d-a731-f413cd269173",
+            "b6e6ddd7-19c8-41d4-b568-8a533a51f715",
+            "bbbb6187-3cb4-4f0a-8dc8-8905665ce451",
+            "ced0028a-8097-419f-ab5a-8d1d6b8a604c",
+            "e63a8183-ec68-400a-8d4e-a46599ddbb43"
+          ]
+        }
+      }
+    }
+  ]
+}
