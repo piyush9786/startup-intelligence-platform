@@ -72,6 +72,162 @@ export function currentSchemeVersion(scheme) {
   return scheme?.current_version_detail || scheme?.current_version || null;
 }
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+function parseDateOnly(value) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const [, year, month, day] = match;
+  const result = new Date(Number(year), Number(month) - 1, Number(day));
+  return Number.isNaN(result.getTime()) ? null : result;
+}
+
+function startOfLocalDay(value) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+}
+
+function formatDateOnly(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(value);
+}
+
+export function schemeDeadlineStatus(scheme, today = new Date()) {
+  const version = currentSchemeVersion(scheme) || {};
+  const applicationStatus = String(
+    version.application_status || "unknown",
+  ).toLowerCase();
+  const deadline = parseDateOnly(version.deadline);
+  const openingDate = parseDateOnly(version.opening_date);
+  const reference = parseDateOnly(today) || new Date();
+  const referenceDay = startOfLocalDay(reference);
+
+  if (applicationStatus === "closed") {
+    return {
+      tone: "closed",
+      label: "Applications closed",
+      detail: deadline
+        ? `Published deadline: ${formatDateOnly(deadline)}`
+        : "No closing date is published.",
+      deadline: version.deadline || null,
+      daysRemaining: deadline
+        ? Math.ceil((startOfLocalDay(deadline) - referenceDay) / DAY_IN_MS)
+        : null,
+    };
+  }
+
+  if (!deadline) {
+    if (applicationStatus === "rolling") {
+      return {
+        tone: "rolling",
+        label: "Rolling applications",
+        detail: "No fixed deadline is published.",
+        deadline: null,
+        daysRemaining: null,
+      };
+    }
+
+    if (applicationStatus === "open") {
+      return {
+        tone: "open",
+        label: "Open — no deadline published",
+        detail: "Check the official source before applying.",
+        deadline: null,
+        daysRemaining: null,
+      };
+    }
+
+    if (applicationStatus === "upcoming" && openingDate) {
+      return {
+        tone: "upcoming",
+        label: `Opens ${formatDateOnly(openingDate)}`,
+        detail: "Applications are not open yet.",
+        deadline: null,
+        daysRemaining: null,
+      };
+    }
+
+    return {
+      tone: "neutral",
+      label: readinessStatusLabel(
+        version.application_status || "Deadline not published",
+      ),
+      detail: "No application deadline is published.",
+      deadline: null,
+      daysRemaining: null,
+    };
+  }
+
+  const deadlineDay = startOfLocalDay(deadline);
+  const daysRemaining = Math.ceil(
+    (deadlineDay.getTime() - referenceDay.getTime()) / DAY_IN_MS,
+  );
+  const exactDate = formatDateOnly(deadline);
+
+  if (daysRemaining < 0) {
+    return {
+      tone: "closed",
+      label: "Deadline passed",
+      detail: `The published deadline was ${exactDate}.`,
+      deadline: version.deadline,
+      daysRemaining,
+    };
+  }
+  if (daysRemaining === 0) {
+    return {
+      tone: "urgent",
+      label: "Closes today",
+      detail: `Published deadline: ${exactDate}.`,
+      deadline: version.deadline,
+      daysRemaining,
+    };
+  }
+  if (daysRemaining === 1) {
+    return {
+      tone: "urgent",
+      label: "Closes tomorrow",
+      detail: `Published deadline: ${exactDate}.`,
+      deadline: version.deadline,
+      daysRemaining,
+    };
+  }
+  if (daysRemaining <= 7) {
+    return {
+      tone: "urgent",
+      label: `Closes in ${daysRemaining} days`,
+      detail: `Published deadline: ${exactDate}.`,
+      deadline: version.deadline,
+      daysRemaining,
+    };
+  }
+  if (daysRemaining <= 30) {
+    return {
+      tone: "soon",
+      label: `Closes in ${daysRemaining} days`,
+      detail: `Published deadline: ${exactDate}.`,
+      deadline: version.deadline,
+      daysRemaining,
+    };
+  }
+
+  return {
+    tone: "open",
+    label: `Closes ${exactDate}`,
+    detail: `${daysRemaining} days remaining.`,
+    deadline: version.deadline,
+    daysRemaining,
+  };
+}
+
 function searchableSchemeText(scheme) {
   const version = currentSchemeVersion(scheme) || {};
   return [
