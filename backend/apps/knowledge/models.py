@@ -924,3 +924,386 @@ class ExternalSchemeRecord(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.scheme_name} ({self.dataset.dataset_key})"
+
+class ExternalKnowledgeDataset(TimeStampedModel):
+    class DatasetKind(models.TextChoices):
+        CAPITAL_SUPPORT = (
+            "capital_support",
+            "Capital support",
+        )
+        CERTIFICATION_REQUIREMENT = (
+            "certification_requirement",
+            "Certification requirement",
+        )
+
+    dataset_kind = models.CharField(
+        max_length=50,
+        choices=DatasetKind.choices,
+    )
+    dataset_key = models.CharField(
+        max_length=150,
+        unique=True,
+    )
+    dataset_name = models.CharField(max_length=500)
+    source_filename = models.CharField(max_length=500)
+    source_sheet = models.CharField(
+        max_length=250,
+        blank=True,
+    )
+    source_row_count = models.PositiveIntegerField(
+        default=0,
+    )
+    record_count = models.PositiveIntegerField(default=0)
+    normalization_version = models.CharField(
+        max_length=100,
+    )
+    content_sha256 = models.CharField(
+        max_length=64,
+        db_index=True,
+    )
+    is_active = models.BooleanField(default=True)
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = [
+            "dataset_kind",
+            "dataset_key",
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "dataset_kind",
+                    "is_active",
+                ],
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.dataset_name
+
+
+class ExternalCapitalSupportRecord(TimeStampedModel):
+    class ReviewStatus(models.TextChoices):
+        NEEDS_REVIEW = (
+            "needs_review",
+            "Needs review",
+        )
+        VERIFIED = "verified", "Verified"
+        REJECTED = "rejected", "Rejected"
+
+    dataset = models.ForeignKey(
+        ExternalKnowledgeDataset,
+        on_delete=models.CASCADE,
+        related_name="capital_support_records",
+    )
+    external_id = models.CharField(max_length=150)
+
+    support_name = models.CharField(max_length=500)
+    support_type = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+    scheme_name = models.CharField(
+        max_length=500,
+        blank=True,
+    )
+    normalized_name = models.CharField(
+        max_length=500,
+        db_index=True,
+    )
+
+    ministry = models.TextField(blank=True)
+    implementing_agency = models.TextField(blank=True)
+    funding_category = models.TextField(blank=True)
+
+    minimum_amount = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    maximum_amount = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    raw_minimum_amount = models.TextField(blank=True)
+    raw_maximum_amount = models.TextField(blank=True)
+    currency = models.CharField(
+        max_length=10,
+        default="INR",
+        blank=True,
+    )
+
+    interest_rate_text = models.TextField(blank=True)
+    collateral_required_text = models.TextField(
+        blank=True,
+    )
+    repayment_required_text = models.TextField(
+        blank=True,
+    )
+
+    startup_stage = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    industry = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    eligible_entity = models.TextField(blank=True)
+    state = models.CharField(
+        max_length=250,
+        blank=True,
+    )
+    funding_purpose = models.TextField(blank=True)
+    claimed_scheme_status = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    source_priority_score = (
+        models.PositiveSmallIntegerField(
+            null=True,
+            blank=True,
+        )
+    )
+    source_ai_recommendation_weight = (
+        models.DecimalField(
+            max_digits=6,
+            decimal_places=5,
+            null=True,
+            blank=True,
+        )
+    )
+    remarks = models.TextField(blank=True)
+
+    matched_external_scheme_ids = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    matched_external_schemes = models.ManyToManyField(
+        ExternalSchemeRecord,
+        blank=True,
+        related_name="capital_support_records",
+    )
+    matched_scheme = models.ForeignKey(
+        "schemes.Scheme",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="external_capital_support_matches",
+    )
+
+    review_status = models.CharField(
+        max_length=30,
+        choices=ReviewStatus.choices,
+        default=ReviewStatus.NEEDS_REVIEW,
+    )
+    review_notes = models.TextField(blank=True)
+
+    quality_warnings = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    source_row_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    raw_row = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+    record_sha256 = models.CharField(
+        max_length=64,
+        db_index=True,
+    )
+
+    class Meta:
+        ordering = [
+            "support_name",
+            "dataset",
+            "external_id",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "dataset",
+                    "external_id",
+                ],
+                name=(
+                    "unique_external_capital_dataset_id"
+                ),
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "dataset",
+                    "review_status",
+                    "normalized_name",
+                ],
+            ),
+            models.Index(
+                fields=[
+                    "support_type",
+                    "review_status",
+                ],
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.support_name} "
+            f"({self.dataset.dataset_key})"
+        )
+
+
+class ExternalCertificationRequirementRecord(
+    TimeStampedModel,
+):
+    class ReviewStatus(models.TextChoices):
+        NEEDS_REVIEW = (
+            "needs_review",
+            "Needs review",
+        )
+        VERIFIED = "verified", "Verified"
+        REJECTED = "rejected", "Rejected"
+
+    dataset = models.ForeignKey(
+        ExternalKnowledgeDataset,
+        on_delete=models.CASCADE,
+        related_name=(
+            "certification_requirement_records"
+        ),
+    )
+    external_id = models.CharField(max_length=150)
+
+    certificate_name = models.CharField(
+        max_length=500,
+    )
+    normalized_name = models.CharField(
+        max_length=500,
+        db_index=True,
+    )
+    certificate_type = models.CharField(
+        max_length=250,
+        blank=True,
+    )
+    description = models.TextField(blank=True)
+
+    industry = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    startup_stage = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    requirement_level = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    eligibility = models.TextField(blank=True)
+    benefits = models.TextField(blank=True)
+    validity = models.TextField(blank=True)
+    renewal_period = models.TextField(blank=True)
+    issuing_authority = models.TextField(blank=True)
+    official_document_text = models.TextField(
+        blank=True,
+    )
+    official_apply_url = models.TextField(blank=True)
+
+    source_priority_score = (
+        models.PositiveSmallIntegerField(
+            null=True,
+            blank=True,
+        )
+    )
+    display_eligible = models.BooleanField(
+        default=False,
+    )
+
+    review_status = models.CharField(
+        max_length=30,
+        choices=ReviewStatus.choices,
+        default=ReviewStatus.NEEDS_REVIEW,
+    )
+    review_notes = models.TextField(blank=True)
+
+    quality_warnings = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    source_row_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    raw_row = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+    record_sha256 = models.CharField(
+        max_length=64,
+        db_index=True,
+    )
+
+    class Meta:
+        ordering = [
+            "certificate_name",
+            "dataset",
+            "external_id",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "dataset",
+                    "external_id",
+                ],
+                name=(
+                    "unique_external_cert_dataset_id"
+                ),
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        review_status__in=[
+                            "needs_review",
+                            "verified",
+                        ],
+                    )
+                    | models.Q(
+                        display_eligible=False,
+                    )
+                ),
+                name=(
+                    "external_cert_rejected_not_displayable"
+                ),
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "dataset",
+                    "review_status",
+                    "display_eligible",
+                ],
+            ),
+            models.Index(
+                fields=[
+                    "certificate_type",
+                    "review_status",
+                ],
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.certificate_name} "
+            f"({self.dataset.dataset_key})"
+        )
