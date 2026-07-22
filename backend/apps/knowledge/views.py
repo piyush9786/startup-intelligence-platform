@@ -9,11 +9,16 @@ from rest_framework.views import APIView
 from apps.documents.models import DocumentExtraction
 
 from .models import (
+    ExternalCapitalSupportRecord,
+    ExternalCertificationRequirementRecord,
+    ExternalKnowledgeDataset,
     ExternalSchemeRecord,
     KnowledgeExtractionRun,
     SchemeCandidate,
 )
 from .serializers import (
+    ExternalCapitalSupportRecordSerializer,
+    ExternalCertificationRequirementRecordSerializer,
     ExternalSchemeRecordSerializer,
     KnowledgeExtractionRunSerializer,
     SchemeCandidateSerializer,
@@ -96,6 +101,111 @@ class ExternalSchemeRecordViewSet(viewsets.ReadOnlyModelViewSet):
         )
         .exclude(
             review_status=ExternalSchemeRecord.ReviewStatus.REJECTED,
+        )
+    )
+
+
+class ExternalCapitalSupportRecordViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    serializer_class = (
+        ExternalCapitalSupportRecordSerializer
+    )
+    filterset_fields = (
+        "review_status",
+        "support_type",
+        "funding_category",
+        "state",
+        "claimed_scheme_status",
+    )
+    search_fields = (
+        "support_name",
+        "scheme_name",
+        "ministry",
+        "implementing_agency",
+        "funding_category",
+        "industry",
+        "eligible_entity",
+        "funding_purpose",
+    )
+    ordering_fields = (
+        "support_name",
+        "minimum_amount",
+        "maximum_amount",
+        "updated_at",
+        "review_status",
+    )
+    ordering = ("support_name",)
+
+    queryset = (
+        ExternalCapitalSupportRecord.objects
+        .select_related(
+            "dataset",
+            "matched_scheme",
+        )
+        .filter(
+            dataset__is_active=True,
+            dataset__dataset_kind=(
+                ExternalKnowledgeDataset
+                .DatasetKind.CAPITAL_SUPPORT
+            ),
+            matched_scheme__isnull=True,
+        )
+        .exclude(
+            review_status=(
+                ExternalCapitalSupportRecord
+                .ReviewStatus.REJECTED
+            ),
+        )
+    )
+
+
+class ExternalCertificationRequirementRecordViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    serializer_class = (
+        ExternalCertificationRequirementRecordSerializer
+    )
+    filterset_fields = (
+        "review_status",
+        "certificate_type",
+        "requirement_level",
+        "issuing_authority",
+    )
+    search_fields = (
+        "certificate_name",
+        "description",
+        "industry",
+        "startup_stage",
+        "eligibility",
+        "benefits",
+        "issuing_authority",
+    )
+    ordering_fields = (
+        "certificate_name",
+        "updated_at",
+        "review_status",
+    )
+    ordering = ("certificate_name",)
+
+    queryset = (
+        ExternalCertificationRequirementRecord.objects
+        .select_related("dataset")
+        .filter(
+            dataset__is_active=True,
+            dataset__dataset_kind=(
+                ExternalKnowledgeDataset
+                .DatasetKind.CERTIFICATION_REQUIREMENT
+            ),
+            display_eligible=True,
+        )
+        .exclude(
+            review_status=(
+                ExternalCertificationRequirementRecord
+                .ReviewStatus.REJECTED
+            ),
         )
     )
 
