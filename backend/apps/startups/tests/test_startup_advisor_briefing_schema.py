@@ -14,7 +14,10 @@ from apps.startups.services import (
     create_startup_advisor_snapshot,
     validate_startup_advisor_briefing,
 )
-from apps.startups.services.briefing_schema import _canonicalize_model_field_path
+from apps.startups.services.briefing_schema import (
+    _canonicalize_model_field_path,
+    _repair_one_based_boundary_pointer,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -210,3 +213,82 @@ def test_prompt_contains_schema_and_immutable_snapshot():
     assert "response_schema" not in user_payload
     assert user_payload["startup_advisor_snapshot"]["advisor_snapshot_id"] == str(snapshot.id)
     assert str(snapshot.id) in prompt["messages"][1]["content"]
+
+
+
+def test_required_retrieved_evidence_citation_is_enforced():
+    _owner, profile, snapshot = make_snapshot()
+    payload = valid_payload(profile)
+    evidence = [
+        {
+            "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "score": 0.9,
+            "text": "DPIIT recognition is required.",
+            "source_url": "https://example.gov.in/guide.pdf",
+            "title": "Recognition Guide",
+            "page_number": 2,
+            "heading": "Eligibility",
+            "extraction_id": (
+                "55555555-5555-5555-5555-555555555555"
+            ),
+            "document_id": (
+                "66666666-6666-6666-6666-666666666666"
+            ),
+        }
+    ]
+
+    with pytest.raises(
+        BriefingOutputValidationError,
+        match="must cite a relevant retrieved evidence chunk",
+    ):
+        validate_startup_advisor_briefing(
+            payload=payload,
+            source_snapshot=snapshot,
+            evidence_documents=evidence,
+            require_evidence_citation=True,
+        )
+
+def test_one_based_boundary_pointer_is_repaired():
+    document = {
+        "blocking_findings": [
+            {"reason": "First blocker"},
+            {"reason": "Second blocker"},
+        ]
+    }
+
+    assert (
+        _repair_one_based_boundary_pointer(
+            document,
+            "/blocking_findings/2/reason",
+        )
+        == "/blocking_findings/1/reason"
+    )
+
+
+def test_non_boundary_missing_pointer_is_not_repaired():
+    document = {
+        "blocking_findings": [
+            {"reason": "Only blocker"},
+        ]
+    }
+
+    assert (
+        _repair_one_based_boundary_pointer(
+            document,
+            "/blocking_findings/3/reason",
+        )
+        is None
+    )
+
+
+def test_prompt_explicitly_requires_zero_based_array_indexes():
+    _owner, _profile, snapshot = make_snapshot()
+
+    prompt = build_startup_advisor_briefing_prompt(
+        source_snapshot=snapshot,
+    )
+
+    assert (
+        "Array indexes are zero-based."
+        in prompt["messages"][0]["content"]
+    )

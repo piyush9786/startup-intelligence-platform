@@ -3102,3 +3102,104 @@ body {
     display: grid;
   }
 }
+
+
+/* A2.2 retrieved official evidence */
+.evidence-usage-note {
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: grid;
+  gap: 0.3rem;
+  margin: 1rem 0 1.5rem;
+  padding: 0.9rem 1rem;
+}
+
+.evidence-usage-note strong {
+  color: var(--forest-dark);
+}
+
+.evidence-usage-note span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.evidence-usage-note-used {
+  background: var(--mint);
+  border-color: #b8dbc5;
+}
+
+.evidence-usage-note-muted {
+  background: #f5f2e9;
+}
+
+.evidence-source-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.evidence-source-card {
+  background: #f8fbf7;
+  border: 1px solid #c9ddce;
+  border-radius: 14px;
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem;
+}
+
+.evidence-source-heading {
+  align-items: start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.evidence-source-heading > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.evidence-source-heading strong {
+  overflow-wrap: anywhere;
+}
+
+.evidence-source-heading > span {
+  background: var(--mint);
+  border-radius: 999px;
+  color: var(--forest-dark);
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.3rem 0.5rem;
+}
+
+.evidence-source-meta {
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  gap: 0.4rem 0.7rem;
+}
+
+.evidence-source-meta code {
+  background: rgba(28, 81, 55, 0.08);
+  border-radius: 6px;
+  color: var(--forest-dark);
+  padding: 0.15rem 0.35rem;
+}
+
+.evidence-source-card p {
+  color: #465149;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.evidence-source-card a {
+  color: var(--forest);
+  font-size: 0.82rem;
+  font-weight: 800;
+  justify-self: start;
+}
