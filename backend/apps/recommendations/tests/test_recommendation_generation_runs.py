@@ -49,6 +49,9 @@ def test_zero_recommendation_generation_is_persisted():
     assert run.recommendation_count == 0
     assert len(run.excluded_schemes) == 1
     assert run.recommendation_snapshot == []
+    assert run.excluded_schemes[0]["eligibility_explanation"]["result"] == (
+        "eligible"
+    )
     assert Recommendation.objects.count() == 0
     assert (
         EligibilityAssessment.objects.filter(

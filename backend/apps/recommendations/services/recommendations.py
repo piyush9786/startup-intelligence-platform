@@ -18,6 +18,9 @@ from apps.recommendations.services.assessment import (
     create_eligibility_assessment,
     snapshot_startup_profile,
 )
+from apps.recommendations.services.explanation import (
+    build_eligibility_explanation,
+)
 from apps.schemes.models import EligibilityRule, Scheme, SchemeVersion
 from apps.startups.models import StartupProfile
 
@@ -179,6 +182,9 @@ def _recommendation_snapshot(
         "score": format(recommendation.score, "f"),
         "score_breakdown": recommendation.score_breakdown,
         "evidence_snapshot": recommendation.evidence_snapshot,
+        "eligibility_explanation": build_eligibility_explanation(
+            recommendation.assessment
+        ),
     }
 
 
@@ -269,6 +275,9 @@ def generate_recommendations(
                     "result": assessment.result,
                     "application_status": (scheme_version.application_status),
                     "reason": exclusion_reason,
+                    "eligibility_explanation": build_eligibility_explanation(
+                        assessment
+                    ),
                 }
             )
             continue

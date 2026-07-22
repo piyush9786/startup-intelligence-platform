@@ -37,6 +37,7 @@ import {
   isLoanScheme,
   recommendationScheme,
   recommendationStatusLabel,
+  schemeDeadlineStatus,
   readinessStatusLabel,
   schemeApplicationSteps,
   schemeEligibilityRules,
@@ -557,6 +558,12 @@ function evaluatedSchemeStatusLabel(result) {
 }
 
 function evaluatedSchemeReason(evaluation = {}) {
+  const explanationSummary =
+    evaluation.eligibility_explanation?.summary;
+  if (explanationSummary) {
+    return explanationSummary;
+  }
+
   const resultMessages = {
     ineligible:
       "One or more mandatory eligibility requirements were not met.",
@@ -681,6 +688,8 @@ function RecommendationList({
                 },
               };
 
+            const deadline = schemeDeadlineStatus(scheme);
+
             return (
               <button
                 className="recommendation-row recommendation-row-button"
@@ -697,18 +706,18 @@ function RecommendationList({
 
                 <div className="recommendation-copy">
                   <strong>{recommendation.scheme_name}</strong>
-                  <span>
-                    {readinessStatusLabel(
-                      recommendation.application_status ||
-                        "status not published",
-                    )}
-                  </span>
+                  <span>{deadline.label}</span>
                 </div>
 
                 <div className="recommendation-evidence">
                   <span className="status-pill">
                     {recommendationStatusLabel(recommendation)}
                   </span>
+                  {recommendation.eligibility_explanation?.summary && (
+                    <small>
+                      {recommendation.eligibility_explanation.summary}
+                    </small>
+                  )}
                   <small>
                     Ranking score{" "}
                     {formatRankingScore(recommendation.score)}
@@ -752,6 +761,8 @@ function RecommendationList({
                     },
                   };
 
+                const deadline = schemeDeadlineStatus(scheme);
+
                 return (
                   <button
                     className={[
@@ -781,12 +792,7 @@ function RecommendationList({
 
                     <div className="recommendation-copy">
                       <strong>{evaluation.scheme_name}</strong>
-                      <span>
-                        {readinessStatusLabel(
-                          evaluation.application_status ||
-                            "status not published",
-                        )}
-                      </span>
+                      <span>{deadline.label}</span>
                     </div>
 
                     <div className="recommendation-evidence">
@@ -1011,14 +1017,18 @@ function DashboardHome({
 function SchemeCard({ onOpen, scheme }) {
   const version = currentSchemeVersion(scheme) || {};
   const supportTypes = (version.support_types || []).slice(0, 3);
+  const deadline = schemeDeadlineStatus(scheme);
   return (
     <button className="scheme-card" onClick={() => onOpen(scheme)} type="button">
       <div className="scheme-card-topline">
         <span className={`verification-badge verification-${version.verification_status || "unknown"}`}>
           {readinessStatusLabel(version.verification_status || "not verified")}
         </span>
-        <span className="application-badge">
-          {readinessStatusLabel(version.application_status || "status unknown")}
+        <span
+          className={`application-badge deadline-${deadline.tone}`}
+          title={deadline.detail}
+        >
+          {deadline.label}
         </span>
       </div>
       <h3>{scheme.canonical_name}</h3>
@@ -1607,13 +1617,7 @@ function FundingPage({
               >
                 <div className="funding-card-heading">
                   <span>{fundingTypeLabel(scheme)}</span>
-                  <small>
-                    {readinessStatusLabel(
-                      currentSchemeVersion(scheme)
-                        ?.application_status ||
-                        "status unknown",
-                    )}
-                  </small>
+                  <small>{schemeDeadlineStatus(scheme).label}</small>
                 </div>
 
                 <h2>{scheme.canonical_name}</h2>
@@ -1876,6 +1880,7 @@ function SchemeDetailPage({ backLabel, onBack, scheme }) {
   const steps = schemeApplicationSteps(scheme);
   const rules = schemeEligibilityRules(scheme);
   const benefits = version.benefits || [];
+  const deadline = schemeDeadlineStatus(scheme);
 
   return (
     <div className="page-stack">
@@ -1887,7 +1892,11 @@ function SchemeDetailPage({ backLabel, onBack, scheme }) {
         actions={<div className="detail-actions">{version.official_url && <a className="button button-ghost" href={version.official_url} rel="noopener noreferrer" target="_blank">Official source</a>}{version.application_url && <a className="button button-primary" href={version.application_url} rel="noopener noreferrer" target="_blank">Open application</a>}</div>}
       />
       <div className="scheme-detail-summary">
-        <div><span>Application status</span><strong>{readinessStatusLabel(version.application_status || "unknown")}</strong></div>
+        <div>
+          <span>Application window</span>
+          <strong>{deadline.label}</strong>
+          <small>{deadline.detail}</small>
+        </div>
         <div><span>Support amount</span><strong>{formatAmountRange(scheme)}</strong></div>
         <div><span>Funding type</span><strong>{isFundingScheme(scheme) ? fundingTypeLabel(scheme) : (version.support_types || []).join(", ") || "Not published"}</strong></div>
         <div><span>Verification</span><strong>{readinessStatusLabel(version.verification_status || "not verified")}</strong></div>
