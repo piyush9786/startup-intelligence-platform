@@ -14,6 +14,11 @@ from .models import (
 from .services.assessment_drafts import (
     get_or_create_startup_assessment_draft,
 )
+from .services.document_autofill import (
+    DOCUMENT_TYPE_CHOICES,
+    MAX_AUTOFILL_DOCUMENT_BYTES,
+    normalize_autofill_mime_type,
+)
 
 
 class StartupProfileSerializer(serializers.ModelSerializer):
@@ -26,6 +31,42 @@ class StartupProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+
+
+
+class StartupDocumentAutofillRequestSerializer(serializers.Serializer):
+    file = serializers.FileField()
+    document_type = serializers.ChoiceField(
+        choices=DOCUMENT_TYPE_CHOICES,
+        required=False,
+        default="auto",
+    )
+
+    def validate_file(self, value):
+        if value.size > MAX_AUTOFILL_DOCUMENT_BYTES:
+            raise serializers.ValidationError(
+                "The uploaded document must be 10 MB or smaller."
+            )
+        return value
+
+    def validate(self, attrs):
+        upload = attrs["file"]
+        mime_type = normalize_autofill_mime_type(
+            upload.name,
+            getattr(upload, "content_type", ""),
+        )
+        if not mime_type:
+            raise serializers.ValidationError(
+                {
+                    "file": (
+                        "Only text-based PDF and plain-text documents "
+                        "are supported."
+                    )
+                }
+            )
+        attrs["mime_type"] = mime_type
+        return attrs
 
 
 class StartupAssessmentDraftSerializer(serializers.ModelSerializer):

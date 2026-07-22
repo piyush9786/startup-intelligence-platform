@@ -152,6 +152,29 @@ export async function listStartupProfiles() {
   return normalizeCollection(response.data);
 }
 
+
+
+export async function autofillStartupProfileFromDocument(
+  file,
+  { documentType = "auto" } = {},
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("document_type", documentType);
+
+  const response = await client.post(
+    "/startup-profiles/autofill-from-document/",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+  return response.data;
+}
+
+
 export async function listStartupAssessmentDrafts({
   startupProfileId = null,
   status = "draft",
