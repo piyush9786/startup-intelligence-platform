@@ -58,12 +58,13 @@ class StartupAssessmentDraftViewSet(
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         draft = serializer.save()
+        response_status = status.HTTP_201_CREATED if serializer.created else status.HTTP_200_OK
         return Response(
             StartupAssessmentDraftSerializer(
                 draft,
                 context=self.get_serializer_context(),
             ).data,
-            status=status.HTTP_201_CREATED,
+            status=response_status,
         )
 
     def update(self, request, *args, **kwargs):

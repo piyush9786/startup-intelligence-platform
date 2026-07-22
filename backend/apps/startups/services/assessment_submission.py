@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
@@ -46,6 +47,11 @@ def submit_startup_assessment_draft(
     draft: StartupAssessmentDraft,
     requested_by: Any,
 ) -> StartupAssessmentSubmission:
+    user_model = get_user_model()
+    user_model._default_manager.select_for_update().only(
+        "pk",
+    ).get(pk=draft.owner_id)
+
     locked_draft = (
         StartupAssessmentDraft.objects.select_for_update(
             of=("self",),
