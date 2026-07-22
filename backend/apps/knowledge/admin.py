@@ -8,6 +8,8 @@ from .models import (
     CandidatePublication,
     CandidateResolution,
     EligibilityRuleCandidate,
+    ExternalSchemeDataset,
+    ExternalSchemeRecord,
     KnowledgeExtractionRun,
     PublishedEvidence,
     RequiredDocumentCandidate,
@@ -258,3 +260,77 @@ class CandidateCurationAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+
+@admin.register(ExternalSchemeDataset)
+class ExternalSchemeDatasetAdmin(admin.ModelAdmin):
+    list_display = (
+        "dataset_key",
+        "dataset_name",
+        "source_row_count",
+        "record_count",
+        "normalization_version",
+        "is_active",
+        "updated_at",
+    )
+    list_filter = (
+        "is_active",
+        "normalization_version",
+    )
+    search_fields = (
+        "dataset_key",
+        "dataset_name",
+        "source_filename",
+    )
+    readonly_fields = (
+        "content_sha256",
+        "created_at",
+        "updated_at",
+    )
+
+
+@admin.register(ExternalSchemeRecord)
+class ExternalSchemeRecordAdmin(admin.ModelAdmin):
+    list_display = (
+        "scheme_name",
+        "dataset",
+        "review_status",
+        "funding_type",
+        "central_state",
+        "state",
+        "warning_count",
+        "matched_scheme",
+    )
+    list_filter = (
+        "dataset",
+        "review_status",
+        "central_state",
+        "state",
+    )
+    search_fields = (
+        "scheme_name",
+        "normalized_name",
+        "external_id",
+        "ministry",
+        "department",
+        "sector",
+        "eligibility",
+    )
+    raw_id_fields = (
+        "matched_candidate",
+        "matched_scheme",
+    )
+    readonly_fields = (
+        "dataset",
+        "external_id",
+        "normalized_name",
+        "record_sha256",
+        "raw_row",
+        "source_rows",
+        "external_ids",
+        "created_at",
+        "updated_at",
+    )
+
+    @admin.display(description="Warnings")
+    def warning_count(self, obj):
+        return len(obj.quality_warnings or [])
