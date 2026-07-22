@@ -158,6 +158,46 @@ export function assessmentDraftData(form) {
   return payload;
 }
 
+
+
+function autofillValueToForm(value) {
+  if (Array.isArray(value)) return value.join(", ");
+  if (value === true) return "yes";
+  if (value === false) return "no";
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+export function autofillSuggestionFieldsForEmptyForm(
+  form = {},
+  suggestions = [],
+) {
+  return suggestions
+    .filter((suggestion) => {
+      if (!Object.hasOwn(form, suggestion.field)) return false;
+      return !String(form[suggestion.field] ?? "").trim();
+    })
+    .map((suggestion) => suggestion.field);
+}
+
+export function assessmentFormWithAutofillSuggestions(
+  form,
+  suggestions,
+  selectedFields,
+) {
+  const selected = new Set(selectedFields || []);
+  const next = { ...form };
+
+  (suggestions || []).forEach((suggestion) => {
+    if (!selected.has(suggestion.field)) return;
+    if (!Object.hasOwn(next, suggestion.field)) return;
+    next[suggestion.field] = autofillValueToForm(suggestion.value);
+  });
+
+  return next;
+}
+
+
 function required(value, message, errors) {
   if (!String(value || "").trim()) {
     errors.push(message);

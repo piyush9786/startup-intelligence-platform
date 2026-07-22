@@ -1,5 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,6 +13,7 @@ from .models import (
     StartupReadinessAssessment,
 )
 from .serializers import (
+    StartupDocumentAutofillRequestSerializer,
     StartupProfileSerializer,
     StartupReadinessActionPlanGenerationRequestSerializer,
     StartupReadinessActionPlanSerializer,
@@ -19,6 +22,8 @@ from .serializers import (
     StartupReadinessRetrievalRequestSerializer,
 )
 from .services import (
+    StartupDocumentAutofillError,
+    build_startup_profile_autofill,
     create_startup_readiness_action_plan,
     create_startup_readiness_assessment,
 )
@@ -65,6 +70,30 @@ class StartupProfileViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+
+
+
+class StartupProfileDocumentAutofillView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        serializer = StartupDocumentAutofillRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        upload = serializer.validated_data["file"]
+
+        try:
+            result = build_startup_profile_autofill(
+                content=upload.read(),
+                filename=upload.name,
+                mime_type=serializer.validated_data["mime_type"],
+                document_type_hint=serializer.validated_data["document_type"],
+            )
+        except StartupDocumentAutofillError as exc:
+            raise ValidationError({"file": str(exc)}) from exc
+
+        return Response(result, status=status.HTTP_200_OK)
 
 
 class StartupReadinessEvaluateView(APIView):
