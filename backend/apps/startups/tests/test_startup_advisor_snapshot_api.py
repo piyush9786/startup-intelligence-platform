@@ -173,6 +173,15 @@ def test_zero_result_generation_is_available_not_missing():
     assert response.data["recommendations"]["recommendation_count"] == 0
     assert response.data["recommendations"]["recommendations"] == []
 
+    generation = response.data["recommendations"]["generation"]
+    assert generation["assessed_scheme_count"] == 1
+    assert generation["excluded_scheme_count"] == 1
+    assert len(generation["excluded_schemes"]) == 1
+    assert (
+        generation["excluded_schemes"][0]["reason"]
+        == "application_status:upcoming"
+    )
+
 
 def test_other_user_cannot_access_advisor_snapshot():
     owner = make_user(username="advisor-private-owner")
