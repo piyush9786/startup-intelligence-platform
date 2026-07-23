@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-EXPLANATION_VERSION = "eligibility-explanation-v1"
+EXPLANATION_VERSION = "eligibility-explanation-v2"
 
 _FIELD_LABELS = {
     "dpiit_recognized": "DPIIT recognition",
@@ -46,6 +46,125 @@ def _humanize_token(value: Any) -> str:
 
 def _field_label(field_path: str) -> str:
     return _FIELD_LABELS.get(field_path, _humanize_token(field_path))
+
+
+def _verified_rule_label(field_path: str) -> str:
+    normalized = field_path.removeprefix(
+        "manual.",
+    ).replace(".", "_")
+    return _field_label(normalized)
+
+
+def build_verification_provenance(
+    assessment: Any,
+) -> list[dict[str, Any]]:
+    groups = (
+        (
+            "pass",
+            list(
+                _value(
+                    assessment,
+                    "matched_rules",
+                    [],
+                )
+                or []
+            ),
+        ),
+        (
+            "fail",
+            list(
+                _value(
+                    assessment,
+                    "failed_rules",
+                    [],
+                )
+                or []
+            ),
+        ),
+        (
+            "unknown",
+            list(
+                _value(
+                    assessment,
+                    "unknown_rules",
+                    [],
+                )
+                or []
+            ),
+        ),
+    )
+
+    provenance: list[dict[str, Any]] = []
+
+    for fallback_outcome, rules in groups:
+        for rule in rules:
+            verification = _value(
+                rule,
+                "verification",
+            )
+            if not isinstance(verification, dict):
+                continue
+
+            decision_id = verification.get(
+                "decision_id",
+            )
+            submission_id = verification.get(
+                "submission_id",
+            )
+            if not decision_id or not submission_id:
+                continue
+
+            field_path = str(
+                _value(
+                    rule,
+                    "field_path",
+                    "",
+                )
+                or ""
+            )
+            label = _verified_rule_label(
+                field_path,
+            )
+
+            provenance.append(
+                {
+                    "rule_id": str(
+                        _value(
+                            rule,
+                            "rule_id",
+                            "",
+                        )
+                        or ""
+                    ),
+                    "field_path": field_path,
+                    "outcome": str(
+                        _value(
+                            rule,
+                            "outcome",
+                            fallback_outcome,
+                        )
+                        or fallback_outcome
+                    ),
+                    "decision_id": str(
+                        decision_id,
+                    ),
+                    "submission_id": str(
+                        submission_id,
+                    ),
+                    "valid_from": verification.get(
+                        "valid_from",
+                    ),
+                    "expires_on": verification.get(
+                        "expires_on",
+                    ),
+                    "message": (
+                        f"{label.capitalize()} was evaluated "
+                        "using reviewer-approved evidence."
+                    ),
+                }
+            )
+
+    return provenance
 
 
 def _decimal(value: Any) -> Decimal | None:
@@ -292,6 +411,11 @@ def build_eligibility_explanation(assessment: Any) -> dict[str, Any]:
     matched_rules = list(_value(assessment, "matched_rules", []) or [])
     failed_rules = list(_value(assessment, "failed_rules", []) or [])
     unknown_rules = list(_value(assessment, "unknown_rules", []) or [])
+    verification_provenance = (
+        build_verification_provenance(
+            assessment,
+        )
+    )
 
     next_steps = [
         *(_next_step(rule, outcome="failed") for rule in failed_rules),
@@ -314,6 +438,9 @@ def build_eligibility_explanation(assessment: Any) -> dict[str, Any]:
             result=result,
             failed_rules=failed_rules,
             unknown_rules=unknown_rules,
+        ),
+        "verification_provenance": (
+            verification_provenance
         ),
         "passed_checks": [_passed_message(rule) for rule in matched_rules],
         "unmet_requirements": [_failed_message(rule) for rule in failed_rules],

@@ -1581,6 +1581,27 @@ body {
 .recommendation-evidence small { color: #78849a; font-size: 0.64rem; }
 .recommendation-evidence { justify-items: end; }
 
+.verification-provenance {
+  display: grid;
+  gap: 0.16rem;
+  justify-items: end;
+  max-width: 290px;
+}
+
+.verification-provenance-badge {
+  background: #e9f8f0;
+  border: 1px solid #bde7cf;
+  border-radius: 999px;
+  color: #11784a;
+  font-size: 0.61rem;
+  font-weight: 820;
+  padding: 0.3rem 0.48rem;
+}
+
+.verification-provenance small {
+  line-height: 1.4;
+}
+
 .advisor-card {
   background:
     radial-gradient(circle at 100% 0, rgba(114, 71, 239, 0.1), transparent 36%),
@@ -1828,6 +1849,7 @@ body {
   .metric-grid { grid-template-columns: 1fr; }
   .recommendation-row { align-items: flex-start; grid-template-columns: auto minmax(0, 1fr); }
   .recommendation-evidence { grid-column: 2; justify-items: start; }
+  .verification-provenance { justify-items: start; }
   .advisor-page-header { align-items: stretch; flex-direction: column; }
 }
 
