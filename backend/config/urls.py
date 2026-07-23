@@ -11,6 +11,10 @@ from rest_framework_simplejwt.views import (
 )
 
 from apps.accounts.views import CurrentUserView
+from apps.assistant.views import (
+    ChatbotCurrentView,
+    ChatbotMessageCreateView,
+)
 from apps.core.views import HealthView, PlatformStatusView
 from apps.discovery.views import (
     CrawlFrontierEntryViewSet,
@@ -121,7 +125,18 @@ router.register(
     basename="startup-assessment-draft",
 )
 
+
 urlpatterns = [
+    path(
+        "api/v1/assistant/chatbot/current/",
+        ChatbotCurrentView.as_view(),
+        name="assistant-chatbot-current",
+    ),
+    path(
+        "api/v1/assistant/chatbot/current/messages/",
+        ChatbotMessageCreateView.as_view(),
+        name="assistant-chatbot-message-create",
+    ),
     path(
         "api/v1/auth/me/",
         CurrentUserView.as_view(),

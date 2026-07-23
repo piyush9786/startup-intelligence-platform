@@ -21,6 +21,7 @@ const api = vi.hoisted(() => ({
   createEligibilityVerificationReviewerDecision: vi.fn(),
   generateGroundedBriefing: vi.fn(),
   getCurrentBriefing: vi.fn(),
+  getCurrentChatbot: vi.fn(),
   getCurrentUser: vi.fn(),
   getCurrentStartupOnboarding: vi.fn(),
   getEligibilityVerificationGates: vi.fn(),
@@ -39,6 +40,7 @@ const api = vi.hoisted(() => ({
   listStartupProfiles: vi.fn(),
   login: vi.fn(),
   submitStartupAssessmentDraft: vi.fn(),
+  sendCurrentChatbotMessage: vi.fn(),
   updateStartupAssessmentDraft: vi.fn(),
   updateCurrentStartupOnboarding: vi.fn(),
   uploadEligibilityVerificationEvidence: vi.fn(),
@@ -393,6 +395,38 @@ function configureAuthenticatedWorkspace({
 } = {}) {
   api.getSession.mockReturnValue({ access: "access-token", refresh: "refresh-token" });
   api.listStartupProfiles.mockResolvedValue(profiles);
+  api.getCurrentChatbot.mockResolvedValue({
+    created: true,
+    session: {
+      id: "chatbot-session-one",
+      agent_type: "chatbot",
+      status: "active",
+      startup_profile_id:
+        profiles[0]?.id || null,
+      scope_key:
+        profiles[0]?.id || "global",
+      turn_count: 0,
+      max_turns: 20,
+      remaining_turns: 20,
+    },
+    messages: [],
+  });
+  api.sendCurrentChatbotMessage.mockResolvedValue({
+    created: false,
+    session: {
+      id: "chatbot-session-one",
+      agent_type: "chatbot",
+      status: "active",
+      startup_profile_id:
+        profiles[0]?.id || null,
+      scope_key:
+        profiles[0]?.id || "global",
+      turn_count: 1,
+      max_turns: 20,
+      remaining_turns: 19,
+    },
+    messages: [],
+  });
   api.listSchemes.mockResolvedValue([grantScheme, loanScheme]);
   api.listExternalSchemes.mockResolvedValue([externalScheme]);
   api.listExternalCapitalSupport.mockResolvedValue([]);
@@ -1387,9 +1421,11 @@ describe("functional user dashboard", () => {
     ).not.toBeInTheDocument();
 
     expect(api.getCurrentUser).toHaveBeenCalledTimes(1);
-    expect(
-      api.listEligibilityVerificationReviewerSubmissions,
-    ).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(
+        api.listEligibilityVerificationReviewerSubmissions,
+      ).toHaveBeenCalledTimes(1);
+    });
 
     expect(
       await screen.findByRole("heading", {
@@ -1501,6 +1537,82 @@ describe("functional user dashboard", () => {
         "Approved decision recorded for Acme Climate.",
       ),
     ).toBeInTheDocument();
+  });
+
+
+  test("opens the persisted site-wide founder assistant", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await screen.findByRole("heading", {
+      name: /Understand what Acme Climate can apply for next/,
+    });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Open founder assistant",
+      }),
+    );
+
+    expect(
+      await screen.findByRole("dialog", {
+        name: "Founder assistant",
+      }),
+    ).toBeInTheDocument();
+
+    expect(
+      api.getCurrentChatbot,
+    ).toHaveBeenCalledWith({
+      startupProfileId: profile.id,
+    });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Close founder assistant",
+      }),
+    );
+
+    expect(
+      screen.queryByRole("dialog", {
+        name: "Founder assistant",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("does not expose the founder assistant to reviewers", async () => {
+    configureAuthenticatedWorkspace({
+      profiles: [],
+    });
+
+    api.getCurrentUser.mockResolvedValue({
+      id: "reviewer-user-chatbot",
+      username: "reviewer",
+      email: "reviewer@example.com",
+      role: "reviewer",
+      role_label: "Data reviewer",
+      email_verified: true,
+      is_staff: false,
+      is_superuser: false,
+      can_review_eligibility: true,
+    });
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Reviewer verification queue",
+      }),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByRole("button", {
+        name: "Open founder assistant",
+      }),
+    ).not.toBeInTheDocument();
+
+    expect(
+      api.getCurrentChatbot,
+    ).not.toHaveBeenCalled();
   });
 
   test("returns to sign-in when the session expires", async () => {
