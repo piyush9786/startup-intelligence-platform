@@ -104,6 +104,21 @@ class ExternalSchemeRecordViewSet(viewsets.ReadOnlyModelViewSet):
         )
     )
 
+    def get_queryset(self):
+        queryset = ExternalSchemeRecord.objects.select_related(
+            "dataset",
+            "matched_scheme",
+        ).filter(dataset__is_active=True)
+
+        if self.request.query_params.get("catalog_scope") == "all":
+            return queryset
+
+        return queryset.filter(
+            matched_scheme__isnull=True,
+        ).exclude(
+            review_status=ExternalSchemeRecord.ReviewStatus.REJECTED,
+        )
+
 
 class ExternalCapitalSupportRecordViewSet(
     viewsets.ReadOnlyModelViewSet

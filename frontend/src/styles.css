@@ -2942,6 +2942,94 @@ body {
 
 /* External scheme discovery records */
 
+.scheme-review-summary {
+  align-items: stretch;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(238, 250, 243, 0.96),
+      rgba(240, 237, 255, 0.92)
+    );
+  border: 1px solid #cfe3d7;
+  border-radius: 16px;
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns:
+    repeat(4, minmax(105px, 0.55fr))
+    minmax(280px, 2fr);
+  padding: 1rem;
+}
+
+.scheme-review-summary > div {
+  border-right: 1px solid rgba(89, 112, 99, 0.16);
+  display: grid;
+  gap: 0.15rem;
+}
+
+.scheme-review-summary strong {
+  color: #205c39;
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
+}
+
+.scheme-review-summary span {
+  color: #50705d;
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+.scheme-review-summary p {
+  align-self: center;
+  color: #4d5c70;
+  font-size: 0.7rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.scheme-catalog-sections {
+  display: grid;
+  gap: 1.4rem;
+}
+
+.scheme-catalog-section {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.scheme-catalog-heading {
+  align-items: flex-end;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.scheme-catalog-heading span {
+  color: #6c54cf;
+  display: block;
+  font-size: 0.61rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.scheme-catalog-heading h2 {
+  font-size: 1rem;
+  margin: 0.2rem 0 0;
+}
+
+.scheme-catalog-heading > strong {
+  align-items: center;
+  background: #f0edff;
+  border-radius: 999px;
+  color: #5537ce;
+  display: inline-flex;
+  font-size: 0.7rem;
+  height: 28px;
+  justify-content: center;
+  min-width: 28px;
+  padding: 0 0.55rem;
+}
+
 .scheme-card-external {
   background:
     linear-gradient(
@@ -2956,6 +3044,72 @@ body {
   border-color: #d0a35a;
 }
 
+.scheme-card-merged {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(238, 242, 255, 0.92),
+      #fff 46%
+    );
+  border-color: #c7d2fe;
+}
+
+.scheme-card-unavailable {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(245, 246, 248, 0.96),
+      #fff 50%
+    );
+  border-color: #d9dde5;
+}
+
+.scheme-card-unavailable:hover {
+  border-color: #aeb6c4;
+}
+
+.verification-merged {
+  background: #e9edff;
+  color: #4056bd;
+}
+
+.verification-unavailable {
+  background: #eceff3;
+  color: #596477;
+}
+
+.external-scheme-facts {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.8rem 0;
+}
+
+.external-scheme-facts > div {
+  background: rgba(247, 248, 252, 0.84);
+  border-radius: 10px;
+  padding: 0.6rem;
+}
+
+.external-scheme-facts span {
+  color: #7c8799;
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.external-scheme-facts p {
+  color: #47546c;
+  display: -webkit-box;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  margin: 0.25rem 0 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .external-scheme-disclaimer {
   background: #fff7e8;
   border: 1px solid #f1d7a7;
@@ -2967,6 +3121,18 @@ body {
   padding: 0.6rem;
 }
 
+.scheme-card-merged .external-scheme-disclaimer {
+  background: #eef2ff;
+  border-color: #cbd5ff;
+  color: #40518d;
+}
+
+.scheme-card-unavailable .external-scheme-disclaimer {
+  background: #f1f3f6;
+  border-color: #d8dde5;
+  color: #586274;
+}
+
 .scheme-card-footer a {
   color: #5537ce;
   font-size: 0.68rem;
@@ -2976,6 +3142,168 @@ body {
 
 .scheme-card-footer a:hover {
   text-decoration: underline;
+}
+
+.scheme-card-footer-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  justify-content: flex-end;
+}
+
+.scheme-card-footer-actions button {
+  background: #5a3fd3;
+  border: 1px solid #5a3fd3;
+  border-radius: 8px;
+  box-shadow: 0 7px 16px rgba(85, 55, 206, 0.16);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.5rem 0.65rem;
+  color: #fff;
+}
+
+.scheme-card-footer-actions button:hover {
+  background: #4930bd;
+  border-color: #4930bd;
+}
+
+.scheme-card-footer .external-support-amount {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.external-support-amount small {
+  color: #8a94a5;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.scheme-card-footer .external-support-amount strong {
+  color: #34415c;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.external-detail-notice {
+  background: #fff7e8;
+  border: 1px solid #f1d7a7;
+  border-radius: 14px;
+  color: #76521d;
+  padding: 0.9rem 1rem;
+}
+
+.external-detail-notice-reviewed {
+  background: #eefaf3;
+  border-color: #bfe5cc;
+  color: #245d3a;
+}
+
+.external-detail-notice-merged {
+  background: #eef2ff;
+  border-color: #cbd5ff;
+  color: #40518d;
+}
+
+.external-detail-notice-unavailable {
+  background: #f1f3f6;
+  border-color: #d8dde5;
+  color: #586274;
+}
+
+.external-detail-notice strong {
+  display: block;
+  font-size: 0.76rem;
+}
+
+.external-detail-notice p {
+  font-size: 0.7rem;
+  line-height: 1.55;
+  margin: 0.35rem 0 0;
+}
+
+.external-detail-metadata {
+  display: grid;
+  gap: 0;
+  margin: 0.8rem 0 0;
+}
+
+.external-detail-metadata div {
+  align-items: start;
+  border-top: 1px solid #edf0f5;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: minmax(110px, 0.8fr) minmax(0, 1.2fr);
+  padding: 0.65rem 0;
+}
+
+.external-detail-metadata dt {
+  color: #7a8699;
+  font-size: 0.65rem;
+}
+
+.external-detail-metadata dd {
+  color: #34415c;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.scheme-detail-grid .dashboard-card > p {
+  color: var(--slate);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.text-link {
+  color: #5537ce;
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-top: 0.65rem;
+  text-decoration: none;
+}
+
+.text-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 960px) {
+  .scheme-review-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scheme-review-summary p {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 680px) {
+  .scheme-review-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scheme-review-summary p {
+    grid-column: 1 / -1;
+  }
+
+  .scheme-card-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .scheme-card-footer-actions {
+    justify-content: flex-start;
+  }
+
+  .external-detail-metadata div {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Eligibility explanation and application-deadline indicators */

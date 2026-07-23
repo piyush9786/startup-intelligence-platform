@@ -1,0 +1,638 @@
+{
+  "schema_version": 1,
+  "manifest_key": "external-scheme-review-2026-07-24-v1",
+  "dataset_key": "friend-startup-schemes-v1",
+  "reviewed_on": "2026-07-24",
+  "reviewer": "Startup Intelligence Platform data review",
+  "clear_quality_warnings_for_verified": true,
+  "apply_source_url_to_official_application_url": true,
+  "decisions": [
+    {
+      "external_id": "SCH001",
+      "status": "verified",
+      "matched_scheme_name": "Startup India Seed Fund Scheme (SISFS)",
+      "official_source_url": "https://seedfund.startupindia.gov.in/",
+      "note": "The official Seed Fund portal confirms the programme. This staging row is matched to the already-published canonical scheme."
+    },
+    {
+      "external_id": "SCH002",
+      "status": "verified",
+      "matched_scheme_name": "Fund of Funds for Startups (FFS)",
+      "official_source_url": "https://www.startupindia.gov.in/content/sih/en/startup-scheme.html",
+      "note": "Startup India confirms the Fund of Funds. This staging row is matched to the already-published canonical scheme."
+    },
+    {
+      "external_id": "SCH003",
+      "status": "verified",
+      "matched_scheme_name": "Credit Guarantee Scheme for Startups (CGSS)",
+      "official_source_url": "https://www.startupindia.gov.in/content/sih/en/credit-guarantee-scheme-for-startups.html",
+      "note": "The official CGSS page confirms the scheme and current guarantee framework. This staging row is matched to the canonical scheme."
+    },
+    {
+      "external_id": "SCH004",
+      "status": "verified",
+      "official_source_url": "https://www.startupindia.gov.in/content/sih/en/startup-scheme.html",
+      "note": "Startup India lists intellectual-property support as a recognised startup benefit.",
+      "overrides": {
+        "application_process": "Review the current SIPP guidelines and engage an empanelled intellectual-property facilitator through Startup India."
+      }
+    },
+    {
+      "external_id": "SCH005",
+      "status": "verified",
+      "official_source_url": "https://www.startupindia.gov.in/content/sih/en/startupgov/startup_recognition_page.html",
+      "note": "The official recognition page confirms DPIIT recognition and directs new applications to the National Single Window System.",
+      "overrides": {
+        "application_process": "Create an account on the National Single Window System, add the Registration as a Startup approval, and submit the recognition application."
+      }
+    },
+    {
+      "external_id": "SCH006",
+      "status": "verified",
+      "official_source_url": "https://www.startupindia.gov.in/content/sih/en/about-startup-india-initiative.html",
+      "note": "Startup India confirms Investor Connect as an official initiative connecting startups and investors.",
+      "overrides": {
+        "funding_amount": "Investor-dependent; no government grant amount is promised"
+      }
+    },
+    {
+      "external_id": "SCH007",
+      "status": "verified",
+      "official_source_url": "https://maarg.startupindia.gov.in/",
+      "note": "The official MAARG portal is active and accepts startup and mentor registrations.",
+      "overrides": {
+        "application_process": "Register on the MAARG portal as a startup to request mentorship."
+      }
+    },
+    {
+      "external_id": "SCH008",
+      "status": "verified",
+      "official_source_url": "https://www.startupindia.gov.in/bhaskar/about",
+      "note": "Startup India confirms BHASKAR as its official ecosystem registry and collaboration platform.",
+      "overrides": {
+        "application_process": "Register for a BHASKAR ID and create the appropriate ecosystem profile."
+      }
+    },
+    {
+      "external_id": "SCH009",
+      "status": "verified",
+      "official_source_url": "https://www.startupindia.gov.in/content/sih/en/form80iac.html",
+      "note": "The official 80-IAC page confirms a 100% deduction for three consecutive financial years, subject to statutory eligibility.",
+      "overrides": {
+        "eligibility": "DPIIT-recognised Private Limited Company or LLP incorporated on or after 1 April 2016, under 10 years old, with turnover below ₹100 crore and meeting the other Section 80-IAC conditions",
+        "application_process": "Apply through the Startup India 80-IAC form and submit the required audited financial, corporate, innovation and declaration documents."
+      }
+    },
+    {
+      "external_id": "SCH010",
+      "status": "verified",
+      "official_source_url": "https://www.startupindia.gov.in/content/sih/en/startup-scheme.html",
+      "note": "Startup India confirms self-certification for specified labour and environmental laws as a recognised-startup benefit.",
+      "overrides": {
+        "funding_type": "Regulatory compliance benefit",
+        "financial_instrument": "Non-financial"
+      }
+    },
+    {
+      "external_id": "SCH011",
+      "status": "verified",
+      "official_source_url": "https://www.msme.gov.in/offerings/schemes-and-services/details/prime-minister-employment-generation-programme-and-other-credit-support-schemes-gDOwMTMtQWa",
+      "note": "The Ministry of MSME confirms the current PMEGP project ceilings and subsidy structure."
+    },
+    {
+      "external_id": "SCH012",
+      "status": "verified",
+      "official_source_url": "https://www.msme.gov.in/offerings/schemes-and-services/details/technology-upgradation-and-quality-certification-kjNzETMtQWa",
+      "note": "The Ministry of MSME confirms MSME Innovative as a current component of the MSME Champions Scheme."
+    },
+    {
+      "external_id": "SCH013",
+      "status": "verified",
+      "official_source_url": "https://ramp.msme.gov.in/",
+      "note": "The official RAMP portal confirms the programme and its current MSME support interventions."
+    },
+    {
+      "external_id": "SCH014",
+      "status": "verified",
+      "official_source_url": "https://www.scsthub.in/",
+      "note": "The official National SC-ST Hub portal confirms support for SC/ST-owned micro and small enterprises."
+    },
+    {
+      "external_id": "SCH015",
+      "status": "verified",
+      "official_source_url": "https://www.msme.gov.in/static/uploads/2026/06/89c36d04131a60b200a88177b91317c8.pdf",
+      "note": "The Ministry of MSME scheme booklet confirms Procurement and Marketing Support."
+    },
+    {
+      "external_id": "SCH016",
+      "status": "verified",
+      "official_source_url": "https://www.msme.gov.in/offerings/schemes-and-services/details/technology-upgradation-and-quality-certification-kjNzETMtQWa",
+      "note": "The former Design Clinic is now presented under the Design component of MSME Innovative; the record has been renamed to the current programme.",
+      "overrides": {
+        "scheme_name": "MSME Innovative — Design component",
+        "normalized_name": "msme innovative design component",
+        "application_process": "Apply under the Design component of MSME Innovative using the current Ministry of MSME guidance."
+      }
+    },
+    {
+      "external_id": "SCH017",
+      "status": "verified",
+      "official_source_url": "https://www.msme.gov.in/offerings/schemes-and-services/details/technology-upgradation-and-quality-certification-kjNzETMtQWa",
+      "note": "The former Lean Manufacturing Competitiveness Scheme is now the MSME Competitive (Lean) Scheme; the record has been renamed.",
+      "overrides": {
+        "scheme_name": "MSME Competitive (Lean) Scheme",
+        "normalized_name": "msme competitive lean scheme",
+        "application_process": "Apply through the current MSME Competitive (Lean) programme portal and guidance."
+      }
+    },
+    {
+      "external_id": "SCH018",
+      "status": "verified",
+      "official_source_url": "https://www.msme.gov.in/offerings/schemes-and-services/details/technology-upgradation-and-quality-certification-kjNzETMtQWa",
+      "note": "The Ministry of MSME confirms the current name and subsidy structure as MSME Sustainable (ZED) Certification.",
+      "overrides": {
+        "scheme_name": "MSME Sustainable (ZED) Certification",
+        "normalized_name": "msme sustainable zed certification",
+        "funding_amount": "Certification subsidy of 80%/60%/50% for Bronze/Silver/Gold, plus applicable additional incentives"
+      }
+    },
+    {
+      "external_id": "SCH019",
+      "status": "verified",
+      "matched_scheme_name": "A Scheme for Promotion of Innovation, Rural Industries and Entrepreneurship (ASPIRE)",
+      "official_source_url": "https://dashboard.msme.gov.in/",
+      "note": "The current MSME dashboard reports active ASPIRE implementation. This staging copy is matched to the canonical ASPIRE record."
+    },
+    {
+      "external_id": "SCH020",
+      "status": "verified",
+      "official_source_url": "https://sfurti.msme.gov.in/SFURTI/Home.aspx",
+      "note": "The official SFURTI portal confirms support for traditional-industry clusters."
+    },
+    {
+      "external_id": "SCH021",
+      "status": "verified",
+      "official_source_url": "https://www.msme.gov.in/offerings/schemes-and-services/details/prime-minister-employment-generation-programme-and-other-credit-support-schemes-gDOwMTMtQWa",
+      "note": "The Ministry of MSME confirms PMEGP. Duplicate source rows were already consolidated into this record."
+    },
+    {
+      "external_id": "SCH022",
+      "status": "verified",
+      "official_source_url": "https://champions.gov.in/",
+      "note": "The official CHAMPIONS portal confirms the umbrella scheme and its grievance, handholding and guidance services.",
+      "overrides": {
+        "scheme_name": "MSME CHAMPIONS Scheme and Portal",
+        "normalized_name": "msme champions scheme and portal"
+      }
+    },
+    {
+      "external_id": "SCH026",
+      "status": "verified",
+      "official_source_url": "https://www.msme.gov.in/static/uploads/2026/06/89c36d04131a60b200a88177b91317c8.pdf",
+      "note": "The Ministry of MSME scheme booklet confirms Procurement and Marketing Support. Duplicate source rows were consolidated."
+    },
+    {
+      "external_id": "SCH030",
+      "status": "verified",
+      "matched_scheme_name": "A Scheme for Promotion of Innovation, Rural Industries and Entrepreneurship (ASPIRE)",
+      "official_source_url": "https://dashboard.msme.gov.in/",
+      "note": "The current MSME dashboard confirms ASPIRE implementation. This second staging variant is matched to the canonical ASPIRE record."
+    },
+    {
+      "external_id": "SCH032",
+      "status": "verified",
+      "official_source_url": "https://coirboard.gov.in/",
+      "note": "The Coir Board is the official implementing authority for Coir Vikas Yojana and related coir-enterprise support."
+    },
+    {
+      "external_id": "SCH033",
+      "status": "verified",
+      "official_source_url": "https://www.msme.gov.in/offerings/schemes-and-services/details/micro-small-enterprises-cluster-development-mse-cdp-kTNxMTMtQWa",
+      "note": "The Ministry of MSME scheme booklet confirms the MSE Cluster Development Programme."
+    },
+    {
+      "external_id": "SCH034",
+      "status": "verified",
+      "official_source_url": "https://my.msme.gov.in/mymsme/Scheme.aspx",
+      "note": "The official Ministry of MSME scheme directory lists the International Cooperation Scheme."
+    },
+    {
+      "external_id": "SCH035",
+      "status": "verified",
+      "official_source_url": "https://dashboard.msme.gov.in/",
+      "note": "The current MSME dashboard reports active Entrepreneurship and Skill Development Programme delivery."
+    },
+    {
+      "external_id": "SCH037",
+      "status": "rejected",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202425/business-performance.php",
+      "note": "The current SIDBI annual report does not identify SMILE as a current direct-finance product, while the available official description is historical. Keep quarantined pending current product terms."
+    },
+    {
+      "external_id": "SCH038",
+      "status": "rejected",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202425/business-performance.php",
+      "note": "The current SIDBI annual report does not identify SMILE Equipment Finance as a current product. The staging claim relies on an older brochure and is not safe to present as current."
+    },
+    {
+      "external_id": "SCH039",
+      "status": "rejected",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202425/business-performance.php",
+      "note": "SIDBI direct assistance is a broad lending channel, not a uniquely defined scheme with the uniform terms claimed by this row."
+    },
+    {
+      "external_id": "SCH040",
+      "status": "verified",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202425/business-performance.php",
+      "note": "SIDBI's current annual report confirms that the Startup Venture Debt framework continued and scaled through FY2025.",
+      "overrides": {
+        "application_process": "Contact SIDBI and review its current venture-debt appraisal requirements; assistance is case-specific and is not an automatic entitlement."
+      }
+    },
+    {
+      "external_id": "SCH041",
+      "status": "verified",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202425/business-performance.php",
+      "note": "SIDBI's current annual report confirms its seed-fund partnerships with incubators.",
+      "overrides": {
+        "application_process": "Apply through a participating incubator when it opens a startup call; SIDBI does not describe a single direct public application route."
+      }
+    },
+    {
+      "external_id": "SCH042",
+      "status": "rejected",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202425/business-performance.php",
+      "note": "The SIDBI Cluster Development Fund finances state and union-territory infrastructure projects; this row incorrectly presents it as direct startup/MSME assistance."
+    },
+    {
+      "external_id": "SCH043",
+      "status": "verified",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202425/business-performance.php",
+      "note": "SIDBI's annual report confirms current green-finance products for eligible greenfield and brownfield MSME projects."
+    },
+    {
+      "external_id": "SCH044",
+      "status": "verified",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202425/business-performance.php",
+      "note": "SIDBI's annual report confirms Mission Solar partnerships for MSME rooftop-solar finance."
+    },
+    {
+      "external_id": "SCH045",
+      "status": "verified",
+      "official_source_url": "https://udyamimitra.in/",
+      "note": "Udyami Mitra is an official SIDBI credit-access and handholding portal, not a grant scheme.",
+      "overrides": {
+        "funding_type": "Credit facilitation and handholding",
+        "financial_instrument": "Non-financial facilitation",
+        "funding_amount": "No direct award; financing depends on the participating lender and product"
+      }
+    },
+    {
+      "external_id": "SCH046",
+      "status": "verified",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202425/business-performance.php",
+      "note": "SIDBI's current annual report confirms that it manages the ₹310 crore ASPIRE Fund for agri and rural-industry startups."
+    },
+    {
+      "external_id": "SCH047",
+      "status": "verified",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202324/business-performance.php",
+      "note": "SIDBI's official reporting confirms the Uttar Pradesh Startup Fund as a ₹1,000 crore fund managed through AIF commitments."
+    },
+    {
+      "external_id": "SCH048",
+      "status": "rejected",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202425/business-performance.php",
+      "note": "No current SIDBI scheme under this exact name and claimed direct terms could be verified in the current product reporting."
+    },
+    {
+      "external_id": "SCH049",
+      "status": "rejected",
+      "official_source_url": "https://www.sidbi.in/uploads/financialreport/Consolidated_Financials_%2Bas_on_march_31%2C2025.pdf",
+      "note": "The National Equity Fund appears as a legacy balance-sheet fund with no current public startup application programme matching this row."
+    },
+    {
+      "external_id": "SCH050",
+      "status": "rejected",
+      "official_source_url": "https://www.sidbi.in/annualreport/AnnualReport202425/business-performance.php",
+      "note": "TReDS is a regulated receivables-financing ecosystem rather than a single SIDBI scheme with the uniform eligibility and application process claimed here."
+    },
+    {
+      "external_id": "SCH051",
+      "status": "verified",
+      "official_source_url": "https://msh.meity.gov.in/schemes/tide",
+      "note": "MeitY Startup Hub confirms TIDE 2.0 and its incubator-mediated support for ICT startups."
+    },
+    {
+      "external_id": "SCH052",
+      "status": "verified",
+      "official_source_url": "https://msh.meity.gov.in/schemes/samridh",
+      "note": "MeitY Startup Hub confirms SAMRIDH and matching funding support of up to ₹40 lakh for selected startups."
+    },
+    {
+      "external_id": "SCH053",
+      "status": "verified",
+      "official_source_url": "https://msh.meity.gov.in/schemes/genesis",
+      "note": "MeitY Startup Hub confirms GENESIS, its ₹490 crore outlay and its Tier-II/Tier-III startup focus."
+    },
+    {
+      "external_id": "SCH054",
+      "status": "verified",
+      "official_source_url": "https://msh.meity.gov.in/",
+      "note": "MeitY Startup Hub is an official ecosystem platform and coordinating body, not a direct funding award.",
+      "overrides": {
+        "funding_type": "Ecosystem platform",
+        "financial_instrument": "Non-financial",
+        "funding_amount": "No direct award; support is delivered through listed MeitY schemes and programmes"
+      }
+    },
+    {
+      "external_id": "SCH055",
+      "status": "verified",
+      "official_source_url": "https://c2s.gov.in/callforproposals.jsp",
+      "note": "The official Chips-to-Startup portal confirms the C2S programme for semiconductor design and workforce-capacity projects."
+    },
+    {
+      "external_id": "SCH056",
+      "status": "verified",
+      "official_source_url": "https://chips-dli.gov.in/DLI/applyforDLI",
+      "note": "The official DLI portal confirms fiscal and design-infrastructure support for eligible domestic companies, startups and MSMEs."
+    },
+    {
+      "external_id": "SCH057",
+      "status": "verified",
+      "official_source_url": "https://emc2.stpi.in/",
+      "note": "The official EMC 2.0 portal confirms infrastructure assistance for electronics manufacturing clusters; support is not a general startup grant."
+    },
+    {
+      "external_id": "SCH058",
+      "status": "verified",
+      "official_source_url": "https://msh.meity.gov.in/assets/GENESIS_Admin%20Approval.pdf",
+      "note": "MeitY's GENESIS approval lists NGIS centres among the startup assets coordinated and strengthened through the current platform."
+    },
+    {
+      "external_id": "SCH059",
+      "status": "verified",
+      "official_source_url": "https://stpi.in/en/stpi-coe",
+      "note": "STPI's official Centre of Entrepreneurship directory confirms active Electropreneur Park facilities."
+    },
+    {
+      "external_id": "SCH060",
+      "status": "verified",
+      "official_source_url": "https://stpi.in/en/stpi-coe",
+      "note": "STPI confirms its network of domain-specific Centres of Entrepreneurship providing incubation and startup ecosystem support."
+    },
+    {
+      "external_id": "SCH061",
+      "status": "verified",
+      "official_source_url": "https://nidhi.dst.gov.in/schemes-programmes/nidhiprayas/",
+      "note": "DST confirms NIDHI-PRAYAS and support of up to ₹10 lakh through selected centres."
+    },
+    {
+      "external_id": "SCH062",
+      "status": "verified",
+      "matched_scheme_name": "NIDHI Seed Support Programme (NIDHI-SSP)",
+      "official_source_url": "https://nidhi.dst.gov.in/nidhissp/",
+      "note": "DST confirms NIDHI-SSP and startup support through approved incubators. This row is matched to the canonical scheme."
+    },
+    {
+      "external_id": "SCH063",
+      "status": "verified",
+      "matched_scheme_name": "NIDHI Entrepreneur-in-Residence (NIDHI-EIR)",
+      "official_source_url": "https://nidhi.dst.gov.in/nidhieir/",
+      "note": "DST confirms NIDHI-EIR fellowship support of ₹10,000–₹30,000 per month for up to 12 months. This row is matched to the canonical scheme.",
+      "overrides": {
+        "funding_amount": "₹10,000 to ₹30,000 per month for up to 12 months"
+      }
+    },
+    {
+      "external_id": "SCH064",
+      "status": "verified",
+      "official_source_url": "https://nidhi.dst.gov.in/schemes-programmes/",
+      "note": "DST lists NIDHI Technology Business Incubators as a current NIDHI programme; startup support is delivered through selected incubators."
+    },
+    {
+      "external_id": "SCH065",
+      "status": "verified",
+      "official_source_url": "https://nidhi.dst.gov.in/schemes-programmes/nidhiaccelerator/",
+      "note": "DST confirms NIDHI Accelerator as a three-to-six-month post-incubation programme delivered through eligible TBIs."
+    },
+    {
+      "external_id": "SCH066",
+      "status": "verified",
+      "official_source_url": "https://nidhi.dst.gov.in/schemes-programmes/",
+      "note": "DST lists NIDHI Centres of Excellence as a current programme implemented through selected centres."
+    },
+    {
+      "external_id": "SCH067",
+      "status": "rejected",
+      "official_source_url": "https://nidhi.dst.gov.in/newgen-iedc/",
+      "note": "DST explicitly states that NewGen IEDC has ended and is no longer operational."
+    },
+    {
+      "external_id": "SCH068",
+      "status": "verified",
+      "official_source_url": "https://nidhi.dst.gov.in/schemes-programmes/",
+      "note": "DST lists i-STED as an official innovation and entrepreneurship initiative.",
+      "overrides": {
+        "funding_amount": "Programme-specific; no uniform direct startup award is published"
+      }
+    },
+    {
+      "external_id": "SCH069",
+      "status": "verified",
+      "matched_scheme_name": "Biotechnology Ignition Grant Scheme (BIG)",
+      "official_source_url": "https://www.birac.nic.in/big.php",
+      "note": "BIRAC confirms BIG grant-in-aid of up to ₹50 lakh for up to 18 months. This row is matched to the canonical scheme."
+    },
+    {
+      "external_id": "SCH070",
+      "status": "verified",
+      "official_source_url": "https://www.birac.nic.in/",
+      "note": "BIRAC's current programme directory lists BioNEST as its bio-incubation programme."
+    },
+    {
+      "external_id": "SCH071",
+      "status": "verified",
+      "official_source_url": "https://www.birac.nic.in/seedFundNew.php",
+      "note": "BIRAC confirms that its SEED Fund is deployed to biotech startups through selected BioNEST incubator partners."
+    },
+    {
+      "external_id": "SCH072",
+      "status": "verified",
+      "official_source_url": "https://www.birac.nic.in/",
+      "note": "BIRAC's current programme directory and reporting confirm LEAP as an equity-funding programme delivered through BioNEST incubators."
+    },
+    {
+      "external_id": "SCH073",
+      "status": "verified",
+      "official_source_url": "https://www.birac.nic.in/",
+      "note": "BIRAC's current programme directory lists SPARSH under social innovation."
+    },
+    {
+      "external_id": "SCH074",
+      "status": "verified",
+      "official_source_url": "https://www.birac.nic.in/",
+      "note": "BIRAC confirms the Product Commercialization Programme, but its official site currently says the call for proposals is closed.",
+      "overrides": {
+        "application_process": "The official BIRAC site currently marks the Product Commercialization Programme call as closed; monitor BIRAC for a new call before preparing an application."
+      }
+    },
+    {
+      "external_id": "SCH075",
+      "status": "verified",
+      "official_source_url": "https://www.birac.nic.in/",
+      "note": "BIRAC's current programme directory lists PACE under translation research."
+    },
+    {
+      "external_id": "SCH081",
+      "status": "verified",
+      "official_source_url": "https://idex.gov.in/idex",
+      "note": "The official iDEX site confirms the programme for startups, MSMEs and individual innovators."
+    },
+    {
+      "external_id": "SCH082",
+      "status": "verified",
+      "official_source_url": "https://idex.gov.in/disc-category/26",
+      "note": "The official ADITI page confirms support up to 50% of product-development budget, capped at ₹25 crore."
+    },
+    {
+      "external_id": "SCH083",
+      "status": "verified",
+      "official_source_url": "https://tdf.drdo.gov.in/",
+      "note": "DRDO's official TDF portal confirms financial and technical support for eligible defence-technology projects."
+    },
+    {
+      "external_id": "SCH084",
+      "status": "verified",
+      "official_source_url": "https://idex.gov.in/challenges",
+      "note": "The official iDEX challenge directory confirms iDEX Prime challenges with grants up to ₹10 crore.",
+      "overrides": {
+        "funding_amount": "Up to ₹10 crore, subject to the specific iDEX Prime challenge"
+      }
+    },
+    {
+      "external_id": "SCH085",
+      "status": "verified",
+      "official_source_url": "https://idex.gov.in/challenges",
+      "note": "The official iDEX challenge directory confirms current Defence India Startup Challenge rounds and challenge-specific deadlines."
+    },
+    {
+      "external_id": "SCH076",
+      "status": "verified",
+      "official_source_url": "https://agristartup.gov.in/",
+      "note": "The official Agri-Startup portal confirms RKVY-RAFTAAR agribusiness incubation and pre-seed/seed support through R-ABIs."
+    },
+    {
+      "external_id": "SCH077",
+      "status": "verified",
+      "official_source_url": "https://www.nabard.org/agrisure.aspx",
+      "note": "NABARD confirms the ₹750 crore AgriSURE Category-II AIF and variable startup investment tickets up to ₹25 crore.",
+      "overrides": {
+        "funding_amount": "Variable investment ticket up to ₹25 crore under the fund's two schemes"
+      }
+    },
+    {
+      "external_id": "SCH078",
+      "status": "verified",
+      "official_source_url": "https://agriinfra.dac.gov.in/",
+      "note": "The official Agriculture Infrastructure Fund portal confirms the financing facility and eligible post-harvest and community-farming assets."
+    },
+    {
+      "external_id": "SCH079",
+      "status": "verified",
+      "official_source_url": "https://www.manage.gov.in/rti/suomotu/acabc.asp",
+      "note": "MANAGE confirms ACABC implementation, training, handholding and bank-linked enterprise support."
+    },
+    {
+      "external_id": "SCH080",
+      "status": "rejected",
+      "official_source_url": "https://www.enam.gov.in/web/",
+      "note": "e-NAM is an electronic agricultural market. No official standalone scheme called e-NAM Startup Integration with the claimed eligibility and support terms could be verified."
+    },
+    {
+      "external_id": "SCH086",
+      "status": "verified",
+      "official_source_url": "https://www.inspace.gov.in/inspace?id=kb_article&sysparm_article=KB0010016",
+      "note": "IN-SPACe confirms its Seed Fund Scheme for Indian space startups and micro and small enterprises."
+    },
+    {
+      "external_id": "SCH087",
+      "status": "verified",
+      "official_source_url": "https://www.inspace.gov.in/inspace/sys_attachment.do?sys_id=a3215e6b3bcaea5063ff0a34c3e45ab4",
+      "note": "IN-SPACe confirms the Technology Adoption Fund, a maximum ₹25 crore project size, and support shares based on applicant category.",
+      "overrides": {
+        "funding_amount": "Maximum funding ₹25 crore; up to 60% of project cost for startups/MSMEs and 40% for large industry"
+      }
+    },
+    {
+      "external_id": "SCH088",
+      "status": "rejected",
+      "official_source_url": "https://www.inspace.gov.in/",
+      "note": "No official IN-SPACe programme under this exact name or with the claimed facility-pricing terms could be verified."
+    },
+    {
+      "external_id": "SCH089",
+      "status": "rejected",
+      "official_source_url": "https://www.inspace.gov.in/",
+      "note": "No official IN-SPACe programme called Space Enterprise Encouragement and Development (SEED) could be verified; this appears to conflate unrelated seed initiatives."
+    },
+    {
+      "external_id": "SCH092",
+      "status": "verified",
+      "official_source_url": "https://kviconline.gov.in/pmegpeportalappdoc/DigitalKVICupload/43320231218130809.pdf",
+      "note": "KVIC's Gramodyog Vikas Yojana guidance confirms Honey Mission training, bee colonies, toolkits and handholding support."
+    },
+    {
+      "external_id": "SCH093",
+      "status": "verified",
+      "official_source_url": "https://kviconline.gov.in/pmegpeportalappdoc/DigitalKVICupload/43320231218130809.pdf",
+      "note": "KVIC guidance confirms the Kumbhar Sashaktikaran pottery programme under Gramodyog Vikas Yojana.",
+      "overrides": {
+        "scheme_name": "Kumbhar Sashaktikaran Programme",
+        "normalized_name": "kumbhar sashaktikaran programme"
+      }
+    },
+    {
+      "external_id": "SCH094",
+      "status": "verified",
+      "official_source_url": "https://www.nsic.co.in/Schemes/RawMaterialAgainstBG",
+      "note": "NSIC confirms Raw Material Assistance with credit support up to 180 days against required security."
+    },
+    {
+      "external_id": "SCH095",
+      "status": "verified",
+      "official_source_url": "https://www.nsic.co.in/Corporate/AboutUs",
+      "note": "NSIC confirms Single Point Registration for eligible micro and small enterprises participating in government purchases."
+    },
+    {
+      "external_id": "SCH096",
+      "status": "verified",
+      "official_source_url": "https://www.nsic.co.in/Schemes/MarketingFacilitation",
+      "note": "NSIC confirms the programme's current name as Marketing Facilitation Scheme and its SPRS-linked eligibility.",
+      "overrides": {
+        "scheme_name": "Marketing Facilitation Scheme (MFS)",
+        "normalized_name": "marketing facilitation scheme",
+        "eligibility": "Micro and Small Enterprises registered under SPRS, or applying for SPRS with the required documents and inspection"
+      }
+    },
+    {
+      "external_id": "SCH097",
+      "status": "verified",
+      "official_source_url": "https://www.nsic.co.in/Corporate/AboutUs",
+      "note": "NSIC confirms bill discounting as part of its financing for marketing activities."
+    },
+    {
+      "external_id": "SCH098",
+      "status": "verified",
+      "official_source_url": "https://www.nsic.co.in/Corporate/AboutUs",
+      "note": "NSIC confirms bank-credit facilitation through participating banks and free proposal handholding."
+    },
+    {
+      "external_id": "SCH099",
+      "status": "verified",
+      "official_source_url": "https://my.msme.gov.in/MyMsmeMob/MsmeScheme/Pages/1_2_0.html",
+      "note": "The official Ministry of MSME scheme page confirms Performance and Credit Rating support and fee reimbursement for eligible micro and small enterprises."
+    }
+  ]
+}

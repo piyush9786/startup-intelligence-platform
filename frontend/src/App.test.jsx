@@ -160,6 +160,60 @@ const externalScheme = {
     "Information supplied by an external dataset. Verify details on the official source before applying.",
 };
 
+const reviewedExternalScheme = {
+  ...externalScheme,
+  id: "external-reviewed-grant",
+  external_id: "EXT002",
+  scheme_name: "Reviewed Climate Innovation Grant",
+  normalized_name: "reviewed climate innovation grant",
+  dpiit_required: "Required",
+  startup_age_limit: "Up to 10 years from incorporation",
+  revenue_criteria: "Annual turnover below INR 100 crore",
+  women_eligible: "Yes",
+  sc_st_eligible: "Yes",
+  documents_required: [
+    "DPIIT recognition certificate",
+    "Pitch deck",
+  ],
+  application_process:
+    "Apply through the authority portal during an active call.",
+  official_website_label: "Climate Innovation Authority",
+  official_application_url:
+    "https://authority.gov.in/climate-grant",
+  review_status: "verified",
+  verification_label: "Official source reviewed",
+  disclaimer:
+    "Reviewed against the cited official source. This external record remains discovery-only and is not used for eligibility recommendations. Confirm current call dates and terms before applying.",
+};
+
+const mergedExternalScheme = {
+  ...reviewedExternalScheme,
+  id: "external-merged-seed-fund",
+  external_id: "EXT003",
+  scheme_name: "Seed Fund Scheme Source Record",
+  normalized_name: "seed fund scheme source record",
+  catalog_status: "merged",
+  review_status: "needs_review",
+  matched_scheme_id: grantScheme.id,
+  matched_scheme_name: grantScheme.canonical_name,
+  verification_label: "Merged with platform scheme",
+  disclaimer:
+    "This source record was merged into the canonical Startup India Seed Fund Scheme (SISFS) record.",
+};
+
+const unavailableExternalScheme = {
+  ...externalScheme,
+  id: "external-unavailable-grant",
+  external_id: "EXT004",
+  scheme_name: "Superseded Startup Grant",
+  normalized_name: "superseded startup grant",
+  catalog_status: "unavailable",
+  review_status: "rejected",
+  verification_label: "Unavailable / not verified",
+  disclaimer:
+    "Official-source review did not confirm this as a current standalone scheme.",
+};
+
 const externalCapitalSupport = {
   id: "external-capital-one",
   external_id: "CAP001",
@@ -435,7 +489,12 @@ function configureAuthenticatedWorkspace({
     messages: [],
   });
   api.listSchemes.mockResolvedValue([grantScheme, loanScheme]);
-  api.listExternalSchemes.mockResolvedValue([externalScheme]);
+  api.listExternalSchemes.mockResolvedValue([
+    externalScheme,
+    reviewedExternalScheme,
+    mergedExternalScheme,
+    unavailableExternalScheme,
+  ]);
   api.listExternalCapitalSupport.mockResolvedValue([]);
   api.listExternalCertificationRequirements.mockResolvedValue([]);
   api.getStartupAdvisorCurrent.mockResolvedValue(dashboard);
@@ -684,9 +743,26 @@ describe("functional user dashboard", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
+      screen.getAllByText(
         "External dataset",
       ),
+    ).toHaveLength(2);
+    expect(
+      within(
+        screen.getByRole("region", {
+          name: "External scheme review summary",
+        }),
+      ).getByText("total catalog records"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Merged source records",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Unavailable or superseded records",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -703,7 +779,7 @@ describe("functional user dashboard", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Verified",
+        name: "Available & reviewed",
       }),
     );
 
@@ -718,6 +794,36 @@ describe("functional user dashboard", () => {
         name: /Startup India Seed Fund Scheme/,
       }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Reviewed Climate Innovation Grant",
+      }),
+    ).toBeInTheDocument();
+    const reviewedCard = screen
+      .getByRole("heading", {
+        name: "Reviewed Climate Innovation Grant",
+      })
+      .closest("article");
+    expect(
+      within(reviewedCard).getByText(
+        "Women-led DPIIT-recognised startups may apply.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(reviewedCard).getByText(
+        "Apply through the authority portal during an active call.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(reviewedCard).getByRole("button", {
+        name: "View details for Reviewed Climate Innovation Grant",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(reviewedCard).getByText(
+        "Official source reviewed",
+      ),
+    ).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", {
@@ -730,12 +836,132 @@ describe("functional user dashboard", () => {
         name: "Women Founder Innovation Grant",
       }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", {
+        name: "Reviewed Climate Innovation Grant",
+      }),
+    ).not.toBeInTheDocument();
 
     expect(
       screen.queryByRole("button", {
         name: /Startup India Seed Fund Scheme/,
       }),
     ).not.toBeInTheDocument();
+  });
+
+  test("keeps merged and unavailable records visible in the complete catalog", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /View all schemes/,
+      }),
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "All catalog (6)",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Merged (1)",
+      }),
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "Seed Fund Scheme Source Record",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", {
+        name: "Superseded Startup Grant",
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Unavailable (1)",
+      }),
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "Superseded Startup Grant",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Unavailable / not verified"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Official link unavailable"),
+    ).toBeInTheDocument();
+  });
+
+  test("shows reviewed external scheme facts and official application guidance", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /View all schemes/,
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Reviewed Climate Innovation Grant",
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Reviewed Climate Innovation Grant",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Official source reviewed"),
+    ).toHaveLength(2);
+    expect(
+      screen.getByText("Up to 10 years from incorporation"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/DPIIT recognition certificate/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Apply through the authority portal during an active call.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "Open official source",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://authority.gov.in/climate-grant",
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "Programme details",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", {
+        name: "Founder verification",
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "← Back to schemes",
+      }),
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "Explore schemes",
+      }),
+    ).toBeInTheDocument();
   });
 
   test("keeps external schemes out of canonical requirements and funding pages", async () => {

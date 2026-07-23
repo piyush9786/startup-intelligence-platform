@@ -82,6 +82,12 @@ class ExternalSchemeRecordSerializer(serializers.ModelSerializer):
     source_type = serializers.SerializerMethodField()
     verification_label = serializers.SerializerMethodField()
     disclaimer = serializers.SerializerMethodField()
+    catalog_status = serializers.SerializerMethodField()
+    matched_scheme_name = serializers.CharField(
+        source="matched_scheme.canonical_name",
+        read_only=True,
+        default="",
+    )
 
     class Meta:
         model = ExternalSchemeRecord
@@ -117,6 +123,8 @@ class ExternalSchemeRecordSerializer(serializers.ModelSerializer):
             "quality_warnings",
             "review_status",
             "matched_scheme_id",
+            "matched_scheme_name",
+            "catalog_status",
             "dataset_key",
             "dataset_name",
             "source_type",
@@ -130,12 +138,54 @@ class ExternalSchemeRecordSerializer(serializers.ModelSerializer):
         return "external"
 
     def get_verification_label(self, obj) -> str:
+        if obj.review_status == ExternalSchemeRecord.ReviewStatus.REJECTED:
+            return "Unavailable / not verified"
+
+        if obj.matched_scheme_id:
+            return "Merged with platform scheme"
+
         if obj.review_status == ExternalSchemeRecord.ReviewStatus.VERIFIED:
-            return "Verified"
+            return "Official source reviewed"
 
         return "Needs review"
 
+    def get_catalog_status(self, obj) -> str:
+        if obj.review_status == ExternalSchemeRecord.ReviewStatus.REJECTED:
+            return "unavailable"
+
+        if obj.matched_scheme_id:
+            return "merged"
+
+        if obj.review_status == ExternalSchemeRecord.ReviewStatus.VERIFIED:
+            return "reviewed"
+
+        return "needs_review"
+
     def get_disclaimer(self, obj) -> str:
+        if obj.review_status == ExternalSchemeRecord.ReviewStatus.REJECTED:
+            return (
+                "Official-source review did not confirm this as a "
+                "current standalone scheme. It is retained for catalog "
+                "transparency and should not be used for application "
+                "decisions."
+            )
+
+        if obj.matched_scheme_id:
+            return (
+                "This source record was merged into the canonical "
+                f"{obj.matched_scheme.canonical_name} record. Use the "
+                "platform scheme for recommendations and current "
+                "application guidance."
+            )
+
+        if obj.review_status == ExternalSchemeRecord.ReviewStatus.VERIFIED:
+            return (
+                "Reviewed against the cited official source. This "
+                "external record remains discovery-only and is not used "
+                "for eligibility recommendations. Confirm current call "
+                "dates and terms before applying."
+            )
+
         return (
             "Information supplied by an external dataset. "
             "Verify details on the official source before applying."
