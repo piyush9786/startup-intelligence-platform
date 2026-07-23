@@ -134,6 +134,71 @@ class StartupAssessmentDraft(TimeStampedModel):
         return f"{profile_name} assessment ({self.status})"
 
 
+class OnboardingProgress(TimeStampedModel):
+    TOUR_VERSION = "founder-onboarding-v1"
+    TOTAL_STEPS = 4
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        DISMISSED = "dismissed", "Dismissed"
+        COMPLETED = "completed", "Completed"
+
+    class Variant(models.TextChoices):
+        EMPTY_PROFILE = "empty_profile", "Empty profile"
+        RETURNING_FOUNDER = (
+            "returning_founder",
+            "Returning founder",
+        )
+
+    owner = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="startup_onboarding_progress",
+    )
+    tour_version = models.CharField(
+        max_length=64,
+        default=TOUR_VERSION,
+    )
+    variant = models.CharField(
+        max_length=32,
+        choices=Variant.choices,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+    )
+    current_step = models.PositiveSmallIntegerField(
+        default=1,
+    )
+    started_at = models.DateTimeField(
+        default=timezone.now,
+    )
+    dismissed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["-updated_at", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    current_step__gte=1,
+                    current_step__lte=4,
+                ),
+                name="startup_onboarding_step_range",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.owner} onboarding ({self.tour_version}, {self.status})"
+
+
 class StartupReadinessAssessment(TimeStampedModel):
     class Status(models.TextChoices):
         BLOCKED = "blocked", "Blocked"

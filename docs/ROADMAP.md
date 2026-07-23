@@ -1,7 +1,7 @@
 # Product and Engineering Roadmap
 
 This roadmap records the agreed implementation order after verified eligibility
-provenance v1.
+provenance v1 and the persisted first-open onboarding milestone.
 
 It is directional rather than a promise of dates.
 
@@ -23,29 +23,35 @@ The following major capabilities are operational:
 - founder manual eligibility-verification workflow;
 - reviewer verification workspace;
 - concurrency-safe verification submissions;
-- verified eligibility provenance in backend snapshots and founder UI.
+- verified eligibility provenance in backend snapshots and founder UI;
+- persisted first-open founder onboarding.
 
-## Implementation order
-
-### 1. First-open onboarding tour — Phase 45
+## Completed Phase 45: first-open onboarding tour
 
 Purpose: improve the first founder experience without adding agent risk.
 
-Scope:
+Implemented scope:
 
-- `OnboardingProgress` persistence;
+- owner-scoped `OnboardingProgress` persistence;
+- `founder-onboarding-v1` versioning;
 - empty-profile and returning-founder variants;
-- resumable progress;
-- dismiss and complete behavior;
-- no repeat after completion;
-- handoff to the existing assessment wizard;
-- frontend accessibility and responsive tests.
+- active, dismissed, and completed states;
+- resumable current-step persistence;
+- no repeat or reopening after completion;
+- direct handoff to the existing assessment wizard;
+- founder-only frontend loading;
+- reviewer-workspace exclusion;
+- accessible modal semantics, progress reporting, keyboard focus containment,
+  Escape dismissal, and responsive layout;
+- focused backend API tests;
+- frontend integration tests and production build validation.
 
-The first version should use a small dependency or a simple internal tour
-implementation only after bundle, accessibility, and maintenance impact are
-reviewed.
+See
+[First-open onboarding tour](frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md).
 
-### 2. Shared agent orchestration — Phase 43
+## Remaining implementation order
+
+### 1. Shared agent orchestration — Phase 43
 
 Purpose: establish the safety and audit boundary once for every conversational
 feature.
@@ -63,7 +69,7 @@ Scope:
 
 Start with read-only tools.
 
-### 3. Site-wide chatbot — Phase 44
+### 2. Site-wide chatbot — Phase 44
 
 Purpose: provide product navigation, definitions, and profile-specific
 explanations.
@@ -79,7 +85,7 @@ Scope:
 
 The chatbot must not directly modify authoritative profile data.
 
-### 4. Concierge state machine — Phases 46 and 47
+### 3. Concierge state machine — Phases 46 and 47
 
 Purpose: guide a founder from an empty profile to a useful starting plan.
 
@@ -97,7 +103,7 @@ The Concierge must reuse `StartupAssessmentDraft`.
 
 It must not create a second authoritative profile representation.
 
-### 5. Scheme dependency graph — Phase 48
+### 4. Scheme dependency graph — Phase 48
 
 Purpose: represent prerequisites and unlock relationships with provenance.
 
@@ -113,7 +119,7 @@ Scope:
 
 LLM-extracted edges must not become authoritative without review.
 
-### 6. Funding plan engine — Phase 49
+### 5. Funding plan engine — Phase 49
 
 Purpose: produce an ordered, dependency-aware funding and readiness plan.
 
@@ -131,7 +137,7 @@ single nullable `depends_on` field.
 
 The LLM may narrate the generated plan but must not choose its ordering.
 
-### 7. Progress feedback — Phase 50
+### 6. Progress feedback — Phase 50
 
 Purpose: connect plan execution back to readiness and recommendations.
 

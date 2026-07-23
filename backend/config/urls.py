@@ -60,6 +60,9 @@ from apps.startups.assessment_views import (
     StartupAssessmentDraftSubmitView,
     StartupAssessmentDraftViewSet,
 )
+from apps.startups.onboarding_views import (
+    StartupOnboardingCurrentView,
+)
 from apps.startups.views import (
     StartupProfileDocumentAutofillView,
     StartupProfileViewSet,
@@ -190,6 +193,11 @@ urlpatterns = [
         "api/v1/startup-advisor/snapshots/generate/",
         StartupAdvisorSnapshotGenerateView.as_view(),
         name="startup-advisor-snapshot-generate",
+    ),
+    path(
+        "api/v1/startup-onboarding/current/",
+        StartupOnboardingCurrentView.as_view(),
+        name="startup-onboarding-current",
     ),
     path(
         "api/v1/startup-profiles/autofill-from-document/",
