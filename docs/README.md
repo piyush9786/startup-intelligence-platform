@@ -14,6 +14,7 @@ workflow, and immediate next milestone.
 ## Architecture
 
 - [System architecture](architecture/README.md)
+- [Shared agent orchestration](architecture/SHARED_AGENT_ORCHESTRATION_V1.md)
 
 ## Eligibility and recommendations
 
