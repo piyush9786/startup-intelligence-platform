@@ -74,7 +74,6 @@ import {
   schemeRequirements,
 } from "./dashboard";
 import {
-  dedupeExternalSchemes,
   externalSchemeAuthority,
   externalSchemeDescription,
   externalSchemeTags,
@@ -1577,18 +1576,54 @@ function SchemeCard({ onOpen, scheme }) {
   );
 }
 
+function externalSchemeCatalogStatus(scheme = {}) {
+  if (scheme.catalog_status) {
+    return scheme.catalog_status;
+  }
+
+  if (scheme.review_status === "rejected") {
+    return "unavailable";
+  }
+
+  if (scheme.matched_scheme_id) {
+    return "merged";
+  }
+
+  if (scheme.review_status === "verified") {
+    return "reviewed";
+  }
+
+  return "needs_review";
+}
+
+
 function ExternalSchemeCard({ onOpen, scheme }) {
   const tags = externalSchemeTags(scheme);
-  const applicationUrl = scheme.official_application_url;
+  const catalogStatus = externalSchemeCatalogStatus(scheme);
+  const isUnavailable = catalogStatus === "unavailable";
+  const isMerged = catalogStatus === "merged";
+  const applicationUrl = isUnavailable
+    ? ""
+    : scheme.official_application_url;
   const isSourceReviewed =
-    scheme.review_status === "verified";
+    catalogStatus === "reviewed";
 
   return (
-    <article className="scheme-card scheme-card-external">
+    <article
+      className={[
+        "scheme-card",
+        "scheme-card-external",
+        `scheme-card-${catalogStatus}`,
+      ].join(" ")}
+    >
       <div className="scheme-card-topline">
         <span
           className={`verification-badge ${
-            isSourceReviewed
+            isUnavailable
+              ? "verification-unavailable"
+              : isMerged
+                ? "verification-merged"
+                : isSourceReviewed
               ? "verification-verified"
               : "verification-review_required"
           }`}
@@ -1596,7 +1631,11 @@ function ExternalSchemeCard({ onOpen, scheme }) {
           {scheme.verification_label || "Needs review"}
         </span>
         <span className="application-badge">
-          External dataset
+          {isUnavailable
+            ? "Catalog history"
+            : isMerged
+              ? "Source alias"
+              : "External dataset"}
         </span>
       </div>
 
@@ -1651,9 +1690,13 @@ function ExternalSchemeCard({ onOpen, scheme }) {
             onClick={() => onOpen(scheme)}
             type="button"
           >
-            {isSourceReviewed
-              ? "View reviewed details →"
-              : "Review scheme details →"}
+            {isUnavailable
+              ? "View review outcome →"
+              : isMerged
+                ? "View merged record →"
+                : isSourceReviewed
+                  ? "View reviewed details →"
+                  : "Review scheme details →"}
           </button>
           {applicationUrl ? (
             <a
@@ -1672,6 +1715,44 @@ function ExternalSchemeCard({ onOpen, scheme }) {
   );
 }
 
+function ExternalSchemeSection({
+  eyebrow,
+  id,
+  onOpenScheme,
+  schemes,
+  title,
+}) {
+  if (!schemes.length) {
+    return null;
+  }
+
+  return (
+    <section
+      aria-labelledby={id}
+      className="scheme-catalog-section"
+    >
+      <div className="scheme-catalog-heading">
+        <div>
+          <span>{eyebrow}</span>
+          <h2 id={id}>{title}</h2>
+        </div>
+        <strong>{schemes.length}</strong>
+      </div>
+      <div className="scheme-grid">
+        {schemes.map((scheme) => (
+          <ExternalSchemeCard
+            key={`external-${scheme.id}`}
+            onOpen={(selected) =>
+              onOpenScheme(selected, "schemes")
+            }
+            scheme={scheme}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 
 function SchemeExplorer({
   externalSchemes,
@@ -1681,12 +1762,12 @@ function SchemeExplorer({
 }) {
   const [filter, setFilter] = useState("all");
 
-  const discoveredExternalSchemes = useMemo(
-    () => dedupeExternalSchemes(
-      schemes,
-      externalSchemes,
-    ),
-    [externalSchemes, schemes],
+  const catalogExternalSchemes = useMemo(
+    () =>
+      Array.isArray(externalSchemes)
+        ? externalSchemes
+        : [],
+    [externalSchemes],
   );
 
   const searchedCanonical = filterSchemes(
@@ -1694,7 +1775,7 @@ function SchemeExplorer({
     query,
   );
   const searchedExternal = filterExternalSchemes(
-    discoveredExternalSchemes,
+    catalogExternalSchemes,
     query,
   );
 
@@ -1708,46 +1789,109 @@ function SchemeExplorer({
         "verified",
     );
     visibleExternal = searchedExternal.filter(
-      (scheme) => scheme.review_status === "verified",
+      (scheme) =>
+        externalSchemeCatalogStatus(scheme) === "reviewed",
+    );
+  } else if (filter === "merged") {
+    visibleCanonical = [];
+    visibleExternal = searchedExternal.filter(
+      (scheme) =>
+        externalSchemeCatalogStatus(scheme) === "merged",
+    );
+  } else if (filter === "unavailable") {
+    visibleCanonical = [];
+    visibleExternal = searchedExternal.filter(
+      (scheme) =>
+        externalSchemeCatalogStatus(scheme) === "unavailable",
     );
   } else if (filter === "needs-review") {
     visibleCanonical = [];
     visibleExternal = searchedExternal.filter(
-      (scheme) => scheme.review_status === "needs_review",
+      (scheme) =>
+        externalSchemeCatalogStatus(scheme) === "needs_review",
     );
   } else if (filter === "funding") {
     visibleCanonical = searchedCanonical.filter(
       isFundingScheme,
     );
     visibleExternal = searchedExternal.filter(
-      isExternalFundingScheme,
+      (scheme) => {
+        const status =
+          externalSchemeCatalogStatus(scheme);
+
+        return (
+          status !== "merged" &&
+          status !== "unavailable" &&
+          isExternalFundingScheme(scheme)
+        );
+      },
     );
   } else if (filter === "loans") {
     visibleCanonical = searchedCanonical.filter(
       isLoanScheme,
     );
     visibleExternal = searchedExternal.filter(
-      isExternalLoanScheme,
+      (scheme) => {
+        const status =
+          externalSchemeCatalogStatus(scheme);
+
+        return (
+          status !== "merged" &&
+          status !== "unavailable" &&
+          isExternalLoanScheme(scheme)
+        );
+      },
     );
   }
 
   const resultCount =
     visibleCanonical.length + visibleExternal.length;
   const reviewedExternalCount =
-    discoveredExternalSchemes.filter(
-      (scheme) => scheme.review_status === "verified",
+    catalogExternalSchemes.filter(
+      (scheme) =>
+        externalSchemeCatalogStatus(scheme) === "reviewed",
     ).length;
   const needsReviewCount =
-    discoveredExternalSchemes.filter(
-      (scheme) => scheme.review_status === "needs_review",
+    catalogExternalSchemes.filter(
+      (scheme) =>
+        externalSchemeCatalogStatus(scheme) === "needs_review",
     ).length;
+  const mergedCount = catalogExternalSchemes.filter(
+    (scheme) =>
+      externalSchemeCatalogStatus(scheme) === "merged",
+  ).length;
+  const unavailableCount = catalogExternalSchemes.filter(
+    (scheme) =>
+      externalSchemeCatalogStatus(scheme) === "unavailable",
+  ).length;
+  const catalogRecordCount =
+    schemes.length + catalogExternalSchemes.length;
+  const availableRecordCount =
+    schemes.length + reviewedExternalCount;
+
+  const visibleReviewedExternal = visibleExternal.filter(
+    (scheme) =>
+      externalSchemeCatalogStatus(scheme) === "reviewed",
+  );
+  const visibleNeedsReview = visibleExternal.filter(
+    (scheme) =>
+      externalSchemeCatalogStatus(scheme) === "needs_review",
+  );
+  const visibleMerged = visibleExternal.filter(
+    (scheme) =>
+      externalSchemeCatalogStatus(scheme) === "merged",
+  );
+  const visibleUnavailable = visibleExternal.filter(
+    (scheme) =>
+      externalSchemeCatalogStatus(scheme) === "unavailable",
+  );
 
   return (
     <div className="page-stack">
       <PageHeader
         eyebrow="DISCOVER SUPPORT"
         title="Explore schemes"
-        description="Browse verified platform schemes, official-source-reviewed external programmes, and records still awaiting review. External records are discovery-only and are not used for startup recommendations."
+        description="Browse the complete scheme catalog, including recommendation-ready schemes, reviewed external programmes, merged aliases, and records retained as unavailable after official-source review."
       />
 
       <section
@@ -1755,17 +1899,28 @@ function SchemeExplorer({
         className="scheme-review-summary"
       >
         <div>
-          <strong>{reviewedExternalCount}</strong>
-          <span>official-source reviewed</span>
+          <strong>{catalogRecordCount}</strong>
+          <span>total catalog records</span>
         </div>
         <div>
-          <strong>{needsReviewCount}</strong>
-          <span>still needing review</span>
+          <strong>{availableRecordCount}</strong>
+          <span>available and reviewed</span>
+        </div>
+        <div>
+          <strong>{mergedCount}</strong>
+          <span>merged source aliases</span>
+        </div>
+        <div>
+          <strong>{unavailableCount}</strong>
+          <span>unavailable records</span>
         </div>
         <p>
-          The reviewed cards below now show corrected eligibility,
-          support and application guidance. Open any card for the
-          complete record and its official source.
+          Every imported record is visible below. Merged entries point
+          to a canonical platform scheme; unavailable entries are kept
+          for transparency and are not presented as active opportunities.
+          {needsReviewCount > 0
+            ? ` ${needsReviewCount} record(s) still need review.`
+            : ""}
         </p>
       </section>
 
@@ -1775,8 +1930,10 @@ function SchemeExplorer({
         aria-label="Scheme filters"
       >
         {[
-          ["all", "All discovered"],
-          ["verified", "Verified"],
+          ["all", `All catalog (${catalogRecordCount})`],
+          ["verified", "Available & reviewed"],
+          ["merged", `Merged (${mergedCount})`],
+          ["unavailable", `Unavailable (${unavailableCount})`],
           ["needs-review", "Needs review"],
           ["funding", "Funding support"],
           ["loans", "Loans & credit"],
@@ -1836,33 +1993,34 @@ function SchemeExplorer({
             </section>
           )}
 
-          {visibleExternal.length > 0 && (
-            <section
-              aria-labelledby="external-schemes-title"
-              className="scheme-catalog-section"
-            >
-              <div className="scheme-catalog-heading">
-                <div>
-                  <span>Discovery catalog</span>
-                  <h2 id="external-schemes-title">
-                    Reviewed external programmes
-                  </h2>
-                </div>
-                <strong>{visibleExternal.length}</strong>
-              </div>
-              <div className="scheme-grid">
-                {visibleExternal.map((scheme) => (
-                  <ExternalSchemeCard
-                    key={`external-${scheme.id}`}
-                    onOpen={(selected) =>
-                      onOpenScheme(selected, "schemes")
-                    }
-                    scheme={scheme}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+          <ExternalSchemeSection
+            eyebrow="Official source reviewed"
+            id="external-schemes-title"
+            onOpenScheme={onOpenScheme}
+            schemes={visibleReviewedExternal}
+            title="Reviewed external programmes"
+          />
+          <ExternalSchemeSection
+            eyebrow="Awaiting source review"
+            id="needs-review-schemes-title"
+            onOpenScheme={onOpenScheme}
+            schemes={visibleNeedsReview}
+            title="Records needing review"
+          />
+          <ExternalSchemeSection
+            eyebrow="Represented above"
+            id="merged-schemes-title"
+            onOpenScheme={onOpenScheme}
+            schemes={visibleMerged}
+            title="Merged source records"
+          />
+          <ExternalSchemeSection
+            eyebrow="Catalog transparency"
+            id="unavailable-schemes-title"
+            onOpenScheme={onOpenScheme}
+            schemes={visibleUnavailable}
+            title="Unavailable or superseded records"
+          />
         </div>
       ) : (
         <EmptyPanel title="No scheme matches these filters">
@@ -3025,8 +3183,14 @@ function ExternalSchemeDetailPage({
   const industries = Array.isArray(scheme.industry)
     ? scheme.industry
     : [];
+  const catalogStatus = externalSchemeCatalogStatus(scheme);
+  const isUnavailable = catalogStatus === "unavailable";
+  const isMerged = catalogStatus === "merged";
   const isSourceReviewed =
-    scheme.review_status === "verified";
+    catalogStatus === "reviewed";
+  const canOpenOfficialSource =
+    Boolean(scheme.official_application_url) &&
+    !isUnavailable;
 
   const eligibilityDetails = [
     ["DPIIT recognition", scheme.dpiit_required],
@@ -3047,6 +3211,7 @@ function ExternalSchemeDetailPage({
     ["Stages", stages.join(", ")],
     ["Industries", industries.join(", ")],
     ["Tax benefit", scheme.tax_benefits],
+    ["Merged into", scheme.matched_scheme_name],
   ].filter(([, value]) => value);
 
   return (
@@ -3061,7 +3226,7 @@ function ExternalSchemeDetailPage({
 
       <PageHeader
         actions={
-          scheme.official_application_url && (
+          canOpenOfficialSource && (
             <a
               className="button button-primary"
               href={scheme.official_application_url}
@@ -3073,8 +3238,10 @@ function ExternalSchemeDetailPage({
           )
         }
         description={
-          scheme.eligibility ||
-          "Review the programme details and official source before applying."
+          isUnavailable
+            ? "This record is retained to explain the official review outcome and is not presented as an active scheme."
+            : scheme.eligibility ||
+              "Review the programme details and official source before applying."
         }
         eyebrow={
           scheme.department ||
@@ -3089,7 +3256,11 @@ function ExternalSchemeDetailPage({
           "external-detail-notice",
           isSourceReviewed
             ? "external-detail-notice-reviewed"
-            : "",
+            : isMerged
+              ? "external-detail-notice-merged"
+              : isUnavailable
+                ? "external-detail-notice-unavailable"
+                : "",
         ].join(" ")}
       >
         <strong>
@@ -3123,12 +3294,17 @@ function ExternalSchemeDetailPage({
           </strong>
         </div>
         <div>
-          <span>Source authority</span>
+          <span>
+            {isMerged ? "Merged into" : "Source authority"}
+          </span>
           <strong>
-            {scheme.official_website_label ||
-              scheme.source_portal ||
-              scheme.ministry ||
-              "Official authority"}
+            {isMerged
+              ? scheme.matched_scheme_name ||
+                "Canonical platform scheme"
+              : scheme.official_website_label ||
+                scheme.source_portal ||
+                scheme.ministry ||
+                "Official authority"}
           </strong>
         </div>
       </div>
@@ -3170,10 +3346,14 @@ function ExternalSchemeDetailPage({
         <section className="dashboard-card">
           <h2>How to apply</h2>
           <p>
-            {scheme.application_process ||
-              "Use the official source to review the current application route."}
+            {isUnavailable
+              ? "No application action is recommended for this record because official-source review did not confirm it as a current standalone scheme."
+              : isMerged
+                ? `Use the canonical ${scheme.matched_scheme_name || "platform scheme"} record for current application guidance.`
+                : scheme.application_process ||
+                  "Use the official source to review the current application route."}
           </p>
-          {scheme.official_application_url && (
+          {canOpenOfficialSource && (
             <a
               className="text-link"
               href={scheme.official_application_url}

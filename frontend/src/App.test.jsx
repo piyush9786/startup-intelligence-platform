@@ -186,6 +186,34 @@ const reviewedExternalScheme = {
     "Reviewed against the cited official source. This external record remains discovery-only and is not used for eligibility recommendations. Confirm current call dates and terms before applying.",
 };
 
+const mergedExternalScheme = {
+  ...reviewedExternalScheme,
+  id: "external-merged-seed-fund",
+  external_id: "EXT003",
+  scheme_name: "Seed Fund Scheme Source Record",
+  normalized_name: "seed fund scheme source record",
+  catalog_status: "merged",
+  review_status: "needs_review",
+  matched_scheme_id: grantScheme.id,
+  matched_scheme_name: grantScheme.canonical_name,
+  verification_label: "Merged with platform scheme",
+  disclaimer:
+    "This source record was merged into the canonical Startup India Seed Fund Scheme (SISFS) record.",
+};
+
+const unavailableExternalScheme = {
+  ...externalScheme,
+  id: "external-unavailable-grant",
+  external_id: "EXT004",
+  scheme_name: "Superseded Startup Grant",
+  normalized_name: "superseded startup grant",
+  catalog_status: "unavailable",
+  review_status: "rejected",
+  verification_label: "Unavailable / not verified",
+  disclaimer:
+    "Official-source review did not confirm this as a current standalone scheme.",
+};
+
 const externalCapitalSupport = {
   id: "external-capital-one",
   external_id: "CAP001",
@@ -464,6 +492,8 @@ function configureAuthenticatedWorkspace({
   api.listExternalSchemes.mockResolvedValue([
     externalScheme,
     reviewedExternalScheme,
+    mergedExternalScheme,
+    unavailableExternalScheme,
   ]);
   api.listExternalCapitalSupport.mockResolvedValue([]);
   api.listExternalCertificationRequirements.mockResolvedValue([]);
@@ -722,7 +752,17 @@ describe("functional user dashboard", () => {
         screen.getByRole("region", {
           name: "External scheme review summary",
         }),
-      ).getByText("official-source reviewed"),
+      ).getByText("total catalog records"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Merged source records",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Unavailable or superseded records",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -739,7 +779,7 @@ describe("functional user dashboard", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Verified",
+        name: "Available & reviewed",
       }),
     );
 
@@ -780,7 +820,9 @@ describe("functional user dashboard", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Official source reviewed"),
+      within(reviewedCard).getByText(
+        "Official source reviewed",
+      ),
     ).toBeInTheDocument();
 
     await user.click(
@@ -805,6 +847,56 @@ describe("functional user dashboard", () => {
         name: /Startup India Seed Fund Scheme/,
       }),
     ).not.toBeInTheDocument();
+  });
+
+  test("keeps merged and unavailable records visible in the complete catalog", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /View all schemes/,
+      }),
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "All catalog (6)",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Merged (1)",
+      }),
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "Seed Fund Scheme Source Record",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", {
+        name: "Superseded Startup Grant",
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Unavailable (1)",
+      }),
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "Superseded Startup Grant",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Unavailable / not verified"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Official link unavailable"),
+    ).toBeInTheDocument();
   });
 
   test("shows reviewed external scheme facts and official application guidance", async () => {

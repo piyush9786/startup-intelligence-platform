@@ -88,6 +88,7 @@ describe("external scheme API client", () => {
       "/knowledge/external-schemes/",
       {
         params: {
+          catalog_scope: "all",
           ordering: "scheme_name",
         },
       },
