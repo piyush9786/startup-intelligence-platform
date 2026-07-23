@@ -65,7 +65,7 @@ excluded from automatic recommendations until verified rules are available.
   "failed_rules": [],
   "unknown_rules": [],
   "explanation": "All mandatory eligibility rules passed.",
-  "engine_version": "rules-v2",
+  "engine_version": "rules-v3",
   "created_at": "2026-07-20T12:00:00Z"
 }
 ```

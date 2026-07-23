@@ -89,6 +89,13 @@ const DECIMAL_FIELDS = new Set([
   "capital_raised",
 ]);
 
+export function localDateInputValue(now = new Date()) {
+  const localTime = new Date(
+    now.getTime() - now.getTimezoneOffset() * 60_000,
+  );
+  return localTime.toISOString().slice(0, 10);
+}
+
 function listToText(value) {
   if (Array.isArray(value)) {
     return value.join(", ");
@@ -204,7 +211,11 @@ function required(value, message, errors) {
   }
 }
 
-export function assessmentStepErrors(step, form) {
+export function assessmentStepErrors(
+  step,
+  form,
+  today = localDateInputValue(),
+) {
   const errors = [];
 
   if (step === 1) {
@@ -227,6 +238,12 @@ export function assessmentStepErrors(step, form) {
         "Add the incorporation or registration date.",
         errors,
       );
+    }
+    const incorporationDate = String(
+      form.incorporation_date || "",
+    ).trim();
+    if (incorporationDate && incorporationDate > today) {
+      errors.push("The incorporation date cannot be in the future.");
     }
     required(form.dpiit_recognized, "Record whether the startup is DPIIT recognised.", errors);
     required(form.udyam_registered, "Record whether the startup has Udyam registration.", errors);

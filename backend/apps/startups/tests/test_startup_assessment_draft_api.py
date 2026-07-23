@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from threading import Barrier
 from types import SimpleNamespace
@@ -568,3 +568,37 @@ def test_concurrent_create_reuses_single_open_draft(linked):
         ).count()
         == 1
     )
+
+
+def test_submit_rejects_future_incorporation_date():
+    owner = make_user(username="assessment-future-date")
+    data = {
+        **valid_draft_data(),
+        "incorporation_date": (
+            timezone.localdate() + timedelta(days=1)
+        ).isoformat(),
+    }
+    draft = StartupAssessmentDraft.objects.create(
+        owner=owner,
+        current_step=8,
+        data=data,
+    )
+
+    response = authenticated_client(owner).post(
+        reverse(
+            "startup-assessment-draft-submit",
+            kwargs={"draft_id": draft.id},
+        ),
+        {},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["incorporation_date"] == [
+        "The incorporation date cannot be in the future."
+    ]
+    draft.refresh_from_db()
+    assert draft.status == StartupAssessmentDraft.Status.DRAFT
+    assert StartupProfile.objects.count() == 0
+    assert StartupReadinessAssessment.objects.count() == 0
+    assert StartupReadinessActionPlan.objects.count() == 0

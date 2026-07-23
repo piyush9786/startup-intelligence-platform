@@ -21,7 +21,18 @@ from .services.document_autofill import (
 )
 
 
+def _validate_incorporation_date(value):
+    if value is not None and value > timezone.localdate():
+        raise serializers.ValidationError(
+            "The incorporation date cannot be in the future."
+        )
+    return value
+
+
 class StartupProfileSerializer(serializers.ModelSerializer):
+    def validate_incorporation_date(self, value):
+        return _validate_incorporation_date(value)
+
     class Meta:
         model = StartupProfile
         fields = "__all__"
@@ -412,6 +423,9 @@ class StartupAssessmentSubmissionSerializer(serializers.Serializer):
         required=False,
         allow_blank=True,
     )
+
+    def validate_incorporation_date(self, value):
+        return _validate_incorporation_date(value)
 
 
 class StartupReadinessEvaluationRequestSerializer(serializers.Serializer):
