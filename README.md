@@ -15,6 +15,9 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 
 ## Implemented capabilities
 
+- persisted first-open founder onboarding with empty-profile and
+  returning-founder variants;
+- resumable, dismissible onboarding with no repeat after completion;
 - startup profile and assessment-draft workflow;
 - document-assisted profile autofill;
 - deterministic startup-readiness assessment;
@@ -53,6 +56,7 @@ architecture, safety, and implementation context.
 ## Documentation
 
 - [Documentation index](docs/README.md)
+- [First-open onboarding tour](docs/frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md)
 - [Project roadmap](docs/ROADMAP.md)
 - [Architecture](docs/architecture/README.md)
 - [Eligibility engine](docs/eligibility/ENGINE_V1.md)
@@ -104,10 +108,12 @@ git diff --check
 
 ## Next product phase
 
-The next milestone is a persisted first-open onboarding tour.
+The next milestone is shared agent orchestration with persisted sessions,
+immutable tool-call logs, authorization context, and a versioned whitelist of
+read-only deterministic tools.
 
-It will be followed by a whitelisted agent tool registry, site-wide chatbot,
-bounded concierge workflow, and dependency-aware funding planning.
+It will be followed by a site-wide chatbot, bounded concierge workflow,
+verified scheme-dependency graph, and dependency-aware funding planning.
 
 These additions must remain conversational interfaces over the existing
 deterministic and verified core.

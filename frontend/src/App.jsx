@@ -11,6 +11,7 @@ import {
   getEligibilityVerificationGates,
   getCurrentBriefing,
   getCurrentUser,
+  getCurrentStartupOnboarding,
   downloadEligibilityVerificationReviewerEvidence,
   getCurrentStartupAdvisorBriefingJob,
   getSession,
@@ -25,9 +26,11 @@ import {
   listStartupAdvisorBriefings,
   listStartupProfiles,
   login,
+  updateCurrentStartupOnboarding,
   uploadEligibilityVerificationEvidence,
 } from "./api";
 import AssessmentWizard from "./AssessmentWizard";
+import OnboardingTour from "./OnboardingTour";
 import {
   canAccessReviewerWorkspace,
   normalizeCurrentUser,
@@ -3473,6 +3476,12 @@ function Workspace({ onSignOut }) {
   const [generationStep, setGenerationStep] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [
+    onboardingProgress,
+    setOnboardingProgress,
+  ] = useState(null);
+  const [onboardingBusy, setOnboardingBusy] =
+    useState(false);
 
   const selectedProfile = useMemo(
     () => profiles.find((profile) => profile.id === selectedProfileId) || null,
@@ -3516,7 +3525,20 @@ function Workspace({ onSignOut }) {
           identityPayload,
         );
 
+        let onboardingPayload = null;
+        let onboardingWarning = false;
+
+        if (identity.role === "founder") {
+          try {
+            onboardingPayload =
+              await getCurrentStartupOnboarding();
+          } catch {
+            onboardingWarning = true;
+          }
+        }
+
         setCurrentUser(identity);
+        setOnboardingProgress(onboardingPayload);
         setProfiles(result.profiles);
         setSchemes(result.schemes);
         setExternalSchemes(result.externalSchemes);
@@ -3539,7 +3561,14 @@ function Workspace({ onSignOut }) {
           setActiveView("reviewer-verifications");
         }
 
-        setError(partialLoadWarning(result.warningLabels));
+        setError(
+          partialLoadWarning([
+            ...(result.warningLabels || []),
+            ...(onboardingWarning
+              ? ["founder onboarding"]
+              : []),
+          ]),
+        );
       } catch (requestError) {
         if (active) handleRequestError(requestError);
       } finally {
@@ -3692,6 +3721,59 @@ function Workspace({ onSignOut }) {
       }
     };
   }, [generationJob?.id, selectedProfileId]);
+
+  async function persistOnboardingAction(payload) {
+    setOnboardingBusy(true);
+    setError("");
+
+    try {
+      const nextProgress =
+        await updateCurrentStartupOnboarding(payload);
+
+      setOnboardingProgress(nextProgress);
+      return nextProgress;
+    } catch (requestError) {
+      handleRequestError(requestError);
+      return null;
+    } finally {
+      setOnboardingBusy(false);
+    }
+  }
+
+  async function handleOnboardingStep(step) {
+    await persistOnboardingAction({
+      action: "set_step",
+      current_step: step,
+    });
+  }
+
+  async function handleOnboardingDismiss() {
+    await persistOnboardingAction({
+      action: "dismiss",
+    });
+  }
+
+  async function handleOnboardingResume() {
+    await persistOnboardingAction({
+      action: "resume",
+    });
+  }
+
+  async function handleOnboardingComplete() {
+    const variant = onboardingProgress?.variant;
+
+    const completed = await persistOnboardingAction({
+      action: "complete",
+    });
+
+    if (!completed) return;
+
+    if (variant === "empty_profile") {
+      handleNavigate("assessment");
+    } else {
+      handleNavigate("overview");
+    }
+  }
 
   function handleNavigate(view) {
     setActiveView(view);
@@ -3939,6 +4021,46 @@ function Workspace({ onSignOut }) {
       <main className="product-main">
         <ProductTopbar loadingProfiles={loadingProfiles} onLogout={handleLogout} onProfileChange={setSelectedProfileId} profiles={profiles} query={query} selectedProfileId={selectedProfileId} setQuery={setQuery} />
         <div className="product-content">
+          {onboardingProgress?.status === "dismissed" &&
+            activeView !== "reviewer-verifications" && (
+              <section
+                className="onboarding-resume-banner"
+                role="status"
+              >
+                <div>
+                  <strong>
+                    Your onboarding tour is paused
+                  </strong>
+                  <span>
+                    Resume from step{" "}
+                    {onboardingProgress.current_step} when
+                    you are ready.
+                  </span>
+                </div>
+                <button
+                  className="button button-ghost"
+                  disabled={onboardingBusy}
+                  onClick={handleOnboardingResume}
+                  type="button"
+                >
+                  {onboardingBusy
+                    ? "Resuming…"
+                    : "Resume onboarding"}
+                </button>
+              </section>
+            )}
+
+          {onboardingProgress?.should_show &&
+            activeView !== "reviewer-verifications" && (
+              <OnboardingTour
+                busy={onboardingBusy}
+                onComplete={handleOnboardingComplete}
+                onDismiss={handleOnboardingDismiss}
+                onStepChange={handleOnboardingStep}
+                progress={onboardingProgress}
+              />
+            )}
+
           {generationStep && <InlineNotice><span className="spinner" aria-hidden="true" />{generationStep} The first local-model request can take longer.</InlineNotice>}
           {error && <InlineNotice tone="danger">{error}</InlineNotice>}
           {success && <InlineNotice tone="success">{success}</InlineNotice>}
