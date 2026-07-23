@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "django_celery_results",
     "apps.core",
     "apps.accounts",
+    "apps.assistant",
     "apps.sources",
     "apps.documents",
     "apps.discovery",
@@ -148,8 +149,7 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@startup.local
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://qdrant:6333")
 STARTUP_ADVISOR_RAG_ENABLED = (
-    os.environ.get("STARTUP_ADVISOR_RAG_ENABLED", "false").lower()
-    == "true"
+    os.environ.get("STARTUP_ADVISOR_RAG_ENABLED", "false").lower() == "true"
 )
 STARTUP_ADVISOR_QDRANT_COLLECTION = os.environ.get(
     "STARTUP_ADVISOR_QDRANT_COLLECTION",
@@ -185,12 +185,8 @@ STARTUP_ADVISOR_EMBEDDING_KEEP_ALIVE = os.environ.get(
     "STARTUP_ADVISOR_EMBEDDING_KEEP_ALIVE",
     "5m",
 )
-STARTUP_ADVISOR_RAG_TOP_K = int(
-    os.environ.get("STARTUP_ADVISOR_RAG_TOP_K", "6")
-)
-STARTUP_ADVISOR_RAG_MIN_SCORE = float(
-    os.environ.get("STARTUP_ADVISOR_RAG_MIN_SCORE", "0.35")
-)
+STARTUP_ADVISOR_RAG_TOP_K = int(os.environ.get("STARTUP_ADVISOR_RAG_TOP_K", "6"))
+STARTUP_ADVISOR_RAG_MIN_SCORE = float(os.environ.get("STARTUP_ADVISOR_RAG_MIN_SCORE", "0.35"))
 NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://neo4j:7687")
 NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "")
