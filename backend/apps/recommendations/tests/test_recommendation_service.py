@@ -293,7 +293,7 @@ def test_scheme_without_rules_requires_verification_and_is_excluded():
     assessment = generation.assessments[0]
     assert assessment.scheme_version == scheme.current_version
     assert assessment.result == EligibilityAssessment.Result.VERIFY
-    assert assessment.engine_version == "rules-v3"
+    assert assessment.engine_version == "rules-v4"
     assert not assessment.matched_rules
     assert not assessment.failed_rules
     assert not assessment.unknown_rules

@@ -18,6 +18,7 @@ from .models import (
     PublishedEvidence,
     RequiredDocumentCandidate,
     SchemeCandidate,
+    VerifiedRuleRevision,
 )
 
 
@@ -569,3 +570,56 @@ class EmbeddingRunAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+
+@admin.register(VerifiedRuleRevision)
+class VerifiedRuleRevisionAdmin(admin.ModelAdmin):
+    list_display = (
+        "manifest_key",
+        "pilot_key",
+        "scheme",
+        "base_version",
+        "revised_version",
+        "reviewed_by",
+        "reviewed_at",
+    )
+    list_filter = (
+        "manifest_key",
+        "reviewed_at",
+        "scheme__authority",
+    )
+    search_fields = (
+        "manifest_key",
+        "pilot_key",
+        "scheme__canonical_name",
+        "manifest_hash",
+    )
+    raw_id_fields = (
+        "source_publication",
+        "scheme",
+        "base_version",
+        "revised_version",
+        "reviewed_by",
+    )
+    readonly_fields = (
+        "manifest_key",
+        "pilot_key",
+        "source_publication",
+        "scheme",
+        "base_version",
+        "revised_version",
+        "reviewed_by",
+        "reviewed_at",
+        "manifest_hash",
+        "metadata",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
