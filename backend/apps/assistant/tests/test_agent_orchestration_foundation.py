@@ -228,14 +228,31 @@ def test_messages_cannot_be_appended_to_closed_session():
         )
 
 
-def test_default_registry_contains_only_read_only_foundation_tool():
+def test_default_registry_contains_bounded_founder_tools():
     registry = default_tool_registry()
     definitions = registry.list()
 
-    assert [definition.name for definition in definitions] == ["get_startup_profile"]
-    assert definitions[0].version == "v1"
-    assert definitions[0].read_only is True
-    assert definitions[0].allowed_agent_types == frozenset(AgentSession.AgentType.values)
+    assert [definition.name for definition in definitions] == [
+        "get_startup_profile",
+        "update_startup_assessment_draft",
+    ]
+
+    profile_tool = definitions[0]
+    draft_update_tool = definitions[1]
+
+    assert profile_tool.version == "v1"
+    assert profile_tool.read_only is True
+    assert profile_tool.write_capability is None
+    assert profile_tool.allowed_agent_types == frozenset(AgentSession.AgentType.values)
+
+    assert draft_update_tool.version == "v1"
+    assert draft_update_tool.read_only is False
+    assert draft_update_tool.write_capability == "assessment_draft_update"
+    assert draft_update_tool.allowed_agent_types == frozenset(
+        {
+            AgentSession.AgentType.CONCIERGE,
+        }
+    )
 
 
 def test_registry_rejects_duplicate_tool_names():

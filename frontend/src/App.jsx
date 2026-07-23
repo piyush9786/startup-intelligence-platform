@@ -31,6 +31,7 @@ import {
 } from "./api";
 import AssessmentWizard from "./AssessmentWizard";
 import ChatbotDrawer from "./ChatbotDrawer";
+import FounderConcierge from "./FounderConcierge";
 import OnboardingTour from "./OnboardingTour";
 import {
   canAccessReviewerWorkspace,
@@ -4087,11 +4088,17 @@ function Workspace({ onSignOut }) {
       </main>
 
       {currentUser?.role === "founder" && (
-        <ChatbotDrawer
-          activeView={activeView}
-          onNavigate={handleNavigate}
-          startupProfile={selectedProfile}
-        />
+        <>
+          <FounderConcierge
+            onNavigate={handleNavigate}
+            startupProfileId={selectedProfile?.id}
+          />
+          <ChatbotDrawer
+            activeView={activeView}
+            onNavigate={handleNavigate}
+            startupProfile={selectedProfile}
+          />
+        </>
       )}
     </div>
   );

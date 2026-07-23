@@ -4327,3 +4327,463 @@ body {
     width: 100%;
   }
 }
+
+
+/* Phase 46 bounded founder concierge */
+
+.concierge-launcher {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d9d5f4;
+  border-radius: 999px;
+  bottom: 1.4rem;
+  box-shadow: 0 16px 42px rgba(39, 44, 120, 0.2);
+  color: #4933c6;
+  display: inline-flex;
+  gap: 0.55rem;
+  left: 1.4rem;
+  min-height: 52px;
+  padding: 0.75rem 1rem;
+  position: fixed;
+  z-index: 850;
+}
+
+.concierge-launcher:hover {
+  background: #f7f5ff;
+  border-color: #c8c0f3;
+  transform: translateY(-1px);
+}
+
+.concierge-launcher:focus-visible,
+.concierge-close:focus-visible,
+.concierge-actions .button:focus-visible {
+  outline: 3px solid rgba(49, 87, 245, 0.38);
+  outline-offset: 3px;
+}
+
+.concierge-launcher > span {
+  align-items: center;
+  background: linear-gradient(
+    135deg,
+    var(--dashboard-blue),
+    var(--dashboard-violet)
+  );
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+
+.concierge-launcher strong {
+  font-size: 0.76rem;
+}
+
+.concierge-panel {
+  background: #ffffff;
+  border: 1px solid #dfe3ee;
+  border-radius: 22px;
+  bottom: 5.6rem;
+  box-shadow: 0 28px 90px rgba(13, 24, 52, 0.3);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  left: 1.4rem;
+  max-height: min(760px, calc(100vh - 7rem));
+  max-width: 520px;
+  overflow: hidden;
+  position: fixed;
+  width: calc(100vw - 2rem);
+  z-index: 900;
+}
+
+.concierge-header {
+  align-items: flex-start;
+  background:
+    radial-gradient(
+      circle at 8% 0,
+      rgba(113, 71, 239, 0.14),
+      transparent 42%
+    ),
+    #ffffff;
+  border-bottom: 1px solid #e6e8f0;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1.1rem 1.15rem 0.95rem;
+}
+
+.concierge-header > div {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.concierge-header > div > span {
+  color: #5b45d1;
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.concierge-header h2 {
+  font-size: 1.18rem;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.concierge-header p {
+  color: #6d7890;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 390px;
+}
+
+.concierge-close {
+  align-items: center;
+  background: #f2f3f8;
+  border: 0;
+  border-radius: 999px;
+  color: #58647a;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 1.25rem;
+  height: 34px;
+  justify-content: center;
+  line-height: 1;
+  width: 34px;
+}
+
+.concierge-close:hover {
+  background: #e8e9f2;
+  color: #3e2bbd;
+}
+
+.concierge-loading,
+.concierge-status-card,
+.concierge-ready-card {
+  align-items: center;
+  display: flex;
+  gap: 0.8rem;
+}
+
+.concierge-loading {
+  align-self: center;
+  color: #6e7990;
+  font-size: 0.74rem;
+  justify-self: center;
+  padding: 2.5rem 1rem;
+}
+
+.concierge-progress {
+  background: #fafafe;
+  border-bottom: 1px solid #e7e8ef;
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.75rem 1rem;
+}
+
+.concierge-progress > div:first-child {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.concierge-progress span {
+  color: #788399;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.concierge-progress strong {
+  font-size: 0.76rem;
+}
+
+.concierge-progress-track {
+  background: #e5e6ef;
+  border-radius: 999px;
+  height: 7px;
+  overflow: hidden;
+}
+
+.concierge-progress-track > span {
+  background: linear-gradient(
+    90deg,
+    var(--dashboard-blue),
+    var(--dashboard-violet)
+  );
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  transition: width 180ms ease;
+}
+
+.concierge-content {
+  display: grid;
+  gap: 1rem;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.concierge-prompt {
+  color: #5f6c84;
+  font-size: 0.76rem;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.concierge-form-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.concierge-field {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.concierge-field > span {
+  color: #27334b;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.concierge-field input,
+.concierge-field select,
+.concierge-field textarea {
+  background: #f8f8fc;
+  border: 1px solid #dcdfea;
+  border-radius: 12px;
+  color: var(--dashboard-ink);
+  font: inherit;
+  font-size: 0.74rem;
+  min-width: 0;
+  padding: 0.68rem 0.75rem;
+  width: 100%;
+}
+
+.concierge-field textarea {
+  min-height: 105px;
+  resize: vertical;
+}
+
+.concierge-field input:focus,
+.concierge-field select:focus,
+.concierge-field textarea:focus {
+  border-color: #6a55ed;
+  box-shadow: 0 0 0 3px rgba(106, 85, 237, 0.14);
+  outline: 0;
+}
+
+.concierge-field small {
+  color: #7a8497;
+  font-size: 0.6rem;
+  line-height: 1.45;
+}
+
+.concierge-field-wide {
+  grid-column: 1 / -1;
+}
+
+.concierge-review {
+  background: #f8f7ff;
+  border: 1px solid #ded9ff;
+  border-radius: 16px;
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+}
+
+.concierge-review h3 {
+  font-size: 0.84rem;
+  margin: 0;
+}
+
+.concierge-review dl {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.concierge-review dl div {
+  background: #ffffff;
+  border: 1px solid #e5e2f5;
+  border-radius: 10px;
+  min-width: 0;
+  padding: 0.65rem;
+}
+
+.concierge-review dt {
+  color: #778198;
+  font-size: 0.57rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.concierge-review dd {
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin: 0.25rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.concierge-review p,
+.concierge-status-card p,
+.concierge-ready-card p {
+  color: #6d7890;
+  font-size: 0.66rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.concierge-status-card,
+.concierge-ready-card {
+  border-radius: 14px;
+  padding: 0.85rem;
+}
+
+.concierge-status-card {
+  background: #f7f6ff;
+  border: 1px solid #dcd7fa;
+}
+
+.concierge-ready-card {
+  background: #f0f9f5;
+  border: 1px solid #cce9da;
+}
+
+.concierge-ready-card > span {
+  align-items: center;
+  background: #1f7a54;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.concierge-status-card > div,
+.concierge-ready-card > div {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.concierge-status-card strong,
+.concierge-ready-card strong {
+  font-size: 0.75rem;
+}
+
+.concierge-notice {
+  font-size: 0.68rem;
+  margin: 0;
+}
+
+.concierge-actions {
+  align-items: center;
+  background: #ffffff;
+  border-top: 1px solid #e5e7ef;
+  display: flex;
+  gap: 0.7rem;
+  justify-content: space-between;
+  padding: 0.8rem;
+}
+
+.concierge-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.concierge-actions .button {
+  font-size: 0.68rem;
+  min-height: 38px;
+  padding: 0.55rem 0.75rem;
+}
+
+.concierge-empty,
+.concierge-error-state {
+  align-content: center;
+  display: grid;
+  gap: 0.7rem;
+  justify-items: center;
+  min-height: 300px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.concierge-empty > span {
+  align-items: center;
+  background: #eeeaff;
+  border-radius: 16px;
+  color: #5435d7;
+  display: inline-flex;
+  font-size: 1.3rem;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.concierge-empty h3 {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.concierge-empty p {
+  color: #707b91;
+  font-size: 0.7rem;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 320px;
+}
+
+@media (max-width: 680px) {
+  .concierge-launcher {
+    bottom: 0.9rem;
+    left: 0.9rem;
+  }
+
+  .concierge-launcher strong {
+    display: none;
+  }
+
+  .concierge-panel {
+    border-radius: 20px 20px 0 0;
+    bottom: 0;
+    left: 0;
+    max-height: calc(100vh - 1.5rem);
+    max-width: none;
+    right: 0;
+    width: 100%;
+  }
+
+  .concierge-form-grid,
+  .concierge-review dl {
+    grid-template-columns: 1fr;
+  }
+
+  .concierge-field-wide {
+    grid-column: auto;
+  }
+
+  .concierge-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .concierge-actions > div {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .concierge-actions .button {
+    width: 100%;
+  }
+}

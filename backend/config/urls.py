@@ -14,6 +14,9 @@ from apps.accounts.views import CurrentUserView
 from apps.assistant.views import (
     ChatbotCurrentView,
     ChatbotMessageCreateView,
+    ConciergeCurrentView,
+    ConciergeDraftUpdateView,
+    ConciergeTransitionView,
 )
 from apps.core.views import HealthView, PlatformStatusView
 from apps.discovery.views import (
@@ -127,6 +130,21 @@ router.register(
 
 
 urlpatterns = [
+    path(
+        "api/v1/assistant/concierge/current/",
+        ConciergeCurrentView.as_view(),
+        name="assistant-concierge-current",
+    ),
+    path(
+        "api/v1/assistant/concierge/current/updates/",
+        ConciergeDraftUpdateView.as_view(),
+        name="assistant-concierge-draft-update",
+    ),
+    path(
+        "api/v1/assistant/concierge/current/transitions/",
+        ConciergeTransitionView.as_view(),
+        name="assistant-concierge-transition",
+    ),
     path(
         "api/v1/assistant/chatbot/current/",
         ChatbotCurrentView.as_view(),
