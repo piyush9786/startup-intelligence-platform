@@ -5,7 +5,9 @@ import {
   adminUrl,
   apiDocsUrl,
   clearSession,
+  createEligibilityVerificationSubmission,
   generateGroundedBriefing,
+  getEligibilityVerificationGates,
   getCurrentBriefing,
   getCurrentStartupAdvisorBriefingJob,
   getSession,
@@ -19,6 +21,7 @@ import {
   listStartupAdvisorBriefings,
   listStartupProfiles,
   login,
+  uploadEligibilityVerificationEvidence,
 } from "./api";
 import AssessmentWizard from "./AssessmentWizard";
 import {
@@ -76,6 +79,14 @@ import {
   loadFounderWorkspaceData,
   partialLoadWarning,
 } from "./workspaceLoad";
+import {
+  normalizeVerificationGateResponse,
+  parseVerificationClaimValue,
+  verificationGateCanUploadEvidence,
+  verificationGateNeedsSubmission,
+  verificationGateStatusLabel,
+  verificationGateStatusTone,
+} from "./verification";
 
 const ACTIVE_ADVISOR_JOB_STATUSES = new Set(["queued", "running"]);
 
@@ -1996,7 +2007,468 @@ function RoadmapPage({ actionPlan }) {
   );
 }
 
-function SchemeDetailPage({ backLabel, onBack, scheme }) {
+
+function verificationGateTitle(gate = {}) {
+  return (
+    gate.evidence_text
+    || gate.field_path
+    || "Manual eligibility requirement"
+  );
+}
+
+function initialVerificationClaim(gate = {}) {
+  if (typeof gate.expected_value === "boolean") {
+    return String(gate.expected_value);
+  }
+  return "";
+}
+
+function VerificationClaimField({
+  disabled,
+  gate,
+  onChange,
+  value,
+}) {
+  const label = verificationGateTitle(gate);
+
+  if (typeof gate.expected_value === "boolean") {
+    return (
+      <label className="assessment-field">
+        <span>Founder claim</span>
+        <select
+          aria-label={`Claim value for ${label}`}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          value={value}
+        >
+          <option value="true">
+            Yes, this requirement is satisfied
+          </option>
+          <option value="false">
+            No, this requirement is not satisfied
+          </option>
+        </select>
+      </label>
+    );
+  }
+
+  return (
+    <label className="assessment-field">
+      <span>Founder claim value</span>
+      <input
+        aria-label={`Claim value for ${label}`}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        type={
+          typeof gate.expected_value === "number"
+            ? "number"
+            : "text"
+        }
+        value={value}
+      />
+    </label>
+  );
+}
+
+function VerificationGateCard({
+  busy,
+  draft,
+  file,
+  gate,
+  onDraftChange,
+  onFileChange,
+  onSubmit,
+  onUpload,
+}) {
+  const title = verificationGateTitle(gate);
+  const tone = verificationGateStatusTone(gate.status);
+  const decision = gate.decision;
+  const submission = gate.submission;
+
+  return (
+    <article className="verification-gate-card">
+      <div className="verification-gate-heading">
+        <div>
+          <span className="section-kicker">
+            {gate.mandatory
+              ? "MANDATORY MANUAL CHECK"
+              : "MANUAL CHECK"}
+          </span>
+          <h3>{title}</h3>
+        </div>
+        <span
+          className={[
+            "verification-status",
+            `verification-status-${tone}`,
+          ].join(" ")}
+        >
+          {verificationGateStatusLabel(gate.status)}
+        </span>
+      </div>
+
+      <dl className="verification-gate-metadata">
+        <div>
+          <dt>Required value</dt>
+          <dd>{JSON.stringify(gate.expected_value)}</dd>
+        </div>
+        <div>
+          <dt>Evidence uploaded</dt>
+          <dd>{submission?.evidence_count || 0}</dd>
+        </div>
+      </dl>
+
+      {decision?.review_notes && (
+        <div className="verification-review-note">
+          <strong>Reviewer note</strong>
+          <p>{decision.review_notes}</p>
+        </div>
+      )}
+
+      {gate.status === "approved" && (
+        <div className="notice notice-success">
+          This requirement is reviewer-approved
+          {decision?.expires_on
+            ? ` through ${decision.expires_on}.`
+            : "."}
+        </div>
+      )}
+
+      {verificationGateNeedsSubmission(gate) && (
+        <form
+          className="verification-submission-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit(gate);
+          }}
+        >
+          <VerificationClaimField
+            disabled={busy}
+            gate={gate}
+            onChange={(value) =>
+              onDraftChange(
+                gate.eligibility_rule_id,
+                "claimValue",
+                value,
+              )
+            }
+            value={draft.claimValue}
+          />
+
+          <label className="assessment-field">
+            <span>Supporting explanation</span>
+            <textarea
+              aria-label={`Claim details for ${title}`}
+              disabled={busy}
+              onChange={(event) =>
+                onDraftChange(
+                  gate.eligibility_rule_id,
+                  "claimText",
+                  event.target.value,
+                )
+              }
+              placeholder="Explain what evidence supports this claim."
+              value={draft.claimText}
+            />
+          </label>
+
+          <button
+            className="button button-primary"
+            disabled={busy}
+            type="submit"
+          >
+            {busy ? "Submitting…" : (
+              gate.status === "not_submitted"
+                ? "Submit claim"
+                : "Resubmit claim"
+            )}
+          </button>
+        </form>
+      )}
+
+      {verificationGateCanUploadEvidence(gate) && (
+        <div className="verification-evidence-form">
+          <label className="assessment-field">
+            <span>Supporting evidence file</span>
+            <input
+              aria-label={`Evidence file for ${title}`}
+              disabled={busy}
+              onChange={(event) =>
+                onFileChange(
+                  gate.eligibility_rule_id,
+                  event.target.files?.[0] || null,
+                )
+              }
+              type="file"
+            />
+            <small>
+              Uploaded evidence remains non-authoritative until
+              an authorized reviewer approves the claim.
+            </small>
+          </label>
+
+          <button
+            className="button button-secondary"
+            disabled={busy || !file}
+            onClick={() => onUpload(gate)}
+            type="button"
+          >
+            {busy ? "Uploading…" : "Upload evidence"}
+          </button>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function FounderVerificationPanel({
+  onRequestError,
+  onSuccess,
+  schemeId,
+  startupProfileId,
+}) {
+  const [gateResponse, setGateResponse] = useState(null);
+  const [drafts, setDrafts] = useState({});
+  const [files, setFiles] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [busyRuleId, setBusyRuleId] = useState("");
+  const [panelError, setPanelError] = useState("");
+
+  async function loadGates({ showLoader = false } = {}) {
+    if (!startupProfileId || !schemeId) {
+      setGateResponse(null);
+      setLoading(false);
+      return;
+    }
+
+    if (showLoader) {
+      setLoading(true);
+    }
+
+    try {
+      const payload = await getEligibilityVerificationGates({
+        startupProfileId,
+        schemeId,
+      });
+      const normalized =
+        normalizeVerificationGateResponse(payload);
+
+      setGateResponse(normalized);
+      setPanelError("");
+      setDrafts((current) => {
+        const next = { ...current };
+
+        normalized.gates.forEach((gate) => {
+          if (!next[gate.eligibility_rule_id]) {
+            next[gate.eligibility_rule_id] = {
+              claimValue: initialVerificationClaim(gate),
+              claimText: gate.submission?.claim_text || "",
+            };
+          }
+        });
+
+        return next;
+      });
+    } catch (requestError) {
+      setPanelError(humanizeApiError(requestError));
+      onRequestError(requestError);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    async function initialize() {
+      if (!active) return;
+      await loadGates({ showLoader: true });
+    }
+
+    initialize();
+
+    return () => {
+      active = false;
+    };
+  }, [schemeId, startupProfileId]);
+
+  function updateDraft(ruleId, field, value) {
+    setDrafts((current) => ({
+      ...current,
+      [ruleId]: {
+        ...(current[ruleId] || {}),
+        [field]: value,
+      },
+    }));
+  }
+
+  async function submitGate(gate) {
+    const ruleId = gate.eligibility_rule_id;
+    const draft = drafts[ruleId] || {
+      claimValue: initialVerificationClaim(gate),
+      claimText: "",
+    };
+
+    let claimValue;
+    try {
+      claimValue = parseVerificationClaimValue(
+        draft.claimValue,
+        gate.expected_value,
+      );
+    } catch (validationError) {
+      setPanelError(validationError.message);
+      return;
+    }
+
+    setBusyRuleId(ruleId);
+    setPanelError("");
+
+    try {
+      await createEligibilityVerificationSubmission({
+        startupProfileId,
+        schemeId,
+        eligibilityRuleId: ruleId,
+        claimValue,
+        claimText: draft.claimText.trim(),
+      });
+
+      setFiles((current) => ({
+        ...current,
+        [ruleId]: null,
+      }));
+
+      await loadGates();
+      onSuccess(
+        "Verification claim submitted for authorized review.",
+      );
+    } catch (requestError) {
+      setPanelError(humanizeApiError(requestError));
+      onRequestError(requestError);
+    } finally {
+      setBusyRuleId("");
+    }
+  }
+
+  async function uploadEvidence(gate) {
+    const ruleId = gate.eligibility_rule_id;
+    const file = files[ruleId];
+
+    if (!file || !gate.submission?.id) return;
+
+    setBusyRuleId(ruleId);
+    setPanelError("");
+
+    try {
+      await uploadEligibilityVerificationEvidence({
+        submissionId: gate.submission.id,
+        file,
+      });
+
+      setFiles((current) => ({
+        ...current,
+        [ruleId]: null,
+      }));
+
+      await loadGates();
+      onSuccess(
+        "Evidence uploaded. It remains pending reviewer approval.",
+      );
+    } catch (requestError) {
+      setPanelError(humanizeApiError(requestError));
+      onRequestError(requestError);
+    } finally {
+      setBusyRuleId("");
+    }
+  }
+
+  if (loading) {
+    return (
+      <section
+        className="dashboard-card verification-panel"
+        aria-labelledby="manual-verification-title"
+      >
+        <div className="dashboard-loader" role="status">
+          <span className="spinner" aria-hidden="true" />
+          Loading manual eligibility checks…
+        </div>
+      </section>
+    );
+  }
+
+  const gates = gateResponse?.gates || [];
+  if (!gates.length) {
+    return null;
+  }
+
+  return (
+    <section
+      className="dashboard-card verification-panel"
+      aria-labelledby="manual-verification-title"
+    >
+      <div className="verification-panel-heading">
+        <div>
+          <span className="section-kicker">
+            FOUNDER EVIDENCE WORKFLOW
+          </span>
+          <h2 id="manual-verification-title">
+            Manual eligibility verification
+          </h2>
+          <p>
+            Founder claims and uploaded files do not determine
+            eligibility. Only a current, effective reviewer
+            approval is used by the eligibility engine.
+          </p>
+        </div>
+        <span className="count-badge">
+          {gateResponse.unresolvedCount}
+        </span>
+      </div>
+
+      {panelError && (
+        <div className="notice notice-danger" role="alert">
+          {panelError}
+        </div>
+      )}
+
+      <div className="verification-gate-list">
+        {gates.map((gate) => {
+          const ruleId = gate.eligibility_rule_id;
+          const draft = drafts[ruleId] || {
+            claimValue: initialVerificationClaim(gate),
+            claimText: "",
+          };
+
+          return (
+            <VerificationGateCard
+              busy={busyRuleId === ruleId}
+              draft={draft}
+              file={files[ruleId] || null}
+              gate={gate}
+              key={ruleId}
+              onDraftChange={updateDraft}
+              onFileChange={(id, file) =>
+                setFiles((current) => ({
+                  ...current,
+                  [id]: file,
+                }))
+              }
+              onSubmit={submitGate}
+              onUpload={uploadEvidence}
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function SchemeDetailPage({
+  backLabel,
+  onBack,
+  onRequestError,
+  onSuccess,
+  scheme,
+  startupProfileId,
+}) {
   const version = currentSchemeVersion(scheme) || {};
   const documents = schemeRequirements(scheme);
   const steps = schemeApplicationSteps(scheme);
@@ -2023,6 +2495,12 @@ function SchemeDetailPage({ backLabel, onBack, scheme }) {
         <div><span>Funding type</span><strong>{isFundingScheme(scheme) ? fundingTypeLabel(scheme) : (version.support_types || []).join(", ") || "Not published"}</strong></div>
         <div><span>Verification</span><strong>{readinessStatusLabel(version.verification_status || "not verified")}</strong></div>
       </div>
+      <FounderVerificationPanel
+        onRequestError={onRequestError}
+        onSuccess={onSuccess}
+        schemeId={scheme.id}
+        startupProfileId={startupProfileId}
+      />
       <div className="scheme-detail-grid">
         <section className="dashboard-card"><h2>Eligibility requirements</h2>{rules.length ? <ul className="detail-list">{rules.map((rule, index) => <li key={rule.id || index}><span className={rule.mandatory ? "mandatory-dot" : "optional-dot"} />{rule.label}</li>)}</ul> : <p className="muted">No structured eligibility rules are present.</p>}</section>
         <section className="dashboard-card"><h2>Required documents and certificates</h2>{documents.length ? <ul className="detail-list">{documents.map((item) => <li key={item}>✓ {item}</li>)}</ul> : <p className="muted">No required-document list is present.</p>}</section>
@@ -2537,7 +3015,27 @@ function Workspace({ onSignOut }) {
       />
     );
   } else if (activeView === "scheme-detail" && selectedScheme) {
-    page = <SchemeDetailPage backLabel={schemeBackView === "funding" ? "funding and loans" : schemeBackView === "requirements" ? "requirements" : schemeBackView === "overview" ? "dashboard" : "schemes"} onBack={() => setActiveView(schemeBackView)} scheme={selectedScheme} />;
+    page = (
+      <SchemeDetailPage
+        backLabel={
+          schemeBackView === "funding"
+            ? "funding and loans"
+            : schemeBackView === "requirements"
+              ? "requirements"
+              : schemeBackView === "overview"
+                ? "dashboard"
+                : "schemes"
+        }
+        onBack={() => setActiveView(schemeBackView)}
+        onRequestError={handleRequestError}
+        onSuccess={(message) => {
+          setError("");
+          setSuccess(message);
+        }}
+        scheme={selectedScheme}
+        startupProfileId={selectedProfileId}
+      />
+    );
   } else {
     page = (
       <DashboardHome
