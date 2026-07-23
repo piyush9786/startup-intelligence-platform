@@ -241,6 +241,33 @@ export async function getStartupAdvisorCurrent(startupProfileId) {
   return response.data;
 }
 
+
+export async function getCurrentStartingPlan(startupProfileId) {
+  const response = await client.get("/startup-starting-plans/current/", {
+    params: { startup_profile_id: startupProfileId },
+  });
+  return response.data;
+}
+
+
+export async function listStartingPlans(startupProfileId) {
+  const response = await client.get("/startup-starting-plans/", {
+    params: { startup_profile_id: startupProfileId },
+  });
+  return response.data;
+}
+
+
+export async function generateStartingPlan(startupProfileId) {
+  const response = await client.post(
+    "/startup-starting-plans/generate/",
+    {
+      startup_profile_id: startupProfileId,
+    },
+  );
+  return response.data;
+}
+
 export async function listExternalSchemes() {
   const schemes = [];
   let nextUrl = "/knowledge/external-schemes/";

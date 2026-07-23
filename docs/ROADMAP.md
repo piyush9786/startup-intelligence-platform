@@ -27,6 +27,8 @@ The following major capabilities are operational:
 - persisted first-open founder onboarding;
 - shared agent-orchestration persistence and audit foundation;
 - persistent site-wide founder chatbot.
+- bounded founder concierge state machine;
+- persisted consolidated deterministic starting plan.
 
 ## Completed Phase 45: first-open onboarding tour
 
@@ -83,7 +85,7 @@ funding amounts, or prerequisite ordering.
 See
 [Site-wide founder chatbot](architecture/SITE_WIDE_CHATBOT_V1.md).
 
-## Remaining implementation order
+## Completed conversational foundation
 
 ## Completed Phase 43: shared agent orchestration
 
@@ -116,25 +118,7 @@ See
 
 ## Remaining implementation order
 
-### 1. Concierge state machine — Phases 46 and 47
-
-Purpose: guide a founder from an empty profile to a useful starting plan.
-
-Scope:
-
-- bounded explicit conversation states;
-- LLM phrasing and structured answer interpretation only;
-- draft-scoped assessment-field updates;
-- confirmation and correction stage;
-- existing serializers and submission services;
-- deterministic readiness, roadmap, eligibility, and recommendation generation;
-- consolidated ordered starting plan.
-
-The Concierge must reuse `StartupAssessmentDraft`.
-
-It must not create a second authoritative profile representation.
-
-### 2. Scheme dependency graph — Phase 48
+### 1. Scheme dependency graph — Phase 48
 
 Purpose: represent prerequisites and unlock relationships with provenance.
 
@@ -150,7 +134,7 @@ Scope:
 
 LLM-extracted edges must not become authoritative without review.
 
-### 3. Funding plan engine — Phase 49
+### 2. Funding plan engine — Phase 49
 
 Purpose: produce an ordered, dependency-aware funding and readiness plan.
 
@@ -168,7 +152,7 @@ single nullable `depends_on` field.
 
 The LLM may narrate the generated plan but must not choose its ordering.
 
-### 4. Progress feedback — Phase 50
+### 3. Progress feedback — Phase 50
 
 Purpose: connect plan execution back to readiness and recommendations.
 
@@ -229,3 +213,30 @@ A phase is complete only when:
 - Added focused backend and frontend regression coverage.
 - Validated 124 frontend tests, the 465-test backend suite, the frontend production build, Ruff, Django checks, and zero migration drift.
 <!-- phase-46-roadmap:end -->
+
+## Phase 47 — Consolidated deterministic starting plan
+
+**Status: Completed**
+
+- Added the persisted, versioned `startup-starting-plan-v1` contract.
+- Composed exact readiness, action-plan, and recommendation-run sources without
+  introducing a second decision engine.
+- Preserved profile, source, result, engine-version, and recommendation
+  snapshots.
+- Added idempotent generation, one current plan per startup, and immutable
+  historical source references.
+- Added authenticated current, history, detail, and generate APIs with owner
+  isolation and raw-payload rejection.
+- Integrated plan creation into confirmed assessment submission and concierge
+  completion in the existing transaction.
+- Added a dedicated founder Starting plan workspace with provenance and
+  responsive grouped actions.
+- Explicitly left prerequisite dependency status as `not_evaluated` until
+  Phases 48 and 49.
+- Added focused backend, frontend, authorization, integration, and regression
+  coverage.
+- Validated 473 backend tests, 127 frontend tests, the frontend production
+  build, Ruff, Django checks, and zero migration drift.
+
+See
+[Consolidated deterministic starting plan](startups/STARTING_PLAN_V1.md).

@@ -778,15 +778,29 @@ export default function FounderConcierge({
                   )}
 
                   {payload.is_terminal && (
-                    <button
-                      className="button button-primary"
-                      onClick={() => {
-                        setOpen(false);
-                      }}
-                      type="button"
-                    >
-                      Done
-                    </button>
+                    <>
+                      {startupProfileId && (
+                        <button
+                          className="button button-primary"
+                          onClick={() => {
+                            setOpen(false);
+                            onNavigate?.("starting-plan");
+                          }}
+                          type="button"
+                        >
+                          Open starting plan
+                        </button>
+                      )}
+                      <button
+                        className="button button-secondary"
+                        onClick={() => {
+                          setOpen(false);
+                        }}
+                        type="button"
+                      >
+                        Done
+                      </button>
+                    </>
                   )}
                 </div>
               </footer>

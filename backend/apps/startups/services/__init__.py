@@ -61,6 +61,12 @@ from .readiness import (
     ReadinessStatus,
     evaluate_startup_readiness,
 )
+from .starting_plan import (
+    STARTING_PLAN_VERSION,
+    StartingPlanResult,
+    StartingPlanSourceError,
+    create_startup_starting_plan,
+)
 
 __all__ = [
     "ACTION_PLAN_VERSION",
@@ -81,8 +87,11 @@ __all__ = [
     "OllamaStartupAdvisorProvider",
     "ReadinessActionItem",
     "STARTUP_ADVISOR_BRIEFING_SCHEMA",
+    "STARTING_PLAN_VERSION",
     "SUPPORTED_AUTOFILL_MIME_TYPES",
     "StartupDocumentAutofillError",
+    "StartingPlanResult",
+    "StartingPlanSourceError",
     "StartupAdvisorLLMProvider",
     "ReadinessActionPlan",
     "ReadinessEvaluation",
@@ -96,6 +105,7 @@ __all__ = [
     "create_startup_advisor_snapshot",
     "create_startup_readiness_action_plan",
     "create_startup_readiness_assessment",
+    "create_startup_starting_plan",
     "evaluate_startup_readiness",
     "generate_startup_advisor_briefing",
     "get_startup_advisor_llm_provider",

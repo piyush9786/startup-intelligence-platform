@@ -40,7 +40,10 @@ VITE_PLATFORM_BASE_URL
 ```
 
 `VITE_PLATFORM_BASE_URL` is the origin used for Django admin and API
-documentation links. No production link is hard-coded to localhost.
+documentation links. The Compose development stack uses same-origin paths and
+Vite proxies API, admin, static, and media requests to Django. This keeps the
+website working when it is opened through localhost, a LAN address, or another
+development hostname without hard-coded browser-side localhost URLs.
 
 External links opened in a new tab include:
 
