@@ -9,6 +9,7 @@ from .models import (
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
+    StartupStartingPlan,
 )
 
 
@@ -188,6 +189,54 @@ class StartupReadinessActionPlanAdmin(admin.ModelAdmin):
         "items",
         "source_engine_version",
         "planner_version",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(StartupStartingPlan)
+class StartupStartingPlanAdmin(admin.ModelAdmin):
+    list_display = (
+        "startup_profile",
+        "plan_version",
+        "total_item_count",
+        "is_current",
+        "requested_by",
+        "created_at",
+    )
+    list_filter = (
+        "plan_version",
+        "is_current",
+    )
+    search_fields = (
+        "startup_profile__startup_name",
+        "startup_profile__legal_name",
+        "requested_by__email",
+    )
+    readonly_fields = (
+        "requested_by",
+        "startup_profile",
+        "source_assessment",
+        "source_action_plan",
+        "recommendation_generation_run",
+        "profile_snapshot",
+        "readiness_snapshot",
+        "action_plan_snapshot",
+        "recommendation_generation_snapshot",
+        "recommendations_snapshot",
+        "readiness_item_count",
+        "recommendation_item_count",
+        "total_item_count",
+        "next_item",
+        "items",
+        "plan_version",
+        "is_current",
         "created_at",
         "updated_at",
     )

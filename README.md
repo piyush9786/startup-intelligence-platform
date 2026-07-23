@@ -29,6 +29,7 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 - document-assisted profile autofill;
 - deterministic startup-readiness assessment;
 - persisted readiness action plans;
+- persisted, versioned consolidated starting plans with source provenance;
 - verified canonical scheme catalog and versioning;
 - executable deterministic eligibility engine (`rules-v5`);
 - immutable eligibility assessments and recommendation runs;
@@ -66,6 +67,7 @@ architecture, safety, and implementation context.
 - [Shared agent orchestration](docs/architecture/SHARED_AGENT_ORCHESTRATION_V1.md)
 - [Site-wide founder chatbot](docs/architecture/SITE_WIDE_CHATBOT_V1.md)
 - [First-open onboarding tour](docs/frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md)
+- [Consolidated starting plan](docs/startups/STARTING_PLAN_V1.md)
 - [Project roadmap](docs/ROADMAP.md)
 - [Architecture](docs/architecture/README.md)
 - [Eligibility engine](docs/eligibility/ENGINE_V1.md)
@@ -117,18 +119,14 @@ git diff --check
 
 ## Next product phase
 
-The next milestone is the bounded concierge state machine.
+The next milestone is the verified scheme-dependency graph.
 
-It will guide founders through the existing assessment-draft workflow using
-explicit conversation states, confirmation, existing serializers, and complete
-audit records.
+It will introduce canonical prerequisite concepts and reviewed scheme
+relationships in PostgreSQL, with a rebuildable Neo4j projection.
 
-Language models may phrase questions and interpret structured answers, but
-deterministic services remain authoritative and profile submission must
-continue through the existing validation workflow.
-
-It will be followed by the consolidated deterministic starting plan, verified
-scheme-dependency graph, and dependency-aware funding planning.
+Automatically extracted relationships will remain non-authoritative until
+reviewed, and dependency-aware plan ordering will remain disabled until the
+graph contract is complete.
 
 <!-- phase-46-founder-concierge:start -->
 ## Phase 46: Bounded founder concierge
@@ -151,3 +149,24 @@ API endpoints:
 
 Validation completed with 20 frontend test files and 124 frontend tests, the 465-test backend suite, the production frontend build, Ruff, Django system checks, and migration drift checks. No database migration was required.
 <!-- phase-46-founder-concierge:end -->
+
+## Phase 47: Consolidated deterministic starting plan
+
+Phase 47 adds the persisted `startup-starting-plan-v1` contract.
+
+It transactionally composes the exact readiness assessment, readiness action
+plan, and recommendation generation created by confirmed assessment
+submission. Each plan retains source snapshots, identifiers, engine versions,
+counts, normalized items, history, and one current version per startup.
+
+Readiness actions preserve readiness priority and scheme opportunities preserve
+recommendation rank. Every item explicitly reports that dependency ordering has
+not been evaluated; verified prerequisite ordering remains reserved for Phases
+48 and 49.
+
+Founder APIs support idempotent generation, current retrieval, history, and
+detail. The founder workspace adds a dedicated Starting plan view with source
+provenance and direct roadmap and scheme-explorer actions.
+
+See
+[Consolidated deterministic starting plan](docs/startups/STARTING_PLAN_V1.md).

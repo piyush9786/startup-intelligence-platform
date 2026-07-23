@@ -10,6 +10,7 @@ from .models import (
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
+    StartupStartingPlan,
 )
 from .services.assessment_drafts import (
     get_or_create_startup_assessment_draft,
@@ -105,7 +106,7 @@ class StartupAssessmentDraftSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
-    def get_completion_percent(self, instance):
+    def get_completion_percent(self, instance) -> int:
         return assessment_completion_percent(instance.data)
 
 
@@ -522,6 +523,76 @@ class StartupReadinessActionPlanSerializer(serializers.ModelSerializer):
             "items",
             "source_engine_version",
             "planner_version",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
+class StartupStartingPlanGenerationRequestSerializer(serializers.Serializer):
+    startup_profile_id = serializers.UUIDField()
+    profile = serializers.JSONField(required=False, write_only=True)
+    readiness = serializers.JSONField(required=False, write_only=True)
+    action_plan = serializers.JSONField(required=False, write_only=True)
+    recommendations = serializers.JSONField(required=False, write_only=True)
+
+    def validate(self, attrs):
+        raw_fields = [
+            name
+            for name in (
+                "profile",
+                "readiness",
+                "action_plan",
+                "recommendations",
+            )
+            if name in attrs
+        ]
+        if raw_fields:
+            raise serializers.ValidationError(
+                {
+                    name: (
+                        "Raw starting-plan data is not accepted. "
+                        "Use startup_profile_id."
+                    )
+                    for name in raw_fields
+                }
+            )
+        return attrs
+
+
+class StartupStartingPlanSerializer(serializers.ModelSerializer):
+    startup_profile_id = serializers.UUIDField(read_only=True)
+    source_assessment_id = serializers.UUIDField(read_only=True)
+    source_action_plan_id = serializers.UUIDField(read_only=True)
+    recommendation_generation_id = serializers.UUIDField(
+        source="recommendation_generation_run_id",
+        read_only=True,
+    )
+    requested_by_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = StartupStartingPlan
+        fields = (
+            "id",
+            "startup_profile_id",
+            "source_assessment_id",
+            "source_action_plan_id",
+            "recommendation_generation_id",
+            "requested_by_id",
+            "profile_snapshot",
+            "readiness_snapshot",
+            "action_plan_snapshot",
+            "recommendation_generation_snapshot",
+            "recommendations_snapshot",
+            "readiness_item_count",
+            "recommendation_item_count",
+            "total_item_count",
+            "next_item",
+            "items",
+            "plan_version",
+            "is_current",
             "created_at",
         )
         read_only_fields = fields
