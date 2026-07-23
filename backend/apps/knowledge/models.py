@@ -764,6 +764,111 @@ class CandidatePublication(TimeStampedModel):
         )
 
 
+class VerifiedRuleRevision(TimeStampedModel):
+    manifest_key = models.CharField(max_length=150)
+    pilot_key = models.CharField(max_length=100)
+    source_publication = models.ForeignKey(
+        CandidatePublication,
+        on_delete=models.PROTECT,
+        related_name="verified_rule_revisions",
+    )
+    scheme = models.ForeignKey(
+        "schemes.Scheme",
+        on_delete=models.PROTECT,
+        related_name="verified_rule_revisions",
+    )
+    base_version = models.ForeignKey(
+        "schemes.SchemeVersion",
+        on_delete=models.PROTECT,
+        related_name="verified_rule_revision_bases",
+    )
+    revised_version = models.OneToOneField(
+        "schemes.SchemeVersion",
+        on_delete=models.PROTECT,
+        related_name="verified_rule_revision",
+    )
+    reviewed_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verified_rule_revisions",
+    )
+    reviewed_at = models.DateTimeField()
+    manifest_hash = models.CharField(max_length=64, db_index=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["manifest_key", "pilot_key"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["manifest_key", "pilot_key"],
+                name="unique_verified_rule_revision_manifest_pilot",
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors = {}
+
+        if self.source_publication_id is not None:
+            if self.source_publication.role != CandidatePublication.Role.PRIMARY:
+                errors["source_publication"] = (
+                    "A verified rule revision requires a primary publication."
+                )
+            elif self.scheme_id is not None:
+                if self.source_publication.scheme_id != self.scheme_id:
+                    errors["source_publication"] = (
+                        "The source publication must belong to the selected scheme."
+                    )
+                if (
+                    self.base_version_id is not None
+                    and self.source_publication.scheme_version_id
+                    != self.base_version_id
+                ):
+                    errors["source_publication"] = (
+                        "The source publication must reference the base version."
+                    )
+
+        for field_name in ("base_version", "revised_version"):
+            version_id = getattr(self, f"{field_name}_id")
+            if version_id is None or self.scheme_id is None:
+                continue
+            version = getattr(self, field_name)
+            if version.scheme_id != self.scheme_id:
+                errors[field_name] = (
+                    "The scheme version must belong to the selected scheme."
+                )
+
+        if self.base_version_id is not None and self.revised_version_id is not None:
+            if self.base_version_id == self.revised_version_id:
+                errors["revised_version"] = (
+                    "The revised version must differ from the base version."
+                )
+            elif (
+                self.revised_version.version_number
+                <= self.base_version.version_number
+            ):
+                errors["revised_version"] = (
+                    "The revised version number must follow the base version."
+                )
+
+        if self.reviewed_by_id is None:
+            errors["reviewed_by"] = (
+                "A verified rule revision requires a reviewer."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self) -> str:
+        return (
+            f"{self.scheme.canonical_name}: "
+            f"v{self.base_version.version_number} → "
+            f"v{self.revised_version.version_number}"
+        )
+
+
 class PublishedEvidence(TimeStampedModel):
     publication = models.ForeignKey(
         CandidatePublication,
