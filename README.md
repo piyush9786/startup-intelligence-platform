@@ -40,7 +40,9 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 - founder-facing reviewer-approved evidence provenance;
 - Qdrant-backed evidence retrieval;
 - grounded Ollama founder-advisor briefings with citations;
-- founder and reviewer React workspaces.
+- founder and reviewer React workspaces;
+- readiness-first responsive founder dashboard with accessible Motion
+  transitions.
 
 ## System architecture
 
