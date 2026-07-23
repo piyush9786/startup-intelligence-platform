@@ -48,6 +48,10 @@ const api = vi.hoisted(() => ({
 
 vi.mock("./api", () => api);
 
+vi.mock("./FounderConcierge", () => ({
+  default: () => null,
+}));
+
 import App from "./App.jsx";
 
 const profile = {
