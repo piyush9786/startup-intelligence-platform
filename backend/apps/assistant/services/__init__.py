@@ -3,6 +3,12 @@ from .canonical import (
     canonical_sha256,
     json_ready,
 )
+from .chatbot import (
+    CHATBOT_VERSION,
+    ChatbotReply,
+    build_chatbot_reply,
+    process_chatbot_message,
+)
 from .sessions import (
     AgentSessionError,
     AgentTurnLimitExceeded,
@@ -27,6 +33,10 @@ from .tool_registry import (
 )
 
 __all__ = [
+    "process_chatbot_message",
+    "build_chatbot_reply",
+    "ChatbotReply",
+    "CHATBOT_VERSION",
     "AgentSessionError",
     "AgentToolAuthorizationError",
     "AgentToolContext",

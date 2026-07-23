@@ -23,6 +23,8 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 - append-only messages, immutable tool-call logs, and claim references;
 - versioned whitelisted read-only tool registry with authorization snapshots
   and canonical output hashes;
+- persistent founder-only site-wide chatbot with bounded sessions, page-aware
+  context, deterministic navigation, and grounded claim provenance;
 - startup profile and assessment-draft workflow;
 - document-assisted profile autofill;
 - deterministic startup-readiness assessment;
@@ -62,6 +64,7 @@ architecture, safety, and implementation context.
 
 - [Documentation index](docs/README.md)
 - [Shared agent orchestration](docs/architecture/SHARED_AGENT_ORCHESTRATION_V1.md)
+- [Site-wide founder chatbot](docs/architecture/SITE_WIDE_CHATBOT_V1.md)
 - [First-open onboarding tour](docs/frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md)
 - [Project roadmap](docs/ROADMAP.md)
 - [Architecture](docs/architecture/README.md)
@@ -114,14 +117,15 @@ git diff --check
 
 ## Next product phase
 
-The next milestone is a site-wide chatbot built on the persisted shared
-orchestration foundation.
+The next milestone is the bounded concierge state machine.
 
-It will use bounded sessions, append-only messages, registered read-only tools,
-authorization snapshots, output hashes, and claim-to-tool-call references.
+It will guide founders through the existing assessment-draft workflow using
+explicit conversation states, confirmation, existing serializers, and complete
+audit records.
 
-It will be followed by the bounded concierge workflow, verified
+Language models may phrase questions and interpret structured answers, but
+deterministic services remain authoritative and profile submission must
+continue through the existing validation workflow.
+
+It will be followed by the consolidated deterministic starting plan, verified
 scheme-dependency graph, and dependency-aware funding planning.
-
-These additions must remain conversational interfaces over the existing
-deterministic and verified core.

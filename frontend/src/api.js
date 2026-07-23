@@ -389,6 +389,50 @@ export async function generateGroundedBriefing(
   return briefingResponse.data;
 }
 
+
+export async function getCurrentChatbot({
+  startupProfileId = null,
+} = {}) {
+  const params = {};
+
+  if (startupProfileId) {
+    params.startup_profile_id = startupProfileId;
+  }
+
+  const response = await client.get(
+    "/assistant/chatbot/current/",
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
+
+export async function sendCurrentChatbotMessage({
+  message,
+  startupProfileId = null,
+  pageContext = {},
+}) {
+  const payload = {
+    message,
+    page_context: pageContext,
+  };
+
+  if (startupProfileId) {
+    payload.startup_profile_id = startupProfileId;
+  }
+
+  const response = await client.post(
+    "/assistant/chatbot/current/messages/",
+    payload,
+  );
+
+  return response.data;
+}
+
+
 export function describeApiFailure(error) {
   return humanizeApiError(error);
 }
