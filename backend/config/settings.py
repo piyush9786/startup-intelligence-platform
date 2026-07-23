@@ -199,6 +199,10 @@ MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "")
 MINIO_SECURE = os.environ.get("MINIO_SECURE", "false").lower() == "true"
 MINIO_BUCKET_RAW = os.environ.get("MINIO_BUCKET_RAW", "startup-raw-documents")
+MINIO_BUCKET_STARTUP_EVIDENCE = os.environ.get(
+    "MINIO_BUCKET_STARTUP_EVIDENCE",
+    "startup-eligibility-evidence",
+)
 COLLECTOR_USER_AGENT = os.environ.get(
     "COLLECTOR_USER_AGENT",
     "StartupIntelligenceCollector/0.1 (+http://localhost:5173)",

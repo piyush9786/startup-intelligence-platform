@@ -232,7 +232,7 @@ def test_empty_rule_set_requires_manual_verification():
     )
 
     assert result.result == "verification_required"
-    assert result.engine_version == "rules-v4"
+    assert result.engine_version == "rules-v5"
     assert not result.matched_rules
     assert not result.failed_rules
     assert not result.unknown_rules
@@ -261,7 +261,7 @@ def test_blank_entity_types_use_startup_profile_default():
     )
 
     assert result.result == "eligible"
-    assert result.engine_version == "rules-v4"
+    assert result.engine_version == "rules-v5"
     assert len(result.matched_rules) == 1
     assert result.matched_rules[0].actual_value == ["startup"]
 
@@ -292,4 +292,4 @@ def test_mandatory_failure_precedes_manual_verification_gate():
         "manual_verification.incubator_association"
     ]
     assert result.unknown_rules[0].requires_verification is True
-    assert result.engine_version == "rules-v4"
+    assert result.engine_version == "rules-v5"
