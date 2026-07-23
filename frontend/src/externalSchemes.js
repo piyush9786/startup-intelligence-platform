@@ -24,6 +24,9 @@ function externalSchemeSearchText(record = {}) {
     record.tax_benefits,
     record.application_process,
     record.source_portal,
+    record.verification_label,
+    record.catalog_status,
+    record.matched_scheme_name,
     ...(record.startup_stage || []),
     ...(record.industry || []),
   ]

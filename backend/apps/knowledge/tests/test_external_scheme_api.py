@@ -137,6 +137,84 @@ def test_anonymous_user_can_list_visible_external_schemes():
     }
 
 
+def test_catalog_scope_all_includes_merged_and_unavailable_records():
+    active_dataset = create_dataset(
+        dataset_key="complete-catalog",
+    )
+    inactive_dataset = create_dataset(
+        dataset_key="inactive-catalog",
+        is_active=False,
+    )
+    available = create_record(
+        dataset=active_dataset,
+        external_id="SCH001",
+        scheme_name="Available Scheme",
+        review_status=ExternalSchemeRecord.ReviewStatus.VERIFIED,
+    )
+    unavailable = create_record(
+        dataset=active_dataset,
+        external_id="SCH002",
+        scheme_name="Unavailable Scheme",
+        review_status=ExternalSchemeRecord.ReviewStatus.REJECTED,
+    )
+    authority = Authority.objects.create(
+        name="Canonical Authority",
+    )
+    canonical_scheme = Scheme.objects.create(
+        canonical_name="Canonical Scheme",
+        authority=authority,
+        lifecycle_status=Scheme.LifecycleStatus.ACTIVE,
+    )
+    merged = create_record(
+        dataset=active_dataset,
+        external_id="SCH003",
+        scheme_name="Merged Scheme Alias",
+        review_status=ExternalSchemeRecord.ReviewStatus.VERIFIED,
+        matched_scheme=canonical_scheme,
+    )
+    create_record(
+        dataset=inactive_dataset,
+        external_id="SCH004",
+        scheme_name="Inactive Scheme",
+    )
+
+    response = APIClient().get(
+        ENDPOINT,
+        {"catalog_scope": "all"},
+    )
+
+    assert response.status_code == 200
+    results = response_results(response)
+    returned_ids = {item["id"] for item in results}
+
+    assert returned_ids == {
+        str(available.id),
+        str(unavailable.id),
+        str(merged.id),
+    }
+
+    records_by_id = {
+        item["external_id"]: item
+        for item in results
+    }
+    assert (
+        records_by_id["SCH002"]["catalog_status"]
+        == "unavailable"
+    )
+    assert (
+        records_by_id["SCH002"]["verification_label"]
+        == "Unavailable / not verified"
+    )
+    assert (
+        records_by_id["SCH003"]["catalog_status"]
+        == "merged"
+    )
+    assert (
+        records_by_id["SCH003"]["matched_scheme_name"]
+        == "Canonical Scheme"
+    )
+
+
 def test_external_scheme_response_is_public_safe():
     dataset = create_dataset(
         dataset_key="safe-response",

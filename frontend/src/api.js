@@ -272,6 +272,7 @@ export async function listExternalSchemes() {
   const schemes = [];
   let nextUrl = "/knowledge/external-schemes/";
   let params = {
+    catalog_scope: "all",
     ordering: "scheme_name",
   };
   let pageCount = 0;
