@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import (
+    OnboardingProgress,
     StartupAdvisorBriefing,
     StartupAdvisorBriefingJob,
     StartupAdvisorSnapshot,
@@ -32,6 +33,46 @@ class StartupProfileAdmin(admin.ModelAdmin):
         "legal_name",
         "description",
     )
+
+
+@admin.register(OnboardingProgress)
+class OnboardingProgressAdmin(admin.ModelAdmin):
+    list_display = (
+        "owner",
+        "tour_version",
+        "variant",
+        "status",
+        "current_step",
+        "updated_at",
+    )
+    list_filter = (
+        "tour_version",
+        "variant",
+        "status",
+        "current_step",
+    )
+    search_fields = (
+        "owner__username",
+        "owner__email",
+    )
+    readonly_fields = (
+        "owner",
+        "tour_version",
+        "variant",
+        "status",
+        "current_step",
+        "started_at",
+        "dismissed_at",
+        "completed_at",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(StartupAssessmentDraft)

@@ -27,21 +27,24 @@ deadlines, verification decisions, or prerequisite sequencing.
 
 The current product is an advanced MVP and functional internal alpha.
 
-Merged baseline when this document was introduced:
+Current repository baseline:
 
-- main commit: `ea59d04`;
-- pull request: `#53`;
 - eligibility engine: `rules-v5`;
 - founder explanation contract: `eligibility-explanation-v2`;
+- persisted onboarding contract: `founder-onboarding-v1`;
+- empty-profile and returning-founder onboarding variants;
+- resumable, dismissible, and non-repeating onboarding progress;
+- direct onboarding handoff to the existing startup assessment wizard;
 - full backend test suite passing;
-- 102 frontend tests passing;
+- 105 frontend tests passing;
 - frontend production build passing;
-- Ruff, Django checks, migration checks, and CI passing.
+- Ruff, Django checks, migration checks, and CI validation commands passing.
 
 The main founder workflow is operational:
 
 ```text
-Startup assessment
+First-open founder onboarding
+→ startup assessment
 → startup profile
 → deterministic readiness evaluation
 → readiness action plan
@@ -112,6 +115,7 @@ The system is a modular monolith with asynchronous workers.
 - React 19;
 - Vite;
 - founder dashboard;
+- persisted first-open onboarding tour;
 - startup assessment wizard;
 - scheme explorer and scheme detail views;
 - readiness and action-roadmap views;
@@ -158,8 +162,8 @@ The current installed domain apps are:
 - `discovery` — discovered URLs, crawl frontier, and quality assessment;
 - `knowledge` — extracted candidates, review, and publication workflows;
 - `schemes` — canonical schemes, versions, benefits, requirements, and rules;
-- `startups` — profiles, assessment drafts, readiness, action plans, and advisor
-  briefings;
+- `startups` — profiles, assessment drafts, persisted onboarding progress,
+  readiness, action plans, and advisor briefings;
 - `recommendations` — eligibility assessments, recommendations, generation
   runs, verification submissions, evidence, and decisions.
 
@@ -254,19 +258,22 @@ deadlines.
 
 ## 10. Planned conversational layer
 
+The first-open founder onboarding tour is now implemented as a deterministic,
+persisted product workflow. It does not use an autonomous agent and does not
+alter readiness, eligibility, recommendation, or verification decisions.
+
 The next product expansion introduces conversation as a controlled interface
 over the existing platform.
 
-The agreed implementation order is:
+The remaining agreed implementation order is:
 
-1. first-open onboarding tour;
-2. shared agent orchestration and whitelisted tool registry;
-3. site-wide chatbot;
-4. bounded concierge state machine;
-5. consolidated deterministic starting plan;
-6. verified scheme-prerequisite graph;
-7. dependency-aware funding-plan engine and timeline;
-8. founder progress tracking with verification-aware feedback.
+1. shared agent orchestration and whitelisted tool registry;
+2. site-wide chatbot;
+3. bounded concierge state machine;
+4. consolidated deterministic starting plan;
+5. verified scheme-prerequisite graph;
+6. dependency-aware funding-plan engine and timeline;
+7. founder progress tracking with verification-aware feedback.
 
 Agents will use logged, whitelisted tools.
 
@@ -401,17 +408,22 @@ Do not mix unrelated refactors into a milestone.
 
 ## 16. Immediate next milestone
 
-After this documentation baseline is merged, begin the first-open onboarding
-tour.
+The next milestone is shared agent orchestration and a whitelisted tool
+registry.
 
-Initial onboarding scope:
+Initial scope:
 
-- persisted `OnboardingProgress`;
-- empty-profile and returning-founder variants;
-- resumable and dismissible progress;
-- no repeated tour after completion;
-- direct handoff to the existing assessment wizard;
-- architecture prepared for a later Concierge Agent handoff.
+- create the `apps/assistant` Django application;
+- persist `AgentSession`, `AgentMessage`, and immutable tool-call records;
+- establish an authorization context for every tool invocation;
+- register versioned, whitelisted tools rather than exposing unrestricted
+  database access;
+- begin with read-only tools over startup profiles, readiness, recommendations,
+  schemes, roadmaps, and persisted evidence;
+- retain tool inputs, outputs, status, duration, version, and output hashes;
+- provide claim-to-tool-call traceability for startup-specific responses;
+- add rate limits and bounded turn execution.
 
-The onboarding milestone should not introduce an autonomous agent or alter
-deterministic readiness, eligibility, recommendation, or verification logic.
+This milestone must not add unrestricted profile writes or allow an LLM to
+override deterministic readiness, eligibility, ranking, verification, funding
+amount, deadline, or sequencing decisions.

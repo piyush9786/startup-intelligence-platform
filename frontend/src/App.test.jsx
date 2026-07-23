@@ -22,6 +22,7 @@ const api = vi.hoisted(() => ({
   generateGroundedBriefing: vi.fn(),
   getCurrentBriefing: vi.fn(),
   getCurrentUser: vi.fn(),
+  getCurrentStartupOnboarding: vi.fn(),
   getEligibilityVerificationGates: vi.fn(),
   getCurrentStartupAdvisorBriefingJob: vi.fn(),
   getSession: vi.fn(),
@@ -39,6 +40,7 @@ const api = vi.hoisted(() => ({
   login: vi.fn(),
   submitStartupAssessmentDraft: vi.fn(),
   updateStartupAssessmentDraft: vi.fn(),
+  updateCurrentStartupOnboarding: vi.fn(),
   uploadEligibilityVerificationEvidence: vi.fn(),
 }));
 
@@ -497,6 +499,31 @@ beforeEach(() => {
     filename: "endorsement.pdf",
     mime_type: "application/pdf",
     size_bytes: 8,
+  });
+  api.getCurrentStartupOnboarding.mockResolvedValue({
+    id: "onboarding-progress-one",
+    owner_id: "founder-user-one",
+    tour_version: "founder-onboarding-v1",
+    variant: "returning_founder",
+    status: "completed",
+    current_step: 4,
+    total_steps: 4,
+    should_show: false,
+    started_at: "2026-07-23T09:00:00Z",
+    dismissed_at: null,
+    completed_at: "2026-07-23T09:05:00Z",
+    created_at: "2026-07-23T09:00:00Z",
+    updated_at: "2026-07-23T09:05:00Z",
+  });
+  api.updateCurrentStartupOnboarding.mockResolvedValue({
+    id: "onboarding-progress-one",
+    owner_id: "founder-user-one",
+    tour_version: "founder-onboarding-v1",
+    variant: "returning_founder",
+    status: "completed",
+    current_step: 4,
+    total_steps: 4,
+    should_show: false,
   });
   api.login.mockResolvedValue({ access: "access-token", refresh: "refresh-token" });
   api.getStartupAdvisorBriefing.mockResolvedValue(makeBriefing());
@@ -1489,5 +1516,230 @@ describe("functional user dashboard", () => {
     });
 
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+  });
+});
+
+
+describe("persisted founder onboarding tour", () => {
+  function makeOnboardingProgress({
+    variant = "empty_profile",
+    status = "active",
+    currentStep = 1,
+  } = {}) {
+    return {
+      id: "onboarding-progress-one",
+      owner_id: "founder-user-one",
+      tour_version: "founder-onboarding-v1",
+      variant,
+      status,
+      current_step: currentStep,
+      total_steps: 4,
+      should_show: status === "active",
+      started_at: "2026-07-23T09:00:00Z",
+      dismissed_at:
+        status === "dismissed"
+          ? "2026-07-23T09:02:00Z"
+          : null,
+      completed_at:
+        status === "completed"
+          ? "2026-07-23T09:05:00Z"
+          : null,
+      created_at: "2026-07-23T09:00:00Z",
+      updated_at: "2026-07-23T09:05:00Z",
+    };
+  }
+
+  test("persists tour steps and supports dismiss and resume", async () => {
+    configureAuthenticatedWorkspace({ profiles: [] });
+
+    let currentProgress = makeOnboardingProgress();
+
+    api.getCurrentStartupOnboarding.mockResolvedValue(
+      currentProgress,
+    );
+
+    api.updateCurrentStartupOnboarding.mockImplementation(
+      async (payload) => {
+        if (payload.action === "set_step") {
+          currentProgress = makeOnboardingProgress({
+            currentStep: payload.current_step,
+          });
+        } else if (payload.action === "dismiss") {
+          currentProgress = makeOnboardingProgress({
+            status: "dismissed",
+            currentStep: currentProgress.current_step,
+          });
+        } else if (payload.action === "resume") {
+          currentProgress = makeOnboardingProgress({
+            status: "active",
+            currentStep: currentProgress.current_step,
+          });
+        }
+
+        return currentProgress;
+      },
+    );
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    expect(
+      await screen.findByRole("dialog", {
+        name: "Welcome to your startup support workspace",
+      }),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("progressbar"),
+    ).toHaveAttribute("aria-valuenow", "1");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Next",
+      }),
+    );
+
+    expect(
+      api.updateCurrentStartupOnboarding,
+    ).toHaveBeenCalledWith({
+      action: "set_step",
+      current_step: 2,
+    });
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Tell us about your startup",
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Skip for now",
+      }),
+    );
+
+    expect(
+      api.updateCurrentStartupOnboarding,
+    ).toHaveBeenCalledWith({
+      action: "dismiss",
+    });
+
+    expect(
+      await screen.findByText(
+        "Your onboarding tour is paused",
+      ),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.queryByRole("dialog"),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Resume onboarding",
+      }),
+    );
+
+    expect(
+      api.updateCurrentStartupOnboarding,
+    ).toHaveBeenCalledWith({
+      action: "resume",
+    });
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Tell us about your startup",
+      }),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("progressbar"),
+    ).toHaveAttribute("aria-valuenow", "2");
+  });
+
+  test("completes the empty-profile tour and opens the assessment", async () => {
+    configureAuthenticatedWorkspace({ profiles: [] });
+
+    const activeFinalStep = makeOnboardingProgress({
+      currentStep: 4,
+    });
+
+    api.getCurrentStartupOnboarding.mockResolvedValue(
+      activeFinalStep,
+    );
+
+    api.updateCurrentStartupOnboarding.mockResolvedValue(
+      makeOnboardingProgress({
+        status: "completed",
+        currentStep: 4,
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const onboardingDialog =
+      await screen.findByRole("dialog", {
+        name: "Start with the founder assessment",
+      });
+
+    await user.click(
+      within(onboardingDialog).getByRole("button", {
+        name: "Start startup assessment",
+      }),
+    );
+
+    expect(
+      api.updateCurrentStartupOnboarding,
+    ).toHaveBeenCalledWith({
+      action: "complete",
+    });
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Tell us about your startup",
+      }),
+    ).toBeInTheDocument();
+
+    expect(
+      api.listStartupAssessmentDrafts,
+    ).toHaveBeenCalledWith({
+      startupProfileId: null,
+      status: "draft",
+    });
+  });
+
+  test("does not request founder onboarding for a reviewer", async () => {
+    configureAuthenticatedWorkspace({
+      profiles: [],
+    });
+
+    api.getCurrentUser.mockResolvedValue({
+      id: "reviewer-user-one",
+      username: "reviewer",
+      email: "reviewer@example.com",
+      role: "reviewer",
+      role_label: "Data reviewer",
+      email_verified: true,
+      is_staff: false,
+      is_superuser: false,
+      can_review_eligibility: true,
+    });
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Reviewer verification queue",
+      }),
+    ).toBeInTheDocument();
+
+    expect(
+      api.getCurrentStartupOnboarding,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      screen.queryByRole("dialog"),
+    ).not.toBeInTheDocument();
   });
 });
