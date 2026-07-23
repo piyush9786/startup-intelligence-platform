@@ -58,3 +58,16 @@ def download_bytes(
     finally:
         response.close()
         response.release_conn()
+
+
+def delete_object(
+    object_key: str,
+    *,
+    bucket_name: str | None = None,
+) -> None:
+    selected_bucket = bucket_name or settings.MINIO_BUCKET_RAW
+    client = minio_client()
+    client.remove_object(
+        selected_bucket,
+        object_key,
+    )

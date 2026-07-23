@@ -22,6 +22,16 @@ from apps.documents.views import (
     DocumentExtractionViewSet,
     ProcessDocumentView,
 )
+from apps.recommendations.verification_reviewer_views import (
+    EligibilityVerificationReviewerDecisionCreateView,
+    EligibilityVerificationReviewerEvidenceDownloadView,
+    EligibilityVerificationReviewerQueueView,
+)
+from apps.recommendations.verification_views import (
+    EligibilityVerificationEvidenceUploadView,
+    EligibilityVerificationGateListView,
+    EligibilityVerificationSubmissionCreateView,
+)
 from apps.recommendations.views import (
     EligibilityEvaluateView,
     RecommendationCurrentView,
@@ -229,6 +239,36 @@ urlpatterns = [
         "api/v1/eligibility/evaluate/",
         EligibilityEvaluateView.as_view(),
         name="eligibility-evaluate",
+    ),
+    path(
+        "api/v1/eligibility/verifications/reviewer/submissions/",
+        EligibilityVerificationReviewerQueueView.as_view(),
+        name="eligibility-verification-reviewer-queue",
+    ),
+    path(
+        ("api/v1/eligibility/verifications/reviewer/submissions/<uuid:submission_id>/decisions/"),
+        EligibilityVerificationReviewerDecisionCreateView.as_view(),
+        name=("eligibility-verification-reviewer-decision-create"),
+    ),
+    path(
+        ("api/v1/eligibility/verifications/reviewer/evidence/<uuid:evidence_id>/download/"),
+        EligibilityVerificationReviewerEvidenceDownloadView.as_view(),
+        name=("eligibility-verification-reviewer-evidence-download"),
+    ),
+    path(
+        "api/v1/eligibility/verifications/gates/",
+        EligibilityVerificationGateListView.as_view(),
+        name="eligibility-verification-gate-list",
+    ),
+    path(
+        "api/v1/eligibility/verifications/submissions/",
+        EligibilityVerificationSubmissionCreateView.as_view(),
+        name="eligibility-verification-submission-create",
+    ),
+    path(
+        ("api/v1/eligibility/verifications/submissions/<uuid:submission_id>/evidence/"),
+        EligibilityVerificationEvidenceUploadView.as_view(),
+        name="eligibility-verification-evidence-upload",
     ),
     path(
         "api/v1/recommendations/generate/",
