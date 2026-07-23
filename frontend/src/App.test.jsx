@@ -612,7 +612,7 @@ describe("founder authentication", () => {
     expect(api.login).toHaveBeenCalledWith({ username: "founder", password: "safe-password" });
     expect(
       await screen.findByRole("heading", {
-        name: /Understand what Acme Climate can apply for next/,
+        name: /Keep Acme Climate moving with one clear next step/,
       }),
     ).toBeInTheDocument();
   });
@@ -636,11 +636,30 @@ describe("founder authentication", () => {
 });
 
 describe("functional user dashboard", () => {
+  test("prioritizes the persisted next action before discovery tools", async () => {
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Complete company registration evidence",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open starting plan" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Progress at a glance" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Your next decisions" }),
+    ).toBeInTheDocument();
+  });
+
   test("loads schemes and opens the explorer from a dashboard action", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: /Explore schemes/ }));
+    await user.click(await screen.findByRole("button", { name: /View all schemes/ }));
 
     expect(api.listSchemes).toHaveBeenCalledTimes(1);
     expect(api.listExternalSchemes).toHaveBeenCalledTimes(1);
@@ -678,7 +697,7 @@ describe("functional user dashboard", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: /Explore schemes/,
+        name: /View all schemes/,
       }),
     );
 
@@ -1552,7 +1571,7 @@ describe("functional user dashboard", () => {
     render(<App />);
 
     await screen.findByRole("heading", {
-      name: /Understand what Acme Climate can apply for next/,
+      name: /Keep Acme Climate moving with one clear next step/,
     });
 
     await user.click(
@@ -1626,7 +1645,7 @@ describe("functional user dashboard", () => {
     render(<App />);
     expect(
       await screen.findByRole("heading", {
-        name: /Understand what Acme Climate can apply for next/,
+        name: /Keep Acme Climate moving with one clear next step/,
       }),
     ).toBeInTheDocument();
 

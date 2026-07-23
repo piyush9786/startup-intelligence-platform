@@ -1,4 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
+import {
+  AnimatePresence,
+  LazyMotion,
+  MotionConfig,
+  domAnimation,
+} from "motion/react";
+import * as m from "motion/react-m";
 
 import {
   SESSION_EXPIRED_EVENT,
@@ -109,6 +116,13 @@ import {
 } from "./verification";
 
 const ACTIVE_ADVISOR_JOB_STATUSES = new Set(["queued", "running"]);
+const MOTION_EASE = [0.22, 1, 0.36, 1];
+
+const revealProps = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.42, ease: MOTION_EASE },
+};
 
 function isActiveAdvisorJob(job) {
   return Boolean(job && ACTIVE_ADVISOR_JOB_STATUSES.has(job.status));
@@ -524,8 +538,8 @@ function Navigation({
       label: "Your workspace",
       items: [
         ["overview", "⌂", "Dashboard"],
-        ["assessment", "＋", "Startup assessment"],
         ["startup", "◉", "My startup"],
+        ["assessment", "＋", "Startup assessment"],
         ["starting-plan", "◎", "Starting plan"],
         ["roadmap", "↗", "Action roadmap"],
       ],
@@ -568,7 +582,7 @@ function Navigation({
             {group.label}
           </span>
           {group.items.map(([id, icon, label]) => (
-            <button
+            <m.button
               aria-current={
                 activeView === id ? "page" : undefined
               }
@@ -580,16 +594,32 @@ function Navigation({
               ].join(" ")}
               key={id}
               onClick={() => onNavigate(id)}
+              transition={{
+                duration: 0.24,
+                ease: MOTION_EASE,
+              }}
               type="button"
+              whileTap={{ scale: 0.98 }}
             >
+              {activeView === id && (
+                <m.span
+                  animate={{ opacity: 1, x: 0 }}
+                  className="nav-active-surface"
+                  initial={{ opacity: 0, x: -4 }}
+                  transition={{
+                    duration: 0.24,
+                    ease: MOTION_EASE,
+                  }}
+                />
+              )}
               <span
                 aria-hidden="true"
                 className="nav-icon"
               >
                 {icon}
               </span>
-              {label}
-            </button>
+              <span className="nav-item-label">{label}</span>
+            </m.button>
           ))}
         </section>
       ))}
@@ -727,7 +757,14 @@ function EmptyPanel({ title, children }) {
 
 function MetricAction({ detail, icon, label, onClick, tone, value }) {
   return (
-    <button className="metric-card metric-card-action" onClick={onClick} type="button">
+    <m.button
+      className="metric-card metric-card-action"
+      onClick={onClick}
+      transition={{ duration: 0.22, ease: MOTION_EASE }}
+      type="button"
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.985 }}
+    >
       <span className={`metric-icon metric-icon-${tone}`} aria-hidden="true">
         {icon}
       </span>
@@ -737,7 +774,7 @@ function MetricAction({ detail, icon, label, onClick, tone, value }) {
         <small>{detail}</small>
       </div>
       <span className="metric-arrow" aria-hidden="true">→</span>
-    </button>
+    </m.button>
   );
 }
 
@@ -935,7 +972,8 @@ function RecommendationList({
       : "Complete the startup assessment to generate ranked scheme matches.";
 
   return (
-    <section
+    <m.section
+      {...revealProps}
       className="dashboard-card recommendations-card"
       aria-labelledby="recommendations-title"
     >
@@ -978,11 +1016,14 @@ function RecommendationList({
               );
 
             return (
-              <button
+              <m.button
                 className="recommendation-row recommendation-row-button"
                 key={recommendation.id}
                 onClick={() => onOpenScheme(scheme, "overview")}
+                transition={{ duration: 0.2 }}
                 type="button"
+                whileHover={{ x: 4 }}
+                whileTap={{ scale: 0.99 }}
               >
                 <span
                   className="recommendation-mark"
@@ -1040,7 +1081,7 @@ function RecommendationList({
                 <span className="row-arrow" aria-hidden="true">
                   ›
                 </span>
-              </button>
+              </m.button>
             );
           })}
         </div>
@@ -1077,7 +1118,7 @@ function RecommendationList({
                 const deadline = schemeDeadlineStatus(scheme);
 
                 return (
-                  <button
+                  <m.button
                     className={[
                       "recommendation-row",
                       "recommendation-row-button",
@@ -1091,7 +1132,10 @@ function RecommendationList({
                     onClick={() =>
                       onOpenScheme(scheme, "overview")
                     }
+                    transition={{ duration: 0.2 }}
                     type="button"
+                    whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.99 }}
                   >
                     <span
                       className={[
@@ -1127,7 +1171,7 @@ function RecommendationList({
                     <span className="row-arrow" aria-hidden="true">
                       ›
                     </span>
-                  </button>
+                  </m.button>
                 );
               })}
             </div>
@@ -1138,7 +1182,7 @@ function RecommendationList({
           )}
         </div>
       )}
-    </section>
+    </m.section>
   );
 }
 
@@ -1151,7 +1195,11 @@ function AdvisorSummary({
 }) {
   const payload = briefing?.briefing;
   return (
-    <section className="dashboard-card advisor-card" aria-labelledby="advisor-summary-title">
+    <m.section
+      {...revealProps}
+      className="dashboard-card advisor-card"
+      aria-labelledby="advisor-summary-title"
+    >
       <div className="advisor-card-status">
         <span className="advisor-orb" aria-hidden="true">✦</span>
         <div>
@@ -1187,7 +1235,7 @@ function AdvisorSummary({
           </button>
         </>
       )}
-    </section>
+    </m.section>
   );
 }
 
@@ -1212,54 +1260,144 @@ function DashboardHome({
   const location = [profile?.district, profile?.state]
     .filter(Boolean)
     .join(", ");
+  const actionPlan = dashboardData?.action_plan?.action_plan;
+  const nextAction = actionPlan?.next_action;
+  const nextActionTitle = nextAction
+    ? actionItemTitle(nextAction)
+    : "Review and complete your startup assessment";
+  const nextActionDetail = nextAction
+    ? actionItemStatus(nextAction)
+    : "Build the verified baseline for your plan";
+  const readinessWidth = Math.min(
+    100,
+    Math.max(0, metrics.readinessScore || 0),
+  );
 
   return (
-    <div className="dashboard-page">
-      <section className="dashboard-hero">
+    <m.div
+      animate="visible"
+      className="dashboard-page"
+      initial="hidden"
+      variants={{
+        hidden: {},
+        visible: {
+          transition: {
+            staggerChildren: 0.08,
+          },
+        },
+      }}
+    >
+      <m.section
+        className="dashboard-hero dashboard-command-hero"
+        variants={{
+          hidden: { opacity: 0, y: 18 },
+          visible: {
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.5, ease: MOTION_EASE },
+          },
+        }}
+      >
         <div className="dashboard-hero-copy">
-          <span className="eyebrow">YOUR STARTUP SUPPORT DASHBOARD</span>
+          <div className="dashboard-hero-topline">
+            <span className="eyebrow">FOUNDER COMMAND CENTER</span>
+            <span className="hero-live-status">
+              <i aria-hidden="true" />
+              Verified records active
+            </span>
+          </div>
           <h1>
-            Understand what <span>{profile?.startup_name || "your startup"}</span> can apply for next.
+            Keep <span>{profile?.startup_name || "your startup"}</span>{" "}
+            moving with one clear next step.
           </h1>
           <p>
-            Explore schemes, certification and document requirements, funding and loans,
-            action steps, and evidence-backed founder guidance.
+            Your readiness, scheme matches, requirements, and guidance are
+            ordered into a practical founder workflow.
           </p>
           <div className="hero-badges">
-            <span>✓ Verified scheme data</span>
+            <span>✓ Evidence-backed</span>
             <span>◎ {metrics.readinessStatus}</span>
+            <span>↗ {metrics.actions} readiness actions</span>
             {location && <span>⌖ {location}</span>}
           </div>
         </div>
-        <div className="hero-action-stack">
-          <button onClick={() => onNavigate("schemes")} type="button">
-            <span>◇</span><div><strong>Explore schemes</strong><small>Browse support programmes</small></div><b>→</b>
-          </button>
-          <button onClick={() => onNavigate("requirements")} type="button">
-            <span>✓</span><div><strong>Check requirements</strong><small>Documents, rules and certifications</small></div><b>→</b>
-          </button>
-          <button onClick={() => onNavigate("funding")} type="button">
-            <span>₹</span><div><strong>Find funding & loans</strong><small>Amounts, rates and application links</small></div><b>→</b>
-          </button>
-        </div>
-      </section>
 
-      <section className="overview-section" aria-labelledby="overview-title">
+        <m.aside
+          className="hero-priority-card"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{
+            delay: 0.14,
+            duration: 0.45,
+            ease: MOTION_EASE,
+          }}
+        >
+          <div className="hero-priority-heading">
+            <span>Next best action</span>
+            <strong aria-label="Priority one">01</strong>
+          </div>
+          <h2>{nextActionTitle}</h2>
+          <p>{nextActionDetail}</p>
+          <m.button
+            className="hero-primary-action"
+            onClick={() =>
+              onNavigate(nextAction ? "starting-plan" : "assessment")
+            }
+            type="button"
+            whileHover={{ x: 3 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <span>
+              {nextAction ? "Open starting plan" : "Start assessment"}
+            </span>
+            <b aria-hidden="true">→</b>
+          </m.button>
+          <div className="hero-readiness-progress">
+            <div>
+              <span>Readiness progress</span>
+              <strong>
+                {metrics.readinessScore === null
+                  ? "Pending"
+                  : `${metrics.readinessScore}%`}
+              </strong>
+            </div>
+            <span className="hero-progress-track">
+              <m.i
+                animate={{ width: `${readinessWidth}%` }}
+                initial={{ width: 0 }}
+                transition={{
+                  delay: 0.28,
+                  duration: 0.7,
+                  ease: MOTION_EASE,
+                }}
+              />
+            </span>
+          </div>
+        </m.aside>
+      </m.section>
+
+      <m.section
+        aria-labelledby="overview-title"
+        className="overview-section"
+        variants={{
+          hidden: { opacity: 0, y: 14 },
+          visible: {
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.42, ease: MOTION_EASE },
+          },
+        }}
+      >
         <div className="overview-heading">
           <div>
-            <span className="section-kicker">Current persisted records</span>
-            <h2 id="overview-title">Your support overview</h2>
+            <span className="section-kicker">Live workspace snapshot</span>
+            <h2 id="overview-title">Progress at a glance</h2>
           </div>
+          <span className="overview-order-note">
+            Status → actions → opportunities → guidance
+          </span>
         </div>
         <div className="metric-grid">
-          <MetricAction
-            detail="Open your ranked scheme matches"
-            icon="◇"
-            label="Recommended schemes"
-            onClick={() => onNavigate("schemes")}
-            tone="green"
-            value={metrics.recommendations}
-          />
           <MetricAction
             detail={metrics.readinessStatus}
             icon="◔"
@@ -1271,10 +1409,18 @@ function DashboardHome({
           <MetricAction
             detail="Open your next verified actions"
             icon="↗"
-            label="Roadmap actions"
+            label="Readiness actions"
             onClick={() => onNavigate("roadmap")}
             tone="amber"
             value={metrics.actions}
+          />
+          <MetricAction
+            detail="Open your ranked scheme matches"
+            icon="◇"
+            label="Recommended schemes"
+            onClick={() => onNavigate("schemes")}
+            tone="green"
+            value={metrics.recommendations}
           />
           <MetricAction
             detail="Open evidence-backed founder guidance"
@@ -1285,9 +1431,41 @@ function DashboardHome({
             value={metrics.hasBriefing ? "Ready" : "Pending"}
           />
         </div>
-      </section>
+      </m.section>
 
-      <div className="dashboard-content-grid">
+      <m.div
+        className="dashboard-section-intro"
+        variants={{
+          hidden: { opacity: 0, y: 12 },
+          visible: {
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.4, ease: MOTION_EASE },
+          },
+        }}
+      >
+        <div>
+          <span className="section-kicker">Act on verified opportunities</span>
+          <h2>Your next decisions</h2>
+        </div>
+        <button onClick={() => onNavigate("schemes")} type="button">
+          View all schemes <span aria-hidden="true">→</span>
+        </button>
+      </m.div>
+
+      <m.div
+        className="dashboard-content-grid"
+        variants={{
+          hidden: { opacity: 0 },
+          visible: {
+            opacity: 1,
+            transition: {
+              delayChildren: 0.08,
+              staggerChildren: 0.08,
+            },
+          },
+        }}
+      >
         <RecommendationList
           assessedSchemeCount={
             recommendationGeneration?.assessed_scheme_count || 0
@@ -1308,22 +1486,61 @@ function DashboardHome({
           onGenerate={onGenerate}
           onOpen={() => onNavigate("advisor")}
         />
-        <section className="dashboard-card support-map-card">
+        <m.section
+          {...revealProps}
+          className="dashboard-card support-map-card"
+        >
           <div className="dashboard-card-heading">
             <div>
-              <span className="section-kicker">Choose what you need</span>
-              <h2>Support map</h2>
+              <span className="section-kicker">Continue your workflow</span>
+              <h2>Founder tools</h2>
             </div>
           </div>
           <div className="support-map-grid">
-            <button onClick={() => onNavigate("requirements")} type="button"><span>✓</span><strong>Requirements</strong><small>Eligibility, documents and certificates</small></button>
-            <button onClick={() => onNavigate("funding")} type="button"><span>₹</span><strong>Funding</strong><small>Loans, grants, subsidies and equity</small></button>
-            <button onClick={() => onNavigate("roadmap")} type="button"><span>↗</span><strong>Next actions</strong><small>What to complete before applying</small></button>
-            <button onClick={() => onNavigate("advisor")} type="button"><span>✦</span><strong>Guidance</strong><small>Priorities, risks and founder questions</small></button>
+            <m.button
+              onClick={() => onNavigate("starting-plan")}
+              type="button"
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span>◎</span>
+              <strong>Starting plan</strong>
+              <small>Your ordered readiness and scheme actions</small>
+            </m.button>
+            <m.button
+              onClick={() => onNavigate("requirements")}
+              type="button"
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span>✓</span>
+              <strong>Requirements</strong>
+              <small>Eligibility, documents and certificates</small>
+            </m.button>
+            <m.button
+              onClick={() => onNavigate("funding")}
+              type="button"
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span>₹</span>
+              <strong>Funding</strong>
+              <small>Loans, grants, subsidies and equity</small>
+            </m.button>
+            <m.button
+              onClick={() => onNavigate("advisor")}
+              type="button"
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span>✦</span>
+              <strong>Guidance</strong>
+              <small>Priorities, risks and founder questions</small>
+            </m.button>
           </div>
-        </section>
-      </div>
-    </div>
+        </m.section>
+      </m.div>
+    </m.div>
   );
 }
 
@@ -4019,19 +4236,21 @@ function Workspace({ onSignOut }) {
   }
 
   return (
-    <div className="product-shell">
-      <ProductSidebar
-        activeView={activeView}
-        canReviewEligibility={
-          canAccessReviewerWorkspace(currentUser)
-        }
-        metrics={metrics}
-        onNavigate={handleNavigate}
-        profile={selectedProfile}
-      />
-      <main className="product-main">
-        <ProductTopbar loadingProfiles={loadingProfiles} onLogout={handleLogout} onProfileChange={setSelectedProfileId} profiles={profiles} query={query} selectedProfileId={selectedProfileId} setQuery={setQuery} />
-        <div className="product-content">
+    <LazyMotion features={domAnimation} strict>
+      <MotionConfig reducedMotion="user">
+        <div className="product-shell">
+        <ProductSidebar
+          activeView={activeView}
+          canReviewEligibility={
+            canAccessReviewerWorkspace(currentUser)
+          }
+          metrics={metrics}
+          onNavigate={handleNavigate}
+          profile={selectedProfile}
+        />
+        <main className="product-main">
+          <ProductTopbar loadingProfiles={loadingProfiles} onLogout={handleLogout} onProfileChange={setSelectedProfileId} profiles={profiles} query={query} selectedProfileId={selectedProfileId} setQuery={setQuery} />
+          <div className="product-content">
           {onboardingProgress?.status === "dismissed" &&
             activeView !== "reviewer-verifications" && (
               <section
@@ -4072,44 +4291,87 @@ function Workspace({ onSignOut }) {
               />
             )}
 
-          {generationStep && <InlineNotice><span className="spinner" aria-hidden="true" />{generationStep} The first local-model request can take longer.</InlineNotice>}
-          {error && <InlineNotice tone="danger">{error}</InlineNotice>}
-          {success && <InlineNotice tone="success">{success}</InlineNotice>}
-          {!loadingProfiles &&
-          !profiles.length &&
-          activeView !== "assessment" &&
-          activeView !== "reviewer-verifications" ? (
-            <EmptyProfileState
-              onStart={() => handleNavigate("assessment")}
-            />
-          ) : loadingWorkspace &&
-            !dashboardData &&
-            activeView !== "assessment" &&
-            activeView !== "reviewer-verifications" ? (
-            <div className="dashboard-loader" role="status">
-              <span className="spinner" aria-hidden="true" />
-              Loading verified founder records…
-            </div>
-          ) : (
-            page
-          )}
-        </div>
-      </main>
+            <AnimatePresence initial={false}>
+              {generationStep && (
+                <m.div
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  initial={{ opacity: 0, y: -6 }}
+                  key="generation-progress"
+                >
+                  <InlineNotice>
+                    <span className="spinner" aria-hidden="true" />
+                    {generationStep} The first local-model request can take longer.
+                  </InlineNotice>
+                </m.div>
+              )}
+              {error && (
+                <m.div
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  initial={{ opacity: 0, y: -6 }}
+                  key="workspace-error"
+                >
+                  <InlineNotice tone="danger">{error}</InlineNotice>
+                </m.div>
+              )}
+              {success && (
+                <m.div
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  initial={{ opacity: 0, y: -6 }}
+                  key="workspace-success"
+                >
+                  <InlineNotice tone="success">{success}</InlineNotice>
+                </m.div>
+              )}
+            </AnimatePresence>
 
-      {currentUser?.role === "founder" && (
-        <>
-          <FounderConcierge
-            onNavigate={handleNavigate}
-            startupProfileId={selectedProfile?.id}
-          />
-          <ChatbotDrawer
-            activeView={activeView}
-            onNavigate={handleNavigate}
-            startupProfile={selectedProfile}
-          />
-        </>
-      )}
-    </div>
+            <m.div
+              animate={{ opacity: 1, y: 0 }}
+              className="workspace-view"
+              initial={{ opacity: 0, y: 10 }}
+              key={activeView}
+              transition={{ duration: 0.32, ease: MOTION_EASE }}
+            >
+              {!loadingProfiles &&
+              !profiles.length &&
+              activeView !== "assessment" &&
+              activeView !== "reviewer-verifications" ? (
+                <EmptyProfileState
+                  onStart={() => handleNavigate("assessment")}
+                />
+              ) : loadingWorkspace &&
+                !dashboardData &&
+                activeView !== "assessment" &&
+                activeView !== "reviewer-verifications" ? (
+                <div className="dashboard-loader" role="status">
+                  <span className="spinner" aria-hidden="true" />
+                  Loading verified founder records…
+                </div>
+              ) : (
+                page
+              )}
+            </m.div>
+          </div>
+        </main>
+
+        {currentUser?.role === "founder" && (
+          <>
+            <FounderConcierge
+              onNavigate={handleNavigate}
+              startupProfileId={selectedProfile?.id}
+            />
+            <ChatbotDrawer
+              activeView={activeView}
+              onNavigate={handleNavigate}
+              startupProfile={selectedProfile}
+            />
+          </>
+        )}
+        </div>
+      </MotionConfig>
+    </LazyMotion>
   );
 }
 

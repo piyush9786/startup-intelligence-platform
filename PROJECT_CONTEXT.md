@@ -34,6 +34,7 @@ Current repository baseline:
 - persisted onboarding contract: `founder-onboarding-v1`;
 - bounded concierge contract: `founder-concierge-v1`;
 - consolidated starting-plan contract: `startup-starting-plan-v1`;
+- ordered founder dashboard with accessible Motion transitions;
 - empty-profile and returning-founder onboarding variants;
 - resumable, dismissible, and non-repeating onboarding progress;
 - shared agent-orchestration persistence foundation;
@@ -44,7 +45,7 @@ Current repository baseline:
 - authorization context and canonical output hashes on every tool call;
 - initial `get_startup_profile` tool at version `v1`;
 - 473 backend tests passing;
-- 127 frontend tests passing;
+- 129 frontend tests passing;
 - frontend production build passing;
 - Ruff, Django checks, and migration checks passing.
 
