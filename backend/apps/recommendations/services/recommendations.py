@@ -20,6 +20,7 @@ from apps.recommendations.services.assessment import (
 )
 from apps.recommendations.services.explanation import (
     build_eligibility_explanation,
+    build_verification_provenance,
 )
 from apps.schemes.models import EligibilityRule, Scheme, SchemeVersion
 from apps.startups.models import StartupProfile
@@ -133,6 +134,11 @@ def _evidence_snapshot(
         "matched_rule_ids": [item["rule_id"] for item in assessment.matched_rules],
         "failed_rule_ids": [item["rule_id"] for item in assessment.failed_rules],
         "unknown_rule_ids": [item["rule_id"] for item in assessment.unknown_rules],
+        "verification_provenance": (
+            build_verification_provenance(
+                assessment,
+            )
+        ),
     }
 
 

@@ -790,6 +790,85 @@ function evaluatedSchemeReason(evaluation = {}) {
     : "This scheme was evaluated but was not included in the ranked matches.";
 }
 
+function recommendationVerificationProvenance(
+  recommendation = {},
+) {
+  const provenance =
+    recommendation
+      .eligibility_explanation
+      ?.verification_provenance;
+
+  return Array.isArray(provenance)
+    ? provenance
+    : [];
+}
+
+function formatVerificationDate(value) {
+  const parts = String(value || "")
+    .split("-")
+    .map(Number);
+
+  if (
+    parts.length !== 3 ||
+    parts.some((part) => !Number.isInteger(part))
+  ) {
+    return String(value || "");
+  }
+
+  const [year, month, day] = parts;
+  const monthLabels = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  if (
+    year < 1 ||
+    month < 1 ||
+    month > monthLabels.length ||
+    day < 1 ||
+    day > 31
+  ) {
+    return String(value || "");
+  }
+
+  return `${day} ${monthLabels[month - 1]} ${year}`;
+}
+
+function verificationEffectiveLabel(
+  provenance = {},
+) {
+  const validFrom = formatVerificationDate(
+    provenance.valid_from,
+  );
+  const expiresOn = formatVerificationDate(
+    provenance.expires_on,
+  );
+
+  if (validFrom && expiresOn) {
+    return `Effective ${validFrom} to ${expiresOn}`;
+  }
+
+  if (validFrom) {
+    return `Effective from ${validFrom}`;
+  }
+
+  if (expiresOn) {
+    return `Valid until ${expiresOn}`;
+  }
+
+  return "";
+}
+
 function filterEvaluatedSchemes(evaluatedSchemes, query) {
   const collection = Array.isArray(evaluatedSchemes)
     ? evaluatedSchemes
@@ -880,6 +959,16 @@ function RecommendationList({
               };
 
             const deadline = schemeDeadlineStatus(scheme);
+            const verificationProvenance =
+              recommendationVerificationProvenance(
+                recommendation,
+              );
+            const primaryVerification =
+              verificationProvenance[0];
+            const effectiveLabel =
+              verificationEffectiveLabel(
+                primaryVerification,
+              );
 
             return (
               <button
@@ -908,6 +997,32 @@ function RecommendationList({
                     <small>
                       {recommendation.eligibility_explanation.summary}
                     </small>
+                  )}
+                  {primaryVerification && (
+                    <div className="verification-provenance">
+                      <span className="verification-provenance-badge">
+                        Reviewer-approved evidence
+                      </span>
+                      {primaryVerification.message && (
+                        <small>
+                          {primaryVerification.message}
+                        </small>
+                      )}
+                      {effectiveLabel && (
+                        <small>{effectiveLabel}</small>
+                      )}
+                      {verificationProvenance.length > 1 && (
+                        <small>
+                          +
+                          {verificationProvenance.length - 1}
+                          {" "}
+                          more verified
+                          {verificationProvenance.length === 2
+                            ? " check"
+                            : " checks"}
+                        </small>
+                      )}
+                    </div>
                   )}
                   <small>
                     Ranking score{" "}
