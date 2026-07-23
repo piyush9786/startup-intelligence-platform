@@ -17,11 +17,13 @@ import {
   assessmentStepErrors,
   autofillSuggestionFieldsForEmptyForm,
   firstInvalidAssessmentStep,
+  localDateInputValue,
 } from "./assessment";
 
 function TextField({
   help,
   label,
+  max,
   name,
   onChange,
   required = false,
@@ -35,6 +37,7 @@ function TextField({
         {required && <b aria-hidden="true"> *</b>}
       </span>
       <input
+        max={max}
         name={name}
         onChange={onChange}
         required={required}
@@ -354,6 +357,7 @@ function StepFields({ form, onChange, step }) {
         </SelectField>
         <TextField
           label="Incorporation / registration date"
+          max={localDateInputValue()}
           name="incorporation_date"
           onChange={onChange}
           required

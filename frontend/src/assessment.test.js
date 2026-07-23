@@ -7,6 +7,7 @@ import {
   assessmentStepErrors,
   autofillSuggestionFieldsForEmptyForm,
   firstInvalidAssessmentStep,
+  localDateInputValue,
 } from "./assessment";
 
 describe("startup assessment helpers", () => {
@@ -106,4 +107,30 @@ describe("startup assessment helpers", () => {
   test("returns the first incomplete assessment step", () => {
     expect(firstInvalidAssessmentStep({ startup_name: "" })).toBe(1);
   });
+});
+
+
+test("rejects future incorporation dates", () => {
+  const errors = assessmentStepErrors(
+    3,
+    {
+      incorporation_type: "private_limited",
+      incorporation_date: "2026-07-24",
+      dpiit_recognized: "yes",
+      udyam_registered: "no",
+    },
+    "2026-07-23",
+  );
+
+  expect(errors).toEqual([
+    "The incorporation date cannot be in the future.",
+  ]);
+});
+
+test("formats the browser local date for date inputs", () => {
+  expect(
+    localDateInputValue(
+      new Date(2026, 6, 23, 12, 0, 0),
+    ),
+  ).toBe("2026-07-23");
 });

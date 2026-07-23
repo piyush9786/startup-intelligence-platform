@@ -232,7 +232,7 @@ def test_empty_rule_set_requires_manual_verification():
     )
 
     assert result.result == "verification_required"
-    assert result.engine_version == "rules-v2"
+    assert result.engine_version == "rules-v3"
     assert not result.matched_rules
     assert not result.failed_rules
     assert not result.unknown_rules
@@ -240,3 +240,27 @@ def test_empty_rule_set_requires_manual_verification():
         "Manual verification is required because the verified scheme version "
         "has no executable eligibility rules."
     )
+
+
+def test_blank_entity_types_use_startup_profile_default():
+    result = evaluate_rules(
+        startup_profile=profile(
+            profile_data={
+                "entity_types": [],
+            }
+        ),
+        rules=[
+            rule(
+                "eligible_entity_type",
+                "contains_any",
+                "startup",
+            )
+        ],
+        application_status="unknown",
+        as_of_date=date(2026, 1, 15),
+    )
+
+    assert result.result == "eligible"
+    assert result.engine_version == "rules-v3"
+    assert len(result.matched_rules) == 1
+    assert result.matched_rules[0].actual_value == ["startup"]
