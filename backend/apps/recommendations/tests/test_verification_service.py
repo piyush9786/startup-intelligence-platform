@@ -1,7 +1,10 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
+from threading import Barrier
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.db import close_old_connections, connections
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -129,6 +132,105 @@ def test_submission_supersedes_current_submission_atomically():
         == 1
     )
 
+
+
+@pytest.mark.django_db(transaction=True)
+def test_first_submission_race_is_serialized_by_startup_profile_lock():
+    founder = make_user("submission-race-founder")
+    profile = StartupProfile.objects.create(
+        owner=founder,
+        startup_name="Submission Race Startup",
+        stage=StartupProfile.Stage.MVP,
+    )
+    version, rule = make_context()
+    barrier = Barrier(2)
+
+    def submit_claim(
+        *,
+        claim_value,
+        claim_text,
+    ):
+        close_old_connections()
+
+        try:
+            thread_founder = User.objects.get(
+                pk=founder.pk,
+            )
+            thread_profile = StartupProfile.objects.get(
+                pk=profile.pk,
+            )
+            thread_version = SchemeVersion.objects.get(
+                pk=version.pk,
+            )
+            thread_rule = EligibilityRule.objects.get(
+                pk=rule.pk,
+            )
+
+            barrier.wait(timeout=10)
+
+            submission = create_verification_submission(
+                startup_profile=thread_profile,
+                scheme_version=thread_version,
+                eligibility_rule=thread_rule,
+                submitted_by=thread_founder,
+                claim_value=claim_value,
+                claim_text=claim_text,
+            )
+
+            return submission.id
+        finally:
+            connections.close_all()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(
+                submit_claim,
+                claim_value=False,
+                claim_text="Concurrent claim one.",
+            ),
+            executor.submit(
+                submit_claim,
+                claim_value=True,
+                claim_text="Concurrent claim two.",
+            ),
+        ]
+
+        submission_ids = {
+            future.result(timeout=20)
+            for future in futures
+        }
+
+    submissions = list(
+        EligibilityVerificationSubmission.objects.filter(
+            startup_profile=profile,
+            eligibility_rule=rule,
+        )
+    )
+
+    assert len(submission_ids) == 2
+    assert {
+        submission.id
+        for submission in submissions
+    } == submission_ids
+    assert sum(
+        submission.is_current
+        for submission in submissions
+    ) == 1
+
+    current_submission = next(
+        submission
+        for submission in submissions
+        if submission.is_current
+    )
+    superseded_submission = next(
+        submission
+        for submission in submissions
+        if not submission.is_current
+    )
+
+    assert current_submission.supersedes_id == (
+        superseded_submission.id
+    )
 
 def test_non_owner_cannot_submit_for_startup():
     founder = make_user("owner-founder")

@@ -21,6 +21,7 @@ from apps.sources.services.storage import (
     delete_object,
     upload_bytes,
 )
+from apps.startups.models import StartupProfile
 
 ALLOWED_REVIEWER_ROLES = {
     User.Role.REVIEWER,
@@ -223,11 +224,6 @@ def create_verification_submission(
     claim_value: Any = None,
     claim_text: str = "",
 ) -> EligibilityVerificationSubmission:
-    _validate_submitter(
-        startup_profile=startup_profile,
-        submitted_by=submitted_by,
-    )
-
     if eligibility_rule.scheme_version_id != scheme_version.id:
         raise ValidationError("The eligibility rule must belong to the selected scheme version.")
 
@@ -243,10 +239,27 @@ def create_verification_submission(
     if claim_value is None and not claim_text.strip():
         raise ValidationError("A structured claim value or explanatory claim text is required.")
 
+    # Lock a stable parent row so even the first submission for this
+    # startup and rule is serialized. Locking only an existing current
+    # submission cannot protect the no-row-yet case.
+    locked_startup_profile = (
+        StartupProfile.objects.select_for_update()
+        .only(
+            "id",
+            "owner_id",
+        )
+        .get(pk=startup_profile.pk)
+    )
+
+    _validate_submitter(
+        startup_profile=locked_startup_profile,
+        submitted_by=submitted_by,
+    )
+
     current_submission = (
         EligibilityVerificationSubmission.objects.select_for_update()
         .filter(
-            startup_profile=startup_profile,
+            startup_profile=locked_startup_profile,
             eligibility_rule=eligibility_rule,
             is_current=True,
         )
@@ -260,7 +273,7 @@ def create_verification_submission(
         ).update(is_current=False)
 
     return EligibilityVerificationSubmission.objects.create(
-        startup_profile=startup_profile,
+        startup_profile=locked_startup_profile,
         scheme_version=scheme_version,
         eligibility_rule=eligibility_rule,
         submitted_by=submitted_by,
