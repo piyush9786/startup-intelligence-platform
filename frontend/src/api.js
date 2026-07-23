@@ -153,6 +153,23 @@ export async function listStartupProfiles() {
 }
 
 
+export async function getCurrentStartupOnboarding() {
+  const response = await client.get(
+    "/startup-onboarding/current/",
+  );
+  return response.data;
+}
+
+
+export async function updateCurrentStartupOnboarding(payload) {
+  const response = await client.patch(
+    "/startup-onboarding/current/",
+    payload,
+  );
+  return response.data;
+}
+
+
 
 export async function autofillStartupProfileFromDocument(
   file,
