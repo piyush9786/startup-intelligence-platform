@@ -1580,11 +1580,19 @@ function SchemeCard({ onOpen, scheme }) {
 function ExternalSchemeCard({ scheme }) {
   const tags = externalSchemeTags(scheme);
   const applicationUrl = scheme.official_application_url;
+  const isSourceReviewed =
+    scheme.review_status === "verified";
 
   return (
     <article className="scheme-card scheme-card-external">
       <div className="scheme-card-topline">
-        <span className="verification-badge verification-review_required">
+        <span
+          className={`verification-badge ${
+            isSourceReviewed
+              ? "verification-verified"
+              : "verification-review_required"
+          }`}
+        >
           {scheme.verification_label || "Needs review"}
         </span>
         <span className="application-badge">
@@ -1675,9 +1683,14 @@ function SchemeExplorer({
         currentSchemeVersion(scheme)?.verification_status ===
         "verified",
     );
-    visibleExternal = [];
+    visibleExternal = searchedExternal.filter(
+      (scheme) => scheme.review_status === "verified",
+    );
   } else if (filter === "needs-review") {
     visibleCanonical = [];
+    visibleExternal = searchedExternal.filter(
+      (scheme) => scheme.review_status === "needs_review",
+    );
   } else if (filter === "funding") {
     visibleCanonical = searchedCanonical.filter(
       isFundingScheme,
@@ -1702,7 +1715,7 @@ function SchemeExplorer({
       <PageHeader
         eyebrow="DISCOVER SUPPORT"
         title="Explore schemes"
-        description="Browse verified platform schemes and external schemes awaiting review. External records are discovery-only and are not used for startup recommendations."
+        description="Browse verified platform schemes, official-source-reviewed external programmes, and records still awaiting review. External records are discovery-only and are not used for startup recommendations."
       />
 
       <div
