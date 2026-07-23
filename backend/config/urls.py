@@ -10,6 +10,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
+from apps.accounts.views import CurrentUserView
 from apps.core.views import HealthView, PlatformStatusView
 from apps.discovery.views import (
     CrawlFrontierEntryViewSet,
@@ -118,6 +119,11 @@ router.register(
 )
 
 urlpatterns = [
+    path(
+        "api/v1/auth/me/",
+        CurrentUserView.as_view(),
+        name="current-user",
+    ),
     path("admin/", admin.site.urls),
     path(
         "api/schema/",
