@@ -24,7 +24,8 @@ The following major capabilities are operational:
 - reviewer verification workspace;
 - concurrency-safe verification submissions;
 - verified eligibility provenance in backend snapshots and founder UI;
-- persisted first-open founder onboarding.
+- persisted first-open founder onboarding;
+- shared agent-orchestration persistence and audit foundation.
 
 ## Completed Phase 45: first-open onboarding tour
 
@@ -51,25 +52,38 @@ See
 
 ## Remaining implementation order
 
-### 1. Shared agent orchestration — Phase 43
+## Completed Phase 43: shared agent orchestration
 
-Purpose: establish the safety and audit boundary once for every conversational
-feature.
+Purpose: establish the safety, ownership, persistence, and audit boundary once
+for future conversational features.
 
-Scope:
+Implemented scope:
 
 - new `apps/assistant` Django application;
-- `AgentSession`, `AgentMessage`, and immutable `AgentToolCallLog`;
-- one active session per founder, startup profile, and agent type;
-- whitelisted tool registry;
-- authorization context on every tool call;
-- tool version, status, duration, output snapshot, and output hash;
-- structured claim-to-tool-call references;
-- rate limits and bounded turn execution.
+- owner-scoped `AgentSession`;
+- one active session per founder, agent type, and startup scope;
+- bounded founder turn counts;
+- append-only `AgentMessage`;
+- immutable `AgentToolCallLog`;
+- structured `AgentClaimReference`;
+- canonical JSON normalization and SHA-256 output hashing;
+- captured authorization context;
+- versioned whitelisted tool registry;
+- explicit denial and logging of unregistered tools;
+- explicit denial and logging of unauthorized actors;
+- explicit denial of write-capable tools during Phase 43;
+- initial read-only `get_startup_profile` tool;
+- focused service, ownership, integrity, and audit tests.
 
-Start with read-only tools.
+The foundation does not yet add an LLM turn runner, public chatbot API, or
+frontend chatbot.
 
-### 2. Site-wide chatbot — Phase 44
+See
+[Shared agent orchestration](architecture/SHARED_AGENT_ORCHESTRATION_V1.md).
+
+## Remaining implementation order
+
+### 1. Site-wide chatbot — Phase 44
 
 Purpose: provide product navigation, definitions, and profile-specific
 explanations.
@@ -85,7 +99,7 @@ Scope:
 
 The chatbot must not directly modify authoritative profile data.
 
-### 3. Concierge state machine — Phases 46 and 47
+### 2. Concierge state machine — Phases 46 and 47
 
 Purpose: guide a founder from an empty profile to a useful starting plan.
 
@@ -103,7 +117,7 @@ The Concierge must reuse `StartupAssessmentDraft`.
 
 It must not create a second authoritative profile representation.
 
-### 4. Scheme dependency graph — Phase 48
+### 3. Scheme dependency graph — Phase 48
 
 Purpose: represent prerequisites and unlock relationships with provenance.
 
@@ -119,7 +133,7 @@ Scope:
 
 LLM-extracted edges must not become authoritative without review.
 
-### 5. Funding plan engine — Phase 49
+### 4. Funding plan engine — Phase 49
 
 Purpose: produce an ordered, dependency-aware funding and readiness plan.
 
@@ -137,7 +151,7 @@ single nullable `depends_on` field.
 
 The LLM may narrate the generated plan but must not choose its ordering.
 
-### 6. Progress feedback — Phase 50
+### 5. Progress feedback — Phase 50
 
 Purpose: connect plan execution back to readiness and recommendations.
 
