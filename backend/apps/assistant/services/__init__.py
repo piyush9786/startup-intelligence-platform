@@ -33,6 +33,15 @@ from .tool_registry import (
 )
 
 __all__ = [
+    "CONCIERGE_STATE_DEFINITIONS",
+    "CONCIERGE_STATE_SEQUENCE",
+    "CONCIERGE_VERSION",
+    "ConciergeStateDefinition",
+    "ConciergeStateError",
+    "advance_concierge_session",
+    "complete_concierge_after_submission",
+    "get_concierge_state",
+    "initialize_concierge_session",
     "process_chatbot_message",
     "build_chatbot_reply",
     "ChatbotReply",
@@ -59,3 +68,15 @@ __all__ = [
     "json_ready",
     "record_tool_call",
 ]
+
+from .concierge import (
+    CONCIERGE_STATE_DEFINITIONS,
+    CONCIERGE_STATE_SEQUENCE,
+    CONCIERGE_VERSION,
+    ConciergeStateDefinition,
+    ConciergeStateError,
+    advance_concierge_session,
+    complete_concierge_after_submission,
+    get_concierge_state,
+    initialize_concierge_session,
+)

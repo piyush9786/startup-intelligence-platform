@@ -129,3 +129,25 @@ continue through the existing validation workflow.
 
 It will be followed by the consolidated deterministic starting plan, verified
 scheme-dependency graph, and dependency-aware funding planning.
+
+<!-- phase-46-founder-concierge:start -->
+## Phase 46: Bounded founder concierge
+
+Phase 46 adds the authenticated founder-only `founder-concierge-v1` workflow while preserving the startup assessment as the authoritative source of founder and startup inputs.
+
+The concierge follows nine bounded states: `greeting`, `basic_info`, `location_legal`, `founder_details`, `funding_need`, `documents_check`, `confirm_profile`, `generating_plan`, and `plan_ready`.
+
+The frontend reads the authoritative current state and renders only the backend-provided `allowed_fields`. Draft changes use the narrowly allowlisted and audited assessment-draft update capability. Every public transition includes `expected_state`, and browser clients never send `system_transition`.
+
+At `confirm_profile`, the founder must explicitly confirm submission. The existing deterministic assessment submission service remains authoritative for readiness, roadmap, eligibility, and recommendation generation. Successful submission performs the internal `generating_plan` to `plan_ready` transition.
+
+The founder concierge remains separate from the site-wide read-only founder chatbot. It does not calculate or invent readiness, eligibility, recommendations, amounts, deadlines, ordering, or verification results in the browser.
+
+API endpoints:
+
+- `GET /api/v1/assistant/concierge/current/`
+- `POST /api/v1/assistant/concierge/current/updates/`
+- `POST /api/v1/assistant/concierge/current/transitions/`
+
+Validation completed with 20 frontend test files and 124 frontend tests, the 465-test backend suite, the production frontend build, Ruff, Django system checks, and migration drift checks. No database migration was required.
+<!-- phase-46-founder-concierge:end -->

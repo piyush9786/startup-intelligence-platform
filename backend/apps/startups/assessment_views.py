@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status
 from rest_framework.permissions import IsAuthenticated
@@ -5,6 +6,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
+from apps.assistant.services.concierge import (
+    complete_concierge_after_submission,
+)
 from apps.recommendations.serializers import RecommendationSerializer
 
 from .models import StartupAssessmentDraft
@@ -103,11 +107,18 @@ class StartupAssessmentDraftSubmitView(APIView):
             pk=draft_id,
         )
 
+        startup_profile_id_before_submission = draft.startup_profile_id
+
         try:
-            submission = submit_startup_assessment_draft(
-                draft=draft,
-                requested_by=request.user,
-            )
+            with transaction.atomic():
+                submission = submit_startup_assessment_draft(
+                    draft=draft,
+                    requested_by=request.user,
+                )
+                complete_concierge_after_submission(
+                    draft=submission.draft,
+                    startup_profile_id_before_submission=(startup_profile_id_before_submission),
+                )
         except AssessmentDraftAlreadySubmittedError as exc:
             return Response(
                 {"detail": str(exc)},
