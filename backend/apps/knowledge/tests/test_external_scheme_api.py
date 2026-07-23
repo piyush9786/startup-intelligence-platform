@@ -177,6 +177,27 @@ def test_external_scheme_response_is_public_safe():
     assert "source_rows" not in item
 
 
+def test_verified_external_scheme_has_source_review_label():
+    dataset = create_dataset(
+        dataset_key="reviewed-response",
+    )
+    create_record(
+        dataset=dataset,
+        external_id="SCH001",
+        scheme_name="Source Reviewed Scheme",
+        review_status=ExternalSchemeRecord.ReviewStatus.VERIFIED,
+    )
+
+    response = APIClient().get(ENDPOINT)
+
+    assert response.status_code == 200
+    item = response_results(response)[0]
+
+    assert item["verification_label"] == "Official source reviewed"
+    assert "discovery-only" in item["disclaimer"]
+    assert "current call dates and terms" in item["disclaimer"]
+
+
 def test_external_scheme_list_supports_search_and_filters():
     dataset = create_dataset(
         dataset_key="search-filter",

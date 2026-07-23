@@ -131,11 +131,19 @@ class ExternalSchemeRecordSerializer(serializers.ModelSerializer):
 
     def get_verification_label(self, obj) -> str:
         if obj.review_status == ExternalSchemeRecord.ReviewStatus.VERIFIED:
-            return "Verified"
+            return "Official source reviewed"
 
         return "Needs review"
 
     def get_disclaimer(self, obj) -> str:
+        if obj.review_status == ExternalSchemeRecord.ReviewStatus.VERIFIED:
+            return (
+                "Reviewed against the cited official source. This "
+                "external record remains discovery-only and is not used "
+                "for eligibility recommendations. Confirm current call "
+                "dates and terms before applying."
+            )
+
         return (
             "Information supplied by an external dataset. "
             "Verify details on the official source before applying."

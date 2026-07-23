@@ -160,6 +160,20 @@ const externalScheme = {
     "Information supplied by an external dataset. Verify details on the official source before applying.",
 };
 
+const reviewedExternalScheme = {
+  ...externalScheme,
+  id: "external-reviewed-grant",
+  external_id: "EXT002",
+  scheme_name: "Reviewed Climate Innovation Grant",
+  normalized_name: "reviewed climate innovation grant",
+  official_application_url:
+    "https://authority.gov.in/climate-grant",
+  review_status: "verified",
+  verification_label: "Official source reviewed",
+  disclaimer:
+    "Reviewed against the cited official source. This external record remains discovery-only and is not used for eligibility recommendations. Confirm current call dates and terms before applying.",
+};
+
 const externalCapitalSupport = {
   id: "external-capital-one",
   external_id: "CAP001",
@@ -435,7 +449,10 @@ function configureAuthenticatedWorkspace({
     messages: [],
   });
   api.listSchemes.mockResolvedValue([grantScheme, loanScheme]);
-  api.listExternalSchemes.mockResolvedValue([externalScheme]);
+  api.listExternalSchemes.mockResolvedValue([
+    externalScheme,
+    reviewedExternalScheme,
+  ]);
   api.listExternalCapitalSupport.mockResolvedValue([]);
   api.listExternalCertificationRequirements.mockResolvedValue([]);
   api.getStartupAdvisorCurrent.mockResolvedValue(dashboard);
@@ -684,10 +701,10 @@ describe("functional user dashboard", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
+      screen.getAllByText(
         "External dataset",
       ),
-    ).toBeInTheDocument();
+    ).toHaveLength(2);
   });
 
 
@@ -718,6 +735,14 @@ describe("functional user dashboard", () => {
         name: /Startup India Seed Fund Scheme/,
       }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Reviewed Climate Innovation Grant",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Official source reviewed"),
+    ).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", {
@@ -730,6 +755,11 @@ describe("functional user dashboard", () => {
         name: "Women Founder Innovation Grant",
       }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", {
+        name: "Reviewed Climate Innovation Grant",
+      }),
+    ).not.toBeInTheDocument();
 
     expect(
       screen.queryByRole("button", {
