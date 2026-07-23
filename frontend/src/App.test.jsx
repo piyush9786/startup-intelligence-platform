@@ -345,6 +345,28 @@ function makeDashboard() {
           assessment_result: "eligible",
           rank: 1,
           score: 95,
+          eligibility_explanation: {
+            version: "eligibility-explanation-v2",
+            result: "eligible",
+            summary:
+              "You meet all mandatory eligibility requirements currently available for this scheme.",
+            verification_provenance: [
+              {
+                rule_id: "manual-rule-one",
+                field_path:
+                  "manual.incubator_endorsement",
+                outcome: "pass",
+                decision_id:
+                  "review-decision-one",
+                submission_id:
+                  "verification-submission-one",
+                valid_from: "2026-07-01",
+                expires_on: "2026-12-31",
+                message:
+                  "Incubator endorsement was evaluated using reviewer-approved evidence.",
+              },
+            ],
+          },
         },
         {
           id: "recommendation-two",
@@ -1017,6 +1039,37 @@ describe("functional user dashboard", () => {
         name: "Startup India Seed Fund Scheme",
       }),
     ).toBeInTheDocument();
+  });
+
+  test("shows reviewer-approved evidence provenance on a recommendation", async () => {
+    render(<App />);
+
+    const recommendation = await screen.findByRole(
+      "button",
+      {
+        name: /Startup India Seed Fund Scheme/,
+      },
+    );
+
+    expect(
+      within(recommendation).getByText(
+        "Reviewer-approved evidence",
+      ),
+    ).toBeInTheDocument();
+
+    expect(recommendation).toHaveTextContent(
+      "Incubator endorsement was evaluated using reviewer-approved evidence.",
+    );
+    expect(recommendation).toHaveTextContent(
+      "Effective 1 Jul 2026 to 31 Dec 2026",
+    );
+
+    expect(recommendation).not.toHaveTextContent(
+      "review-decision-one",
+    );
+    expect(recommendation).not.toHaveTextContent(
+      "verification-submission-one",
+    );
   });
 
   test("opens a recommended scheme as a real detail page", async () => {
