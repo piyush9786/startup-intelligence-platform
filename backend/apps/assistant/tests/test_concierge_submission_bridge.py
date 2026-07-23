@@ -146,6 +146,7 @@ def test_successful_submission_completes_generating_session(
         "startup_profile",
         "readiness_assessment",
         "action_plan",
+        "starting_plan",
         "recommendations",
     }
 

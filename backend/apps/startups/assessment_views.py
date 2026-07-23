@@ -20,6 +20,7 @@ from .serializers import (
     StartupProfileSerializer,
     StartupReadinessActionPlanSerializer,
     StartupReadinessAssessmentSerializer,
+    StartupStartingPlanSerializer,
 )
 from .services.assessment_submission import (
     AssessmentDraftAlreadySubmittedError,
@@ -46,6 +47,8 @@ class StartupAssessmentDraftViewSet(
     http_method_names = ["get", "post", "patch", "head", "options"]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return StartupAssessmentDraft.objects.none()
         return _visible_assessment_drafts(self.request.user).select_related(
             "owner",
             "startup_profile",
@@ -145,6 +148,9 @@ class StartupAssessmentDraftSubmitView(APIView):
                 ).data,
                 "action_plan": StartupReadinessActionPlanSerializer(
                     submission.action_plan,
+                ).data,
+                "starting_plan": StartupStartingPlanSerializer(
+                    submission.starting_plan,
                 ).data,
                 "recommendations": {
                     "generation_id": str(generation.generation_id),

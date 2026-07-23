@@ -334,6 +334,101 @@ class StartupReadinessActionPlan(TimeStampedModel):
         return f"{self.startup_profile} action plan from {self.source_assessment_id}"
 
 
+class StartupStartingPlan(TimeStampedModel):
+    PLAN_VERSION = "startup-starting-plan-v1"
+
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="startup_starting_plans",
+    )
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="starting_plans",
+    )
+    source_assessment = models.ForeignKey(
+        StartupReadinessAssessment,
+        on_delete=models.PROTECT,
+        related_name="starting_plans",
+    )
+    source_action_plan = models.ForeignKey(
+        StartupReadinessActionPlan,
+        on_delete=models.PROTECT,
+        related_name="starting_plans",
+    )
+    recommendation_generation_run = models.ForeignKey(
+        "recommendations.RecommendationGenerationRun",
+        on_delete=models.PROTECT,
+        related_name="starting_plans",
+    )
+    profile_snapshot = models.JSONField(default=dict)
+    readiness_snapshot = models.JSONField(default=dict)
+    action_plan_snapshot = models.JSONField(default=dict)
+    recommendation_generation_snapshot = models.JSONField(default=dict)
+    recommendations_snapshot = models.JSONField(default=list)
+    readiness_item_count = models.PositiveIntegerField(default=0)
+    recommendation_item_count = models.PositiveIntegerField(default=0)
+    total_item_count = models.PositiveIntegerField(default=0)
+    next_item = models.JSONField(null=True, blank=True)
+    items = models.JSONField(default=list)
+    plan_version = models.CharField(
+        max_length=64,
+        default=PLAN_VERSION,
+    )
+    is_current = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["startup_profile", "-created_at"],
+                name="startup_start_profile_created",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "source_action_plan",
+                    "recommendation_generation_run",
+                ],
+                name="startup_unique_starting_plan_sources",
+            ),
+            models.UniqueConstraint(
+                fields=["startup_profile"],
+                condition=models.Q(is_current=True),
+                name="startup_unique_current_starting_plan",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    total_item_count=(
+                        models.F("readiness_item_count")
+                        + models.F("recommendation_item_count")
+                    ),
+                ),
+                name="startup_start_plan_counts_match",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        total_item_count=0,
+                        next_item__isnull=True,
+                    )
+                    | models.Q(
+                        total_item_count__gt=0,
+                        next_item__isnull=False,
+                    )
+                ),
+                name="startup_start_plan_next_match",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.startup_profile} starting plan {self.plan_version}"
+
+
 class StartupAdvisorSnapshot(TimeStampedModel):
     requested_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

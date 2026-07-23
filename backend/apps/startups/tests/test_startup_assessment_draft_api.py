@@ -4,7 +4,6 @@ from decimal import Decimal
 from threading import Barrier
 from types import SimpleNamespace
 from unittest.mock import patch
-from uuid import uuid4
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -19,6 +18,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from apps.recommendations.models import RecommendationGenerationRun
 from apps.startups.models import (
     StartupAssessmentDraft,
     StartupProfile,
@@ -112,9 +112,20 @@ def valid_draft_data():
 
 
 def recommendation_generation(*, startup_profile, requested_by, assessment_date):
-    del requested_by
+    generation_run = RecommendationGenerationRun.objects.create(
+        requested_by=requested_by,
+        startup_profile=startup_profile,
+        assessment_date=assessment_date,
+        ranking_version="recommendation-ranking-v1",
+        profile_snapshot={},
+        assessed_scheme_count=0,
+        recommendation_count=0,
+        excluded_schemes=[],
+        recommendation_snapshot=[],
+    )
     return SimpleNamespace(
-        generation_id=uuid4(),
+        generation_id=generation_run.id,
+        generation_run=generation_run,
         ranking_version="recommendation-ranking-v1",
         startup_profile=startup_profile,
         assessment_date=assessment_date,
@@ -246,6 +257,9 @@ def test_submit_creates_profile_and_downstream_records(mock_generate):
     assert response.data["startup_profile"]["startup_name"] == ("Assessment Workflow Startup")
     assert response.data["readiness_assessment"]["status"] == "ready"
     assert response.data["recommendations"]["recommendation_count"] == 0
+    assert response.data["starting_plan"]["plan_version"] == (
+        "startup-starting-plan-v1"
+    )
 
 
 @patch("apps.startups.services.assessment_submission.generate_recommendations")

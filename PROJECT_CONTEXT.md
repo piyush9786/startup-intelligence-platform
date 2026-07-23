@@ -32,16 +32,19 @@ Current repository baseline:
 - eligibility engine: `rules-v5`;
 - founder explanation contract: `eligibility-explanation-v2`;
 - persisted onboarding contract: `founder-onboarding-v1`;
+- bounded concierge contract: `founder-concierge-v1`;
+- consolidated starting-plan contract: `startup-starting-plan-v1`;
 - empty-profile and returning-founder onboarding variants;
 - resumable, dismissible, and non-repeating onboarding progress;
 - shared agent-orchestration persistence foundation;
 - owner-scoped and bounded `AgentSession` records;
 - append-only agent messages, tool-call logs, and claim references;
-- versioned, whitelisted, read-only tool registry;
+- versioned, whitelisted tool registry with one narrowly scoped draft-write
+  capability;
 - authorization context and canonical output hashes on every tool call;
 - initial `get_startup_profile` tool at version `v1`;
-- full backend test suite passing;
-- 105 frontend tests passing;
+- 473 backend tests passing;
+- 127 frontend tests passing;
 - frontend production build passing;
 - Ruff, Django checks, and migration checks passing.
 
@@ -54,15 +57,15 @@ The main founder workflow is operational:
     → readiness action plan
     → verified scheme eligibility assessment
     → deterministic recommendation ranking
+    → consolidated deterministic starting plan
     → manual verification for unresolved gates
     → reviewer decision
     → recommendation regeneration
     → founder-facing verified provenance
     → grounded advisor briefing
 
-The orchestration foundation is infrastructure for later conversational
-interfaces. It does not yet provide a site-wide chatbot or autonomous agent
-runtime.
+The orchestration foundation supports the site-wide chatbot and bounded
+founder concierge. It does not provide an autonomous agent runtime.
 
 ## 3. Non-negotiable engineering principles
 
@@ -173,12 +176,12 @@ The current installed domain apps are:
 - `knowledge` — extracted candidates, review, and publication workflows;
 - `schemes` — canonical schemes, versions, benefits, requirements, and rules;
 - `startups` — profiles, assessment drafts, persisted onboarding progress,
-  readiness, action plans, and advisor briefings;
+  readiness, action plans, consolidated starting plans, and advisor briefings;
 - `recommendations` — eligibility assessments, recommendations, generation
   runs, verification submissions, evidence, and decisions;
 - `assistant` — bounded agent sessions, append-only messages, immutable
   tool-call logs, claim references, canonical hashing, and the whitelisted
-  read-only tool registry.
+  tool registry.
 
 ## 6. Deterministic readiness
 
@@ -273,13 +276,15 @@ The shared orchestration foundation now adds:
 - captured authorization context;
 - structured `AgentClaimReference` records;
 - a versioned, explicit tool registry;
-- a Phase 43 prohibition on write-capable tools;
-- the read-only `get_startup_profile` tool.
+- the read-only `get_startup_profile` tool;
+- one explicitly allowlisted, draft-scoped concierge write capability.
 
 The site-wide founder chatbot is implemented as a bounded deterministic
 conversation layer over the shared orchestration foundation.
 
-There is not yet a general LLM turn runner or concierge workflow.
+The bounded founder concierge guides founders through the authoritative
+assessment draft and confirmed submission workflow. There is not a general LLM
+turn runner or autonomous agent runtime.
 
 The advisor and future agents must preserve deterministic results as
 authoritative and must not invent eligibility, funding amounts, legal
@@ -307,25 +312,46 @@ services or the grounded founder-advisor workflow.
 See
 [Site-wide founder chatbot](docs/architecture/SITE_WIDE_CHATBOT_V1.md).
 
-## 10. Planned conversational layer
+## 9.2 Bounded concierge and consolidated starting plan
 
-The first-open founder onboarding tour and shared orchestration foundation are
-implemented.
+Phases 46 and 47 add:
+
+- a nine-state `founder-concierge-v1` workflow;
+- backend-provided state-specific assessment-field allowlists;
+- audited draft updates through the existing serializers;
+- explicit founder confirmation before submission;
+- transactionally generated readiness, action-plan, eligibility,
+  recommendation, and starting-plan records;
+- a persisted `startup-starting-plan-v1` snapshot;
+- idempotent plan generation, current retrieval, and history;
+- source identifiers, snapshots, and engine-version provenance;
+- a founder Starting plan workspace.
+
+Starting-plan readiness actions retain readiness priority and scheme
+opportunities retain recommendation rank. Dependency status remains
+`not_evaluated`; the platform does not claim prerequisite ordering before the
+verified graph and funding-plan phases.
+
+See
+[Consolidated deterministic starting plan](docs/startups/STARTING_PLAN_V1.md).
+
+## 10. Planned conversational and planning layer
+
+The first-open onboarding, shared orchestration foundation, site chatbot,
+bounded concierge, and consolidated starting plan are implemented.
 
 The remaining agreed implementation order is:
 
-1. bounded concierge state machine;
-2. consolidated deterministic starting plan;
-3. verified scheme-prerequisite graph;
-4. dependency-aware funding-plan engine and timeline;
-5. founder progress tracking with verification-aware feedback.
+1. verified scheme-prerequisite graph;
+2. dependency-aware funding-plan engine and timeline;
+3. founder progress tracking with verification-aware feedback.
 
 Future conversational interfaces must execute only versioned, registered tools.
 
 They must not receive unrestricted database access.
 
-Conversational writes must update assessment drafts only and remain disabled
-until a separately reviewed write-tool milestone.
+Conversational writes may update assessment drafts only through the registered
+and explicitly allowlisted `assessment_draft_update` capability.
 
 Profile submission must continue through the existing validation and
 confirmation workflow.
@@ -359,13 +385,13 @@ Every tool execution must:
 - snapshot the output or safe failure;
 - store a canonical output hash.
 
-Unregistered, unauthorized, closed-session, and write-capable tool requests
-must be denied and logged.
+Unregistered, unauthorized, closed-session, and non-allowlisted write-capable
+tool requests must be denied and logged.
 
 Agent messages, tool-call logs, and claim references are append-only through
 the model service boundary.
 
-A draft-scoped field update may be allowed later, but it must:
+A draft-scoped field update is allowed only for the concierge, and it must:
 
 - use existing serializers;
 - record previous and new values;
@@ -474,23 +500,18 @@ Do not mix unrelated refactors into a milestone.
 
 ## 16. Immediate next milestone
 
-The next milestone is the bounded concierge state machine.
+The next milestone is the verified scheme-dependency graph.
 
 Initial scope:
 
-- guide a founder from an empty or incomplete profile to a useful starting
-  plan;
-- reuse the existing `StartupAssessmentDraft` representation;
-- use explicit bounded conversation states;
-- allow language-model phrasing and structured answer interpretation only;
-- keep draft-field updates behind separately reviewed write tools;
-- require confirmation and correction before assessment submission;
-- submit through existing serializers and validation services;
-- run deterministic readiness, roadmap, eligibility, and recommendation
-  services after confirmed submission;
-- preserve complete session, tool-call, and field-change audit records.
+- define canonical prerequisite concepts in PostgreSQL;
+- define scheme-to-prerequisite and unlock relationships;
+- retain official source and reviewer provenance for every relationship;
+- support multiple predecessors rather than one nullable dependency;
+- validate cycles before publication;
+- project reviewed canonical relationships into Neo4j;
+- provide rebuild and PostgreSQL/Neo4j consistency checks;
+- keep automatically extracted relationships non-authoritative until review.
 
-The concierge must not create a second authoritative startup-profile
-representation, bypass assessment validation, directly modify submitted
-profiles, or allow language models to choose eligibility, ranking,
-recommendation, funding, deadline, or prerequisite decisions.
+Phase 48 must not reorder the Phase 47 starting plan until the graph is
+verified. Dependency-aware funding-plan ordering belongs to Phase 49.

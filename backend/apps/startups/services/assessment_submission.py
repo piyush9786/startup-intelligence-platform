@@ -19,6 +19,7 @@ from ..models import (
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
+    StartupStartingPlan,
 )
 from ..serializers import StartupAssessmentSubmissionSerializer
 from .action_plan_persistence import create_startup_readiness_action_plan
@@ -26,6 +27,7 @@ from .assessment import (
     create_startup_readiness_assessment,
     snapshot_startup_profile,
 )
+from .starting_plan import create_startup_starting_plan
 
 
 class AssessmentDraftAlreadySubmittedError(RuntimeError):
@@ -39,6 +41,7 @@ class StartupAssessmentSubmission:
     readiness_assessment: StartupReadinessAssessment
     action_plan: StartupReadinessActionPlan
     recommendation_generation: Any
+    starting_plan: StartupStartingPlan
 
 
 @transaction.atomic
@@ -107,6 +110,14 @@ def submit_startup_assessment_draft(
         requested_by=requested_by,
         assessment_date=timezone.localdate(),
     )
+    starting_plan = create_startup_starting_plan(
+        source_assessment=readiness_assessment,
+        source_action_plan=action_plan,
+        recommendation_generation_run=(
+            recommendation_generation.generation_run
+        ),
+        requested_by=requested_by,
+    ).plan
 
     locked_draft.startup_profile = startup_profile
     locked_draft.status = StartupAssessmentDraft.Status.SUBMITTED
@@ -132,4 +143,5 @@ def submit_startup_assessment_draft(
         readiness_assessment=readiness_assessment,
         action_plan=action_plan,
         recommendation_generation=recommendation_generation,
+        starting_plan=starting_plan,
     )

@@ -33,6 +33,7 @@ import AssessmentWizard from "./AssessmentWizard";
 import ChatbotDrawer from "./ChatbotDrawer";
 import FounderConcierge from "./FounderConcierge";
 import OnboardingTour from "./OnboardingTour";
+import StartingPlanPage from "./StartingPlanPage";
 import {
   canAccessReviewerWorkspace,
   normalizeCurrentUser,
@@ -525,6 +526,7 @@ function Navigation({
         ["overview", "⌂", "Dashboard"],
         ["assessment", "＋", "Startup assessment"],
         ["startup", "◉", "My startup"],
+        ["starting-plan", "◎", "Starting plan"],
         ["roadmap", "↗", "Action roadmap"],
       ],
     },
@@ -3958,6 +3960,13 @@ function Workspace({ onSignOut }) {
     );
   } else if (activeView === "roadmap") {
     page = <RoadmapPage actionPlan={dashboardData?.action_plan} />;
+  } else if (activeView === "starting-plan") {
+    page = (
+      <StartingPlanPage
+        onNavigate={handleNavigate}
+        startupProfileId={selectedProfileId}
+      />
+    );
   } else if (activeView === "advisor") {
     page = (
       <AdvisorWorkspace

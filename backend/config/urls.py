@@ -81,6 +81,10 @@ from apps.startups.views import (
     StartupReadinessAssessmentListView,
     StartupReadinessCurrentView,
     StartupReadinessEvaluateView,
+    StartupStartingPlanCurrentView,
+    StartupStartingPlanDetailView,
+    StartupStartingPlanGenerateView,
+    StartupStartingPlanListView,
 )
 
 router = DefaultRouter()
@@ -276,6 +280,26 @@ urlpatterns = [
         "api/v1/startup-readiness/action-plans/",
         StartupReadinessActionPlanListView.as_view(),
         name="startup-readiness-action-plan-list",
+    ),
+    path(
+        "api/v1/startup-starting-plans/generate/",
+        StartupStartingPlanGenerateView.as_view(),
+        name="startup-starting-plan-generate",
+    ),
+    path(
+        "api/v1/startup-starting-plans/current/",
+        StartupStartingPlanCurrentView.as_view(),
+        name="startup-starting-plan-current",
+    ),
+    path(
+        "api/v1/startup-starting-plans/",
+        StartupStartingPlanListView.as_view(),
+        name="startup-starting-plan-list",
+    ),
+    path(
+        "api/v1/startup-starting-plans/<uuid:starting_plan_id>/",
+        StartupStartingPlanDetailView.as_view(),
+        name="startup-starting-plan-detail",
     ),
     path(
         "api/v1/startup-readiness/action-plans/<uuid:action_plan_id>/",
