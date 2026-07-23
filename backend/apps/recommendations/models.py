@@ -1,12 +1,13 @@
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
 from apps.core.models import TimeStampedModel
-from apps.schemes.models import SchemeVersion
+from apps.schemes.models import EligibilityRule, SchemeVersion
 from apps.startups.models import StartupProfile
 
 
@@ -88,6 +89,268 @@ class EligibilityAssessment(TimeStampedModel):
     unknown_rules = models.JSONField(default=list)
     explanation = models.TextField(blank=True)
     engine_version = models.CharField(max_length=50, default="rules-v1")
+
+
+class EligibilityVerificationSubmission(TimeStampedModel):
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="eligibility_verification_submissions",
+    )
+    scheme_version = models.ForeignKey(
+        SchemeVersion,
+        on_delete=models.PROTECT,
+        related_name="eligibility_verification_submissions",
+    )
+    eligibility_rule = models.ForeignKey(
+        EligibilityRule,
+        on_delete=models.PROTECT,
+        related_name="verification_submissions",
+    )
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="eligibility_verification_submissions",
+    )
+    supersedes = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="superseding_submissions",
+    )
+    is_current = models.BooleanField(default=True)
+    claim_value = models.JSONField(null=True, blank=True)
+    claim_text = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["startup_profile", "-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "startup_profile",
+                    "eligibility_rule",
+                ],
+                condition=Q(is_current=True),
+                name="unique_current_eligibility_verification",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "startup_profile",
+                    "is_current",
+                    "-created_at",
+                ],
+                name="elig_ver_profile_current",
+            ),
+            models.Index(
+                fields=[
+                    "eligibility_rule",
+                    "is_current",
+                    "-created_at",
+                ],
+                name="elig_ver_rule_current",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        errors = {}
+
+        if self.eligibility_rule_id and self.scheme_version_id:
+            rule_scheme_version_id = (
+                EligibilityRule.objects.filter(
+                    pk=self.eligibility_rule_id,
+                )
+                .values_list("scheme_version_id", flat=True)
+                .first()
+            )
+            if (
+                rule_scheme_version_id is not None
+                and rule_scheme_version_id != self.scheme_version_id
+            ):
+                errors["eligibility_rule"] = (
+                    "The eligibility rule must belong to the selected scheme version."
+                )
+
+        if self.supersedes_id:
+            if self.pk and self.supersedes_id == self.pk:
+                errors["supersedes"] = "A submission cannot supersede itself."
+            else:
+                superseded = (
+                    type(self)
+                    .objects.filter(pk=self.supersedes_id)
+                    .values(
+                        "startup_profile_id",
+                        "scheme_version_id",
+                        "eligibility_rule_id",
+                    )
+                    .first()
+                )
+                if superseded is not None:
+                    if superseded["startup_profile_id"] != self.startup_profile_id:
+                        errors["supersedes"] = (
+                            "The superseded submission must belong to the same startup profile."
+                        )
+                    elif (
+                        superseded["scheme_version_id"] != self.scheme_version_id
+                        or superseded["eligibility_rule_id"] != self.eligibility_rule_id
+                    ):
+                        errors["supersedes"] = (
+                            "The superseded submission must target the "
+                            "same scheme version and eligibility rule."
+                        )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.startup_profile} - {self.eligibility_rule.field_path}"
+
+
+class EligibilityVerificationEvidence(TimeStampedModel):
+    submission = models.ForeignKey(
+        EligibilityVerificationSubmission,
+        on_delete=models.CASCADE,
+        related_name="evidence",
+    )
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="eligibility_verification_evidence_uploads",
+    )
+    filename = models.CharField(max_length=500)
+    mime_type = models.CharField(max_length=255)
+    size_bytes = models.PositiveBigIntegerField()
+    content_hash = models.CharField(
+        max_length=64,
+        db_index=True,
+    )
+    storage_key = models.CharField(
+        max_length=1000,
+        unique=True,
+    )
+
+    class Meta:
+        ordering = ["submission", "created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "submission",
+                    "content_hash",
+                ],
+                name="unique_submission_evidence_hash",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.submission_id} - {self.filename}"
+
+
+class EligibilityVerificationDecisionQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValidationError("Eligibility verification decisions are immutable.")
+
+    def delete(self):
+        raise ValidationError("Eligibility verification decisions cannot be deleted.")
+
+
+class EligibilityVerificationDecision(TimeStampedModel):
+    class Outcome(models.TextChoices):
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    objects = EligibilityVerificationDecisionQuerySet.as_manager()
+
+    submission = models.ForeignKey(
+        EligibilityVerificationSubmission,
+        on_delete=models.PROTECT,
+        related_name="decisions",
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="eligibility_verification_decisions",
+    )
+    outcome = models.CharField(
+        max_length=20,
+        choices=Outcome.choices,
+    )
+    verified_value = models.JSONField(
+        null=True,
+        blank=True,
+    )
+    review_notes = models.TextField(blank=True)
+    valid_from = models.DateField(
+        default=timezone.localdate,
+    )
+    expires_on = models.DateField(
+        null=True,
+        blank=True,
+    )
+    submission_snapshot = models.JSONField(default=dict)
+    rule_snapshot = models.JSONField(default=dict)
+    evidence_snapshot = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ["submission", "-created_at", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        outcome="approved",
+                        verified_value__isnull=False,
+                    )
+                    | Q(
+                        outcome="rejected",
+                        verified_value__isnull=True,
+                    )
+                ),
+                name="elig_ver_decision_value_matches",
+            ),
+            models.CheckConstraint(
+                condition=(Q(expires_on__isnull=True) | Q(expires_on__gte=models.F("valid_from"))),
+                name="elig_ver_decision_dates_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "submission",
+                    "-created_at",
+                ],
+                name="elig_ver_decision_latest",
+            ),
+            models.Index(
+                fields=[
+                    "outcome",
+                    "valid_from",
+                    "expires_on",
+                ],
+                name="elig_ver_decision_validity",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Eligibility verification decisions are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Eligibility verification decisions cannot be deleted.")
+
+    def __str__(self) -> str:
+        return f"{self.submission_id} - {self.outcome}"
 
 
 class Recommendation(TimeStampedModel):

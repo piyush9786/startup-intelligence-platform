@@ -9,7 +9,7 @@ from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from typing import Any
 
-ENGINE_VERSION = "rules-v4"
+ENGINE_VERSION = "rules-v5"
 _MISSING = object()
 _TOKEN_RE = re.compile(r"[^a-z0-9]+")
 
@@ -41,12 +41,15 @@ class RuleEvaluation:
     evidence_text: str
     evidence_page: int | None
     requires_verification: bool = False
+    verification: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["outcome"] = self.outcome.value
         payload["expected_value"] = _json_ready(self.expected_value)
         payload["actual_value"] = _json_ready(self.actual_value)
+        if payload["verification"] is None:
+            payload.pop("verification")
         return payload
 
 
@@ -278,6 +281,7 @@ def evaluate_rule(
     startup_profile: Any,
     rule: Any,
     as_of_date: date,
+    approved_verifications: dict[str, dict[str, Any]] | None = None,
 ) -> RuleEvaluation:
     field_path = str(rule.field_path).strip()
     operator = str(rule.operator).strip()
@@ -320,11 +324,25 @@ def evaluate_rule(
             requires_verification=True,
         )
 
-    resolved = resolve_profile_field(
-        startup_profile=startup_profile,
-        field_path=field_path,
-        as_of_date=as_of_date,
-    )
+    approved_verification = (approved_verifications or {}).get(rule_id)
+    verification_metadata = None
+
+    if approved_verification is not None:
+        resolved = ResolvedValue(
+            value=approved_verification["value"],
+        )
+        verification_metadata = {
+            "decision_id": approved_verification["decision_id"],
+            "submission_id": approved_verification["submission_id"],
+            "valid_from": approved_verification["valid_from"],
+            "expires_on": approved_verification["expires_on"],
+        }
+    else:
+        resolved = resolve_profile_field(
+            startup_profile=startup_profile,
+            field_path=field_path,
+            as_of_date=as_of_date,
+        )
 
     if not resolved.supported:
         return RuleEvaluation(
@@ -361,6 +379,7 @@ def evaluate_rule(
             reason=resolved.reason or f"{field_path} has not been provided.",
             evidence_text=evidence_text,
             evidence_page=evidence_page,
+            verification=verification_metadata,
         )
     except EvaluationInputError as exc:
         return RuleEvaluation(
@@ -376,6 +395,7 @@ def evaluate_rule(
             evidence_text=evidence_text,
             evidence_page=evidence_page,
             requires_verification=True,
+            verification=verification_metadata,
         )
 
     return RuleEvaluation(
@@ -396,6 +416,7 @@ def evaluate_rule(
         ),
         evidence_text=evidence_text,
         evidence_page=evidence_page,
+        verification=verification_metadata,
     )
 
 
@@ -405,6 +426,7 @@ def evaluate_rules(
     rules: Iterable[Any],
     application_status: str,
     as_of_date: date | None = None,
+    approved_verifications: dict[str, dict[str, Any]] | None = None,
 ) -> EligibilityEvaluation:
     assessment_date = as_of_date or date.today()
     ordered_rules = sorted(
@@ -422,6 +444,7 @@ def evaluate_rules(
             startup_profile=startup_profile,
             rule=rule,
             as_of_date=assessment_date,
+            approved_verifications=approved_verifications,
         )
         for rule in ordered_rules
     )
@@ -469,10 +492,12 @@ def evaluate_scheme_eligibility(
     startup_profile: Any,
     scheme_version: Any,
     as_of_date: date | None = None,
+    approved_verifications: dict[str, dict[str, Any]] | None = None,
 ) -> EligibilityEvaluation:
     return evaluate_rules(
         startup_profile=startup_profile,
         rules=scheme_version.eligibility_rules.all(),
         application_status=scheme_version.application_status,
         as_of_date=as_of_date,
+        approved_verifications=approved_verifications,
     )
