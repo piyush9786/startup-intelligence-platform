@@ -14,6 +14,9 @@ from apps.recommendations.services.eligibility import (
     EligibilityEvaluation,
     evaluate_scheme_eligibility,
 )
+from apps.recommendations.services.verification import (
+    approved_verification_values,
+)
 
 PROFILE_SNAPSHOT_FIELDS = (
     "startup_name",
@@ -78,10 +81,16 @@ def create_eligibility_assessment(
     assessment_date: date,
     generation_run: RecommendationGenerationRun | None = None,
 ) -> EligibilityAssessment:
+    approved_verifications = approved_verification_values(
+        startup_profile=startup_profile,
+        scheme_version=scheme_version,
+        as_of_date=assessment_date,
+    )
     evaluation: EligibilityEvaluation = evaluate_scheme_eligibility(
         startup_profile=startup_profile,
         scheme_version=scheme_version,
         as_of_date=assessment_date,
+        approved_verifications=approved_verifications,
     )
 
     return EligibilityAssessment.objects.create(
