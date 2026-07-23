@@ -717,6 +717,13 @@ describe("functional user dashboard", () => {
         "External dataset",
       ),
     ).toHaveLength(2);
+    expect(
+      within(
+        screen.getByRole("region", {
+          name: "External scheme review summary",
+        }),
+      ).getByText("official-source reviewed"),
+    ).toBeInTheDocument();
   });
 
 
@@ -750,6 +757,26 @@ describe("functional user dashboard", () => {
     expect(
       screen.getByRole("heading", {
         name: "Reviewed Climate Innovation Grant",
+      }),
+    ).toBeInTheDocument();
+    const reviewedCard = screen
+      .getByRole("heading", {
+        name: "Reviewed Climate Innovation Grant",
+      })
+      .closest("article");
+    expect(
+      within(reviewedCard).getByText(
+        "Women-led DPIIT-recognised startups may apply.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(reviewedCard).getByText(
+        "Apply through the authority portal during an active call.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(reviewedCard).getByRole("button", {
+        name: "View details for Reviewed Climate Innovation Grant",
       }),
     ).toBeInTheDocument();
     expect(
