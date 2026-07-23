@@ -441,3 +441,110 @@ export async function uploadEligibilityVerificationEvidence({
   );
   return response.data;
 }
+
+export async function getCurrentUser() {
+  const response = await client.get("/auth/me/");
+  return response.data;
+}
+
+export async function listEligibilityVerificationReviewerSubmissions({
+  asOfDate,
+} = {}) {
+  const params = {};
+
+  if (asOfDate) {
+    params.as_of_date = asOfDate;
+  }
+
+  const response = await client.get(
+    "/eligibility/verifications/reviewer/submissions/",
+    { params },
+  );
+  return response.data;
+}
+
+
+export async function createEligibilityVerificationReviewerDecision({
+  submissionId,
+  outcome,
+  verifiedValue,
+  reviewNotes = "",
+  validFrom,
+  expiresOn,
+}) {
+  const payload = {
+    outcome,
+    review_notes: reviewNotes,
+  };
+
+  if (outcome === "approved") {
+    payload.verified_value = verifiedValue;
+  }
+
+  if (validFrom) {
+    payload.valid_from = validFrom;
+  }
+
+  if (expiresOn) {
+    payload.expires_on = expiresOn;
+  }
+
+  const response = await client.post(
+    (
+      "/eligibility/verifications/reviewer/submissions/"
+      + `${submissionId}/decisions/`
+    ),
+    payload,
+  );
+  return response.data;
+}
+
+
+function evidenceDownloadFilename(headers = {}, fallback) {
+  const disposition =
+    headers["content-disposition"]
+    || headers["Content-Disposition"]
+    || "";
+
+  const utfMatch = disposition.match(
+    /filename\*=UTF-8''([^;]+)/i,
+  );
+  if (utfMatch) {
+    return decodeURIComponent(
+      utfMatch[1].replace(/^["']|["']$/g, ""),
+    );
+  }
+
+  const basicMatch = disposition.match(
+    /filename="?([^";]+)"?/i,
+  );
+  return basicMatch?.[1] || fallback;
+}
+
+
+export async function downloadEligibilityVerificationReviewerEvidence({
+  evidenceId,
+  fallbackFilename = "verification-evidence",
+}) {
+  const response = await client.get(
+    (
+      "/eligibility/verifications/reviewer/evidence/"
+      + `${evidenceId}/download/`
+    ),
+    {
+      responseType: "blob",
+    },
+  );
+
+  return {
+    blob: response.data,
+    filename: evidenceDownloadFilename(
+      response.headers,
+      fallbackFilename,
+    ),
+    mimeType:
+      response.headers?.["content-type"]
+      || response.data?.type
+      || "application/octet-stream",
+  };
+}

@@ -16,9 +16,12 @@ const api = vi.hoisted(() => ({
   clearSession: vi.fn(),
   createStartupAssessmentDraft: vi.fn(),
   describeApiFailure: vi.fn(() => "Request failed"),
+  downloadEligibilityVerificationReviewerEvidence: vi.fn(),
   createEligibilityVerificationSubmission: vi.fn(),
+  createEligibilityVerificationReviewerDecision: vi.fn(),
   generateGroundedBriefing: vi.fn(),
   getCurrentBriefing: vi.fn(),
+  getCurrentUser: vi.fn(),
   getEligibilityVerificationGates: vi.fn(),
   getCurrentStartupAdvisorBriefingJob: vi.fn(),
   getSession: vi.fn(),
@@ -28,6 +31,7 @@ const api = vi.hoisted(() => ({
   listExternalCapitalSupport: vi.fn(),
   listExternalCertificationRequirements: vi.fn(),
   listExternalSchemes: vi.fn(),
+  listEligibilityVerificationReviewerSubmissions: vi.fn(),
   listSchemes: vi.fn(),
   listStartupAssessmentDrafts: vi.fn(),
   listStartupAdvisorBriefings: vi.fn(),
@@ -203,6 +207,44 @@ const externalCertificationRequirement = {
     "Confirm the requirement and application process with the issuing authority.",
 };
 
+
+const reviewerSubmission = {
+  id: "review-submission-one",
+  status: "pending",
+  startup_profile_id: profile.id,
+  startup_name: "Acme Climate",
+  startup_owner_id: "founder-user-one",
+  scheme_id: loanScheme.id,
+  scheme_version_id: "loan-version-one",
+  scheme_name: "Startup Working Capital Loan",
+  eligibility_rule_id: "manual-rule-one",
+  field_path: "manual.incubator_endorsement",
+  operator: "equals",
+  expected_value: true,
+  mandatory: true,
+  evidence_text:
+    "Incubator endorsement is required.",
+  evidence_page: 4,
+  submitted_by_id: "founder-user-one",
+  claim_value: true,
+  claim_text:
+    "The incubator endorsement has been obtained.",
+  evidence_count: 1,
+  evidence: [
+    {
+      id: "review-evidence-one",
+      filename: "endorsement.pdf",
+      mime_type: "application/pdf",
+      size_bytes: 128,
+      content_hash: "a".repeat(64),
+      uploaded_by_id: "founder-user-one",
+      created_at: "2026-07-23T08:00:00Z",
+    },
+  ],
+  created_at: "2026-07-23T08:00:00Z",
+  decision: null,
+};
+
 function makeBriefing({
   id = "22222222-2222-2222-2222-222222222222",
   summary = "Prioritise regulatory readiness and customer proof.",
@@ -352,6 +394,67 @@ function configureAuthenticatedWorkspace({
 beforeEach(() => {
   vi.resetAllMocks();
   configureAuthenticatedWorkspace();
+  api.getCurrentUser.mockResolvedValue({
+    id: "founder-user-one",
+    username: "founder",
+    email: "founder@example.com",
+    role: "founder",
+    role_label: "Founder",
+    email_verified: true,
+    is_staff: false,
+    is_superuser: false,
+    can_review_eligibility: false,
+  });
+  api.listEligibilityVerificationReviewerSubmissions.mockResolvedValue({
+    as_of_date: "2026-07-23",
+    count: 1,
+    submissions: [reviewerSubmission],
+  });
+  api.createEligibilityVerificationReviewerDecision.mockResolvedValue({
+    id: "review-decision-one",
+    submission_id: reviewerSubmission.id,
+    reviewed_by_id: "reviewer-user-one",
+    outcome: "approved",
+    verified_value: true,
+    review_notes: "Evidence verified.",
+    valid_from: "2026-07-23",
+    expires_on: null,
+    created_at: "2026-07-23T08:30:00Z",
+  });
+  api.downloadEligibilityVerificationReviewerEvidence.mockResolvedValue({
+    blob: new Blob(
+      ["review evidence"],
+      {
+        type: "application/pdf",
+      },
+    ),
+    filename: "endorsement.pdf",
+    mimeType: "application/pdf",
+  });
+
+  Object.defineProperty(
+    URL,
+    "createObjectURL",
+    {
+      configurable: true,
+      value: vi.fn(
+        () => "blob:reviewer-evidence",
+      ),
+    },
+  );
+  Object.defineProperty(
+    URL,
+    "revokeObjectURL",
+    {
+      configurable: true,
+      value: vi.fn(),
+    },
+  );
+  vi.spyOn(
+    HTMLAnchorElement.prototype,
+    "click",
+  ).mockImplementation(() => {});
+
   api.getEligibilityVerificationGates.mockResolvedValue({
     startup_profile_id: profile.id,
     scheme_id: loanScheme.id,
@@ -1143,6 +1246,181 @@ describe("functional user dashboard", () => {
     expect(api.createStartupAssessmentDraft).toHaveBeenCalledWith({
       startupProfileId: null,
     });
+  });
+
+
+
+  test("does not expose reviewer navigation to founders", async () => {
+    render(<App />);
+
+    await screen.findByRole("button", {
+      name: "Dashboard",
+    });
+
+    expect(
+      screen.queryByRole("button", {
+        name: "Reviewer verification",
+      }),
+    ).not.toBeInTheDocument();
+
+    expect(api.getCurrentUser).toHaveBeenCalledTimes(1);
+  });
+
+  test("opens the server-authorized reviewer workspace without a startup profile", async () => {
+    configureAuthenticatedWorkspace({
+      profiles: [],
+    });
+
+    api.getCurrentUser.mockResolvedValue({
+      id: "reviewer-user-one",
+      username: "reviewer",
+      email: "reviewer@example.com",
+      role: "reviewer",
+      role_label: "Data reviewer",
+      email_verified: true,
+      is_staff: false,
+      is_superuser: false,
+      can_review_eligibility: true,
+    });
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Reviewer verification queue",
+      }),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("button", {
+        name: "Reviewer verification",
+      }),
+    ).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    expect(
+      screen.queryByRole("button", {
+        name: "Start startup assessment",
+      }),
+    ).not.toBeInTheDocument();
+
+    expect(api.getCurrentUser).toHaveBeenCalledTimes(1);
+    expect(
+      api.listEligibilityVerificationReviewerSubmissions,
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Acme Climate",
+      }),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(
+        "manual.incubator_endorsement · equals",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  test("downloads protected reviewer evidence and approves a pending submission", async () => {
+    const user = userEvent.setup();
+
+    configureAuthenticatedWorkspace({
+      profiles: [],
+    });
+
+    api.getCurrentUser.mockResolvedValue({
+      id: "reviewer-user-one",
+      username: "reviewer",
+      email: "reviewer@example.com",
+      role: "reviewer",
+      role_label: "Data reviewer",
+      email_verified: true,
+      is_staff: false,
+      is_superuser: false,
+      can_review_eligibility: true,
+    });
+
+    api.listEligibilityVerificationReviewerSubmissions
+      .mockResolvedValueOnce({
+        as_of_date: "2026-07-23",
+        count: 1,
+        submissions: [reviewerSubmission],
+      })
+      .mockResolvedValueOnce({
+        as_of_date: "2026-07-23",
+        count: 1,
+        submissions: [
+          {
+            ...reviewerSubmission,
+            status: "approved",
+            decision: {
+              id: "review-decision-one",
+              reviewed_by_id: "reviewer-user-one",
+              outcome: "approved",
+              verified_value: true,
+              review_notes: "Evidence verified.",
+              valid_from: "2026-07-23",
+              expires_on: null,
+              created_at: "2026-07-23T08:30:00Z",
+            },
+          },
+        ],
+      });
+
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Download endorsement.pdf",
+      }),
+    );
+
+    expect(
+      api.downloadEligibilityVerificationReviewerEvidence,
+    ).toHaveBeenCalledWith({
+      evidenceId: "review-evidence-one",
+      fallbackFilename: "endorsement.pdf",
+    });
+
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(
+      "blob:reviewer-evidence",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: "Reviewer notes",
+      }),
+      "Evidence verified.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Approve submission",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(
+        api.createEligibilityVerificationReviewerDecision,
+      ).toHaveBeenCalledWith({
+        submissionId: reviewerSubmission.id,
+        outcome: "approved",
+        verifiedValue: true,
+        reviewNotes: "Evidence verified.",
+        validFrom: "2026-07-23",
+        expiresOn: undefined,
+      });
+    });
+
+    expect(
+      await screen.findByText(
+        "Approved decision recorded for Acme Climate.",
+      ),
+    ).toBeInTheDocument();
   });
 
   test("returns to sign-in when the session expires", async () => {
