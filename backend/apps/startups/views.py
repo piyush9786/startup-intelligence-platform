@@ -7,10 +7,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from apps.recommendations.models import RecommendationGenerationRun
+
 from .models import (
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
+    StartupStartingPlan,
 )
 from .serializers import (
     StartupDocumentAutofillRequestSerializer,
@@ -20,12 +23,16 @@ from .serializers import (
     StartupReadinessAssessmentSerializer,
     StartupReadinessEvaluationRequestSerializer,
     StartupReadinessRetrievalRequestSerializer,
+    StartupStartingPlanGenerationRequestSerializer,
+    StartupStartingPlanSerializer,
 )
 from .services import (
+    StartingPlanSourceError,
     StartupDocumentAutofillError,
     build_startup_profile_autofill,
     create_startup_readiness_action_plan,
     create_startup_readiness_assessment,
+    create_startup_starting_plan,
 )
 
 
@@ -50,6 +57,13 @@ def _visible_readiness_action_plans(user):
     return queryset
 
 
+def _visible_starting_plans(user):
+    queryset = StartupStartingPlan.objects.all()
+    if not user.is_staff:
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
+
+
 class StartupProfileViewSet(ModelViewSet):
     serializer_class = StartupProfileSerializer
     permission_classes = [IsAuthenticated]
@@ -66,6 +80,8 @@ class StartupProfileViewSet(ModelViewSet):
     ]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return StartupProfile.objects.none()
         return _visible_profiles(self.request.user)
 
     def perform_create(self, serializer):
@@ -322,5 +338,178 @@ class StartupReadinessActionPlanDetailView(APIView):
         )
         return Response(
             StartupReadinessActionPlanSerializer(action_plan).data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupStartingPlanGenerateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        request_serializer = StartupStartingPlanGenerationRequestSerializer(
+            data=request.data,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        source_action_plan = (
+            _visible_readiness_action_plans(request.user)
+            .filter(startup_profile=startup_profile)
+            .select_related(
+                "source_assessment",
+                "startup_profile",
+            )
+            .order_by("-created_at", "-id")
+            .first()
+        )
+        generation_run = (
+            RecommendationGenerationRun.objects.filter(
+                startup_profile=startup_profile,
+                is_current=True,
+            )
+            .order_by("-completed_at", "-created_at")
+            .first()
+        )
+
+        if source_action_plan is None:
+            raise ValidationError(
+                {
+                    "startup_profile_id": (
+                        "A persisted readiness action plan is required "
+                        "before generating a starting plan."
+                    )
+                }
+            )
+
+        if generation_run is None:
+            raise ValidationError(
+                {
+                    "startup_profile_id": (
+                        "A current recommendation generation is required "
+                        "before generating a starting plan."
+                    )
+                }
+            )
+
+        try:
+            result = create_startup_starting_plan(
+                source_assessment=source_action_plan.source_assessment,
+                source_action_plan=source_action_plan,
+                recommendation_generation_run=generation_run,
+                requested_by=request.user,
+            )
+        except StartingPlanSourceError as exc:
+            raise ValidationError({"startup_profile_id": str(exc)}) from exc
+
+        payload = dict(StartupStartingPlanSerializer(result.plan).data)
+        payload["created"] = result.created
+        return Response(
+            payload,
+            status=(
+                status.HTTP_201_CREATED
+                if result.created
+                else status.HTTP_200_OK
+            ),
+        )
+
+
+class StartupStartingPlanCurrentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = StartupReadinessRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        plan = (
+            _visible_starting_plans(request.user)
+            .filter(
+                startup_profile=startup_profile,
+                is_current=True,
+            )
+            .select_related(
+                "source_assessment",
+                "source_action_plan",
+                "recommendation_generation_run",
+                "requested_by",
+            )
+            .first()
+        )
+        return Response(
+            {
+                "startup_profile_id": str(startup_profile.pk),
+                "has_starting_plan": plan is not None,
+                "starting_plan": (
+                    StartupStartingPlanSerializer(plan).data
+                    if plan is not None
+                    else None
+                ),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupStartingPlanListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = StartupReadinessRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(raise_exception=True)
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        plans = (
+            _visible_starting_plans(request.user)
+            .filter(startup_profile=startup_profile)
+            .select_related(
+                "source_assessment",
+                "source_action_plan",
+                "recommendation_generation_run",
+                "requested_by",
+            )
+            .order_by("-created_at", "-id")
+        )
+        data = StartupStartingPlanSerializer(
+            plans,
+            many=True,
+        ).data
+        return Response(
+            {
+                "startup_profile_id": str(startup_profile.pk),
+                "count": len(data),
+                "starting_plans": data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupStartingPlanDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, starting_plan_id):
+        plan = get_object_or_404(
+            _visible_starting_plans(request.user).select_related(
+                "startup_profile",
+                "source_assessment",
+                "source_action_plan",
+                "recommendation_generation_run",
+                "requested_by",
+            ),
+            pk=starting_plan_id,
+        )
+        return Response(
+            StartupStartingPlanSerializer(plan).data,
             status=status.HTTP_200_OK,
         )

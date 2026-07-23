@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import {
   SESSION_EXPIRED_EVENT,
   adminUrl,
+  apiRoot,
   apiDocsUrl,
   buildPlatformUrl,
   clearSession,
@@ -64,6 +65,10 @@ describe("founder session storage", () => {
 });
 
 describe("environment-safe platform links", () => {
+  test("uses a same-origin API path by default", () => {
+    expect(apiRoot).toBe("/api/v1");
+  });
+
   test("builds stable admin and API documentation URLs", () => {
     expect(new URL(adminUrl).pathname).toBe("/admin/");
     expect(new URL(apiDocsUrl).pathname).toBe("/api/docs/");
