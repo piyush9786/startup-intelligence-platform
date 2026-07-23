@@ -609,3 +609,5 @@ export async function downloadEligibilityVerificationReviewerEvidence({
       || "application/octet-stream",
   };
 }
+
+export { client as authenticatedApiClient };

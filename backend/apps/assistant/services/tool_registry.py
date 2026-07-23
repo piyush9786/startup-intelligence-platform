@@ -19,6 +19,16 @@ from .sessions import record_tool_call
 
 TOOL_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]{2,99}$")
 
+WRITE_TOOL_CAPABILITY_ALLOWLIST = frozenset(
+    {
+        (
+            "update_startup_assessment_draft",
+            "v1",
+            "assessment_draft_update",
+        ),
+    }
+)
+
 
 class AgentToolRegistryError(RuntimeError):
     pass
@@ -81,6 +91,7 @@ class AgentToolDefinition:
     handler: AgentToolHandler
     allowed_agent_types: frozenset[str]
     read_only: bool = True
+    write_capability: str | None = None
 
     def __post_init__(self) -> None:
         if not TOOL_NAME_PATTERN.fullmatch(self.name):
@@ -99,6 +110,15 @@ class AgentToolDefinition:
 
         if invalid_types:
             raise AgentToolRegistryError(f"Unsupported agent types: {sorted(invalid_types)!r}.")
+
+        if self.write_capability is not None:
+            if not TOOL_NAME_PATTERN.fullmatch(self.write_capability):
+                raise AgentToolRegistryError(
+                    f"Invalid write capability: {self.write_capability!r}."
+                )
+
+            if self.read_only:
+                raise AgentToolRegistryError("Read-only tools cannot declare a write capability.")
 
         if not callable(self.handler):
             raise AgentToolRegistryError("A callable tool handler is required.")
@@ -164,6 +184,7 @@ def _authorization_context(
     definition: AgentToolDefinition | None,
     allowed: bool,
     reason: str,
+    granted_write_capabilities: frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     return {
         "actor_id": (str(actor.pk) if getattr(actor, "pk", None) is not None else None),
@@ -177,6 +198,8 @@ def _authorization_context(
         "agent_type": session.agent_type,
         "session_status": session.status,
         "tool_read_only": (definition.read_only if definition is not None else None),
+        "tool_write_capability": (definition.write_capability if definition is not None else None),
+        "granted_write_capabilities": sorted(granted_write_capabilities),
         "allowed": allowed,
         "reason": reason,
     }
@@ -194,6 +217,7 @@ def _denied(
     error_code: str,
     triggering_message: AgentMessage | None,
     called_at: Any,
+    granted_write_capabilities: frozenset[str] = frozenset(),
 ) -> AgentToolAuthorizationError:
     output = {
         "denied": True,
@@ -213,6 +237,7 @@ def _denied(
             definition=definition,
             allowed=False,
             reason=reason,
+            granted_write_capabilities=(granted_write_capabilities),
         ),
         output_snapshot=output,
         duration_ms=0,
@@ -236,6 +261,7 @@ def execute_registered_tool(
     input_params: dict[str, Any] | None = None,
     triggering_message: AgentMessage | None = None,
     registry: AgentToolRegistry | None = None,
+    write_capabilities: (set[str] | frozenset[str] | tuple[str, ...] | list[str] | None) = None,
 ) -> AgentToolExecutionResult:
     selected_registry = registry if registry is not None else default_tool_registry()
 
@@ -243,6 +269,23 @@ def execute_registered_tool(
 
     if not isinstance(params, dict):
         raise AgentToolInputError("Tool input parameters must be an object.")
+
+    if write_capabilities is None:
+        normalized_write_capabilities = frozenset()
+    else:
+        if isinstance(write_capabilities, str):
+            raise AgentToolInputError("Write capabilities must be a collection.")
+
+        try:
+            normalized_write_capabilities = frozenset(write_capabilities)
+        except TypeError as exc:
+            raise AgentToolInputError("Write capabilities must be a collection.") from exc
+
+        if any(
+            not isinstance(capability, str) or not TOOL_NAME_PATTERN.fullmatch(capability)
+            for capability in normalized_write_capabilities
+        ):
+            raise AgentToolInputError("Write capabilities contain an invalid value.")
 
     called_at = timezone.now()
 
@@ -337,18 +380,32 @@ def execute_registered_tool(
         )
 
     if not definition.read_only:
-        raise _denied(
-            session=session,
-            actor=actor,
-            tool_name=definition.name,
-            tool_version=definition.version,
-            input_params=params,
-            definition=definition,
-            reason=("Write-capable tools are disabled in the Phase 43 foundation."),
-            error_code="write_tool_disabled",
-            triggering_message=triggering_message,
-            called_at=called_at,
+        required_capability = definition.write_capability
+        allowlist_key = (
+            definition.name,
+            definition.version,
+            required_capability,
         )
+        write_allowed = (
+            required_capability is not None
+            and required_capability in normalized_write_capabilities
+            and allowlist_key in WRITE_TOOL_CAPABILITY_ALLOWLIST
+        )
+
+        if not write_allowed:
+            raise _denied(
+                session=session,
+                actor=actor,
+                tool_name=definition.name,
+                tool_version=definition.version,
+                input_params=params,
+                definition=definition,
+                reason=("Write-capable tool access is not authorized for this tool."),
+                error_code="write_tool_disabled",
+                triggering_message=triggering_message,
+                called_at=called_at,
+                granted_write_capabilities=(normalized_write_capabilities),
+            )
 
     context = AgentToolContext(
         actor_id=str(actor.pk),
@@ -394,6 +451,7 @@ def execute_registered_tool(
                 definition=definition,
                 allowed=True,
                 reason="authorized",
+                granted_write_capabilities=(normalized_write_capabilities),
             ),
             output_snapshot=failure_output,
             duration_ms=duration_ms,
@@ -423,6 +481,7 @@ def execute_registered_tool(
             definition=definition,
             allowed=True,
             reason="authorized",
+            granted_write_capabilities=(normalized_write_capabilities),
         ),
         output_snapshot=output,
         duration_ms=duration_ms,

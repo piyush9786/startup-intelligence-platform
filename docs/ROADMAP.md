@@ -213,3 +213,19 @@ A phase is complete only when:
 - API and founder-facing behavior are documented;
 - CI passes;
 - the project context and roadmap are updated.
+
+<!-- phase-46-roadmap:start -->
+## Phase 46 — Bounded founder concierge state machine
+
+**Status: Completed**
+
+- Added the versioned `founder-concierge-v1` nine-state workflow.
+- Added authenticated founder-only current-state, bounded-update, and expected-state transition APIs.
+- Added one narrowly allowlisted and audited assessment-draft write capability; unrelated write tools remain disabled.
+- Required explicit founder confirmation before deterministic assessment submission.
+- Added the internal successful-submission bridge from `generating_plan` to `plan_ready`.
+- Added the responsive founder concierge frontend while keeping the site-wide chatbot separate and read-only.
+- Preserved deterministic readiness, eligibility, recommendation, amount, deadline, ordering, and verification authority outside the browser.
+- Added focused backend and frontend regression coverage.
+- Validated 124 frontend tests, the 465-test backend suite, the frontend production build, Ruff, Django checks, and zero migration drift.
+<!-- phase-46-roadmap:end -->
