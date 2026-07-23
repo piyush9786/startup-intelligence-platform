@@ -1606,9 +1606,19 @@ function ExternalSchemeCard({ onOpen, scheme }) {
         {externalSchemeAuthority(scheme)}
       </p>
 
-      <p className="scheme-description">
-        {externalSchemeDescription(scheme)}
-      </p>
+      <div className="external-scheme-facts">
+        <div>
+          <span>Eligibility</span>
+          <p>{externalSchemeDescription(scheme)}</p>
+        </div>
+        <div>
+          <span>How to apply</span>
+          <p>
+            {scheme.application_process ||
+              "Review the current application route on the official source."}
+          </p>
+        </div>
+      </div>
 
       <div className="scheme-tags">
         {tags.length ? (
@@ -1628,8 +1638,11 @@ function ExternalSchemeCard({ onOpen, scheme }) {
       </p>
 
       <div className="scheme-card-footer">
-        <span>
-          {scheme.funding_amount || "Amount not published"}
+        <span className="external-support-amount">
+          <small>Support</small>
+          <strong>
+            {scheme.funding_amount || "Amount not published"}
+          </strong>
         </span>
 
         <div className="scheme-card-footer-actions">
@@ -1638,7 +1651,9 @@ function ExternalSchemeCard({ onOpen, scheme }) {
             onClick={() => onOpen(scheme)}
             type="button"
           >
-            View details →
+            {isSourceReviewed
+              ? "View reviewed details →"
+              : "Review scheme details →"}
           </button>
           {applicationUrl ? (
             <a
@@ -1718,6 +1733,14 @@ function SchemeExplorer({
 
   const resultCount =
     visibleCanonical.length + visibleExternal.length;
+  const reviewedExternalCount =
+    discoveredExternalSchemes.filter(
+      (scheme) => scheme.review_status === "verified",
+    ).length;
+  const needsReviewCount =
+    discoveredExternalSchemes.filter(
+      (scheme) => scheme.review_status === "needs_review",
+    ).length;
 
   return (
     <div className="page-stack">
@@ -1726,6 +1749,25 @@ function SchemeExplorer({
         title="Explore schemes"
         description="Browse verified platform schemes, official-source-reviewed external programmes, and records still awaiting review. External records are discovery-only and are not used for startup recommendations."
       />
+
+      <section
+        aria-label="External scheme review summary"
+        className="scheme-review-summary"
+      >
+        <div>
+          <strong>{reviewedExternalCount}</strong>
+          <span>official-source reviewed</span>
+        </div>
+        <div>
+          <strong>{needsReviewCount}</strong>
+          <span>still needing review</span>
+        </div>
+        <p>
+          The reviewed cards below now show corrected eligibility,
+          support and application guidance. Open any card for the
+          complete record and its official source.
+        </p>
+      </section>
 
       <div
         className="filter-tabs"
@@ -1765,26 +1807,62 @@ function SchemeExplorer({
       </p>
 
       {resultCount ? (
-        <div className="scheme-grid">
-          {visibleCanonical.map((scheme) => (
-            <SchemeCard
-              key={`canonical-${scheme.id}`}
-              onOpen={(selected) =>
-                onOpenScheme(selected, "schemes")
-              }
-              scheme={scheme}
-            />
-          ))}
+        <div className="scheme-catalog-sections">
+          {visibleCanonical.length > 0 && (
+            <section
+              aria-labelledby="platform-schemes-title"
+              className="scheme-catalog-section"
+            >
+              <div className="scheme-catalog-heading">
+                <div>
+                  <span>Recommendation-ready</span>
+                  <h2 id="platform-schemes-title">
+                    Platform schemes
+                  </h2>
+                </div>
+                <strong>{visibleCanonical.length}</strong>
+              </div>
+              <div className="scheme-grid">
+                {visibleCanonical.map((scheme) => (
+                  <SchemeCard
+                    key={`canonical-${scheme.id}`}
+                    onOpen={(selected) =>
+                      onOpenScheme(selected, "schemes")
+                    }
+                    scheme={scheme}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
-          {visibleExternal.map((scheme) => (
-            <ExternalSchemeCard
-              key={`external-${scheme.id}`}
-              onOpen={(selected) =>
-                onOpenScheme(selected, "schemes")
-              }
-              scheme={scheme}
-            />
-          ))}
+          {visibleExternal.length > 0 && (
+            <section
+              aria-labelledby="external-schemes-title"
+              className="scheme-catalog-section"
+            >
+              <div className="scheme-catalog-heading">
+                <div>
+                  <span>Discovery catalog</span>
+                  <h2 id="external-schemes-title">
+                    Reviewed external programmes
+                  </h2>
+                </div>
+                <strong>{visibleExternal.length}</strong>
+              </div>
+              <div className="scheme-grid">
+                {visibleExternal.map((scheme) => (
+                  <ExternalSchemeCard
+                    key={`external-${scheme.id}`}
+                    onOpen={(selected) =>
+                      onOpenScheme(selected, "schemes")
+                    }
+                    scheme={scheme}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       ) : (
         <EmptyPanel title="No scheme matches these filters">
