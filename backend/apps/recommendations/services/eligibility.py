@@ -9,7 +9,7 @@ from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from typing import Any
 
-ENGINE_VERSION = "rules-v3"
+ENGINE_VERSION = "rules-v4"
 _MISSING = object()
 _TOKEN_RE = re.compile(r"[^a-z0-9]+")
 
@@ -439,15 +439,15 @@ def evaluate_rules(
             "Manual verification is required because the verified scheme version "
             "has no executable eligibility rules."
         )
+    elif any(item.mandatory for item in failed):
+        result = "ineligible"
+        explanation = "One or more mandatory eligibility rules failed."
     elif any(item.requires_verification for item in evaluations):
         result = "verification_required"
         explanation = (
             "Manual verification is required because at least one canonical rule "
             "or profile mapping is unsupported or invalid."
         )
-    elif any(item.mandatory for item in failed):
-        result = "ineligible"
-        explanation = "One or more mandatory eligibility rules failed."
     elif any(item.mandatory for item in unknown):
         result = "insufficient_information"
         explanation = "No mandatory rule failed, but required profile information is missing."

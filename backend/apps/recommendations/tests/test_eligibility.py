@@ -232,7 +232,7 @@ def test_empty_rule_set_requires_manual_verification():
     )
 
     assert result.result == "verification_required"
-    assert result.engine_version == "rules-v3"
+    assert result.engine_version == "rules-v4"
     assert not result.matched_rules
     assert not result.failed_rules
     assert not result.unknown_rules
@@ -261,6 +261,35 @@ def test_blank_entity_types_use_startup_profile_default():
     )
 
     assert result.result == "eligible"
-    assert result.engine_version == "rules-v3"
+    assert result.engine_version == "rules-v4"
     assert len(result.matched_rules) == 1
     assert result.matched_rules[0].actual_value == ["startup"]
+
+def test_mandatory_failure_precedes_manual_verification_gate():
+    result = evaluate_rules(
+        startup_profile=profile(),
+        rules=[
+            rule(
+                "eligible_entity_type",
+                "contains_any",
+                "entrepreneur",
+            ),
+            rule(
+                "manual_verification.incubator_association",
+                "exists",
+                None,
+            ),
+        ],
+        application_status="unknown",
+        as_of_date=date(2026, 1, 15),
+    )
+
+    assert result.result == "ineligible"
+    assert [item.field_path for item in result.failed_rules] == [
+        "eligible_entity_type"
+    ]
+    assert [item.field_path for item in result.unknown_rules] == [
+        "manual_verification.incubator_association"
+    ]
+    assert result.unknown_rules[0].requires_verification is True
+    assert result.engine_version == "rules-v4"
