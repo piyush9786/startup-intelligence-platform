@@ -6,9 +6,12 @@ import {
   apiDocsUrl,
   clearSession,
   createEligibilityVerificationSubmission,
+  createEligibilityVerificationReviewerDecision,
   generateGroundedBriefing,
   getEligibilityVerificationGates,
   getCurrentBriefing,
+  getCurrentUser,
+  downloadEligibilityVerificationReviewerEvidence,
   getCurrentStartupAdvisorBriefingJob,
   getSession,
   getStartupAdvisorBriefing,
@@ -17,6 +20,7 @@ import {
   listExternalCapitalSupport,
   listExternalCertificationRequirements,
   listExternalSchemes,
+  listEligibilityVerificationReviewerSubmissions,
   listSchemes,
   listStartupAdvisorBriefings,
   listStartupProfiles,
@@ -24,6 +28,16 @@ import {
   uploadEligibilityVerificationEvidence,
 } from "./api";
 import AssessmentWizard from "./AssessmentWizard";
+import {
+  canAccessReviewerWorkspace,
+  normalizeCurrentUser,
+} from "./identity";
+import {
+  buildReviewerDecisionPayload,
+  normalizeReviewerVerificationQueue,
+  reviewerVerificationStatusLabel,
+  reviewerVerificationStatusTone,
+} from "./reviewerVerification";
 import {
   actionItemStatus,
   actionItemTitle,
@@ -494,7 +508,11 @@ function BriefingDocument({ briefingRecord }) {
   );
 }
 
-function Navigation({ activeView, onNavigate }) {
+function Navigation({
+  activeView,
+  canReviewEligibility,
+  onNavigate,
+}) {
   const groups = [
     {
       label: "Your workspace",
@@ -519,20 +537,50 @@ function Navigation({ activeView, onNavigate }) {
     },
   ];
 
+  if (canReviewEligibility) {
+    groups.push({
+      label: "Review operations",
+      items: [
+        [
+          "reviewer-verifications",
+          "⎙",
+          "Reviewer verification",
+        ],
+      ],
+    });
+  }
+
   return (
-    <nav className="product-navigation" aria-label="Founder workspace">
+    <nav
+      aria-label="Application workspace"
+      className="product-navigation"
+    >
       {groups.map((group) => (
         <section className="nav-group" key={group.label}>
-          <span className="nav-group-label">{group.label}</span>
+          <span className="nav-group-label">
+            {group.label}
+          </span>
           {group.items.map(([id, icon, label]) => (
             <button
-              aria-current={activeView === id ? "page" : undefined}
-              className={`nav-item ${activeView === id ? "nav-item-active" : ""}`}
+              aria-current={
+                activeView === id ? "page" : undefined
+              }
+              className={[
+                "nav-item",
+                activeView === id
+                  ? "nav-item-active"
+                  : "",
+              ].join(" ")}
               key={id}
               onClick={() => onNavigate(id)}
               type="button"
             >
-              <span className="nav-icon" aria-hidden="true">{icon}</span>
+              <span
+                aria-hidden="true"
+                className="nav-icon"
+              >
+                {icon}
+              </span>
               {label}
             </button>
           ))}
@@ -542,7 +590,13 @@ function Navigation({ activeView, onNavigate }) {
   );
 }
 
-function ProductSidebar({ activeView, metrics, onNavigate, profile }) {
+function ProductSidebar({
+  activeView,
+  canReviewEligibility,
+  metrics,
+  onNavigate,
+  profile,
+}) {
   return (
     <aside className="product-sidebar">
       <div className="product-brand">
@@ -553,7 +607,11 @@ function ProductSidebar({ activeView, metrics, onNavigate, profile }) {
         </div>
       </div>
 
-      <Navigation activeView={activeView} onNavigate={onNavigate} />
+      <Navigation
+        activeView={activeView}
+        canReviewEligibility={canReviewEligibility}
+        onNavigate={onNavigate}
+      />
 
       <section className="sidebar-evidence-card">
         <span className="sidebar-evidence-icon" aria-hidden="true">✓</span>
@@ -2572,6 +2630,675 @@ function AdvisorWorkspace({
   );
 }
 
+
+function formatReviewerValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return "Not supplied";
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
+}
+
+
+function triggerBrowserDownload({
+  blob,
+  filename,
+}) {
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(objectUrl);
+}
+
+
+function ReviewerDecisionForm({
+  defaultValidFrom,
+  onDecisionCreated,
+  submission,
+}) {
+  const [outcome, setOutcome] = useState("approved");
+  const [
+    rawVerifiedValue,
+    setRawVerifiedValue,
+  ] = useState(
+    formatReviewerValue(
+      submission.claim_value
+      ?? submission.expected_value,
+    ),
+  );
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [validFrom, setValidFrom] = useState(
+    defaultValidFrom || "",
+  );
+  const [expiresOn, setExpiresOn] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setFormError("");
+
+    try {
+      const payload = buildReviewerDecisionPayload({
+        submission,
+        outcome,
+        rawVerifiedValue,
+        reviewNotes,
+        validFrom,
+        expiresOn,
+      });
+
+      setSubmitting(true);
+
+      const decision =
+        await createEligibilityVerificationReviewerDecision(
+          payload,
+        );
+
+      await onDecisionCreated({
+        decision,
+        submission,
+      });
+    } catch (requestError) {
+      setFormError(
+        requestError?.response
+          ? humanizeApiError(requestError)
+          : requestError.message,
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form
+      className="reviewer-decision-form"
+      onSubmit={handleSubmit}
+    >
+      <div className="reviewer-decision-heading">
+        <div>
+          <span className="section-kicker">
+            IMMUTABLE REVIEW DECISION
+          </span>
+          <h3>Record a decision</h3>
+        </div>
+        <span className="reviewer-decision-warning">
+          A new decision record will be created.
+        </span>
+      </div>
+
+      {formError && (
+        <InlineNotice tone="danger">
+          {formError}
+        </InlineNotice>
+      )}
+
+      <div className="reviewer-form-grid">
+        <label className="field">
+          <span>Outcome</span>
+          <select
+            aria-label="Review outcome"
+            disabled={submitting}
+            onChange={(event) =>
+              setOutcome(event.target.value)
+            }
+            value={outcome}
+          >
+            <option value="approved">Approve</option>
+            <option value="rejected">Reject</option>
+          </select>
+        </label>
+
+        {outcome === "approved" && (
+          <label className="field">
+            <span>Verified value</span>
+            <input
+              aria-label="Verified value"
+              disabled={submitting}
+              onChange={(event) =>
+                setRawVerifiedValue(event.target.value)
+              }
+              required
+              value={rawVerifiedValue}
+            />
+          </label>
+        )}
+
+        <label className="field">
+          <span>Valid from</span>
+          <input
+            aria-label="Valid from"
+            disabled={submitting}
+            onChange={(event) =>
+              setValidFrom(event.target.value)
+            }
+            required
+            type="date"
+            value={validFrom}
+          />
+        </label>
+
+        <label className="field">
+          <span>Expires on</span>
+          <input
+            aria-label="Expires on"
+            disabled={submitting}
+            min={validFrom || undefined}
+            onChange={(event) =>
+              setExpiresOn(event.target.value)
+            }
+            type="date"
+            value={expiresOn}
+          />
+        </label>
+      </div>
+
+      <label className="field">
+        <span>Reviewer notes</span>
+        <textarea
+          aria-label="Reviewer notes"
+          disabled={submitting}
+          onChange={(event) =>
+            setReviewNotes(event.target.value)
+          }
+          placeholder="Describe what was checked and why this outcome is appropriate."
+          rows="4"
+          value={reviewNotes}
+        />
+      </label>
+
+      <button
+        className={[
+          "button",
+          outcome === "approved"
+            ? "button-primary"
+            : "button-secondary",
+        ].join(" ")}
+        disabled={submitting}
+        type="submit"
+      >
+        {submitting
+          ? "Recording decision…"
+          : outcome === "approved"
+            ? "Approve submission"
+            : "Reject submission"}
+      </button>
+    </form>
+  );
+}
+
+
+function ReviewerVerificationWorkspace({
+  currentUser,
+  onRequestError,
+}) {
+  const [queue, setQueue] = useState(
+    normalizeReviewerVerificationQueue(),
+  );
+  const [statusFilter, setStatusFilter] = useState(
+    "pending",
+  );
+  const [loading, setLoading] = useState(true);
+  const [
+    downloadingEvidenceId,
+    setDownloadingEvidenceId,
+  ] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const visibleSubmissions = useMemo(
+    () =>
+      queue.submissions.filter(
+        (submission) =>
+          statusFilter === "all"
+          || submission.status === statusFilter,
+      ),
+    [queue.submissions, statusFilter],
+  );
+
+  const statusCounts = useMemo(
+    () =>
+      queue.submissions.reduce(
+        (counts, submission) => ({
+          ...counts,
+          [submission.status]:
+            (counts[submission.status] || 0) + 1,
+        }),
+        {},
+      ),
+    [queue.submissions],
+  );
+
+  async function loadQueue({
+    showLoading = true,
+  } = {}) {
+    if (showLoading) {
+      setLoading(true);
+    }
+
+    setError("");
+
+    try {
+      const payload =
+        await listEligibilityVerificationReviewerSubmissions();
+
+      setQueue(
+        normalizeReviewerVerificationQueue(payload),
+      );
+    } catch (requestError) {
+      if (requestError?.response?.status === 401) {
+        onRequestError(requestError);
+        return;
+      }
+
+      setError(humanizeApiError(requestError));
+    } finally {
+      if (showLoading) {
+        setLoading(false);
+      }
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadInitialQueue() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const payload =
+          await listEligibilityVerificationReviewerSubmissions();
+
+        if (!active) return;
+
+        setQueue(
+          normalizeReviewerVerificationQueue(payload),
+        );
+      } catch (requestError) {
+        if (!active) return;
+
+        if (requestError?.response?.status === 401) {
+          onRequestError(requestError);
+          return;
+        }
+
+        setError(humanizeApiError(requestError));
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadInitialQueue();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function handleEvidenceDownload(evidence) {
+    setDownloadingEvidenceId(evidence.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const download =
+        await downloadEligibilityVerificationReviewerEvidence({
+          evidenceId: evidence.id,
+          fallbackFilename:
+            evidence.filename
+            || "verification-evidence",
+        });
+
+      triggerBrowserDownload(download);
+      setSuccess(
+        `${download.filename} was downloaded securely.`,
+      );
+    } catch (requestError) {
+      if (requestError?.response?.status === 401) {
+        onRequestError(requestError);
+        return;
+      }
+
+      setError(humanizeApiError(requestError));
+    } finally {
+      setDownloadingEvidenceId("");
+    }
+  }
+
+  async function handleDecisionCreated({
+    decision,
+    submission,
+  }) {
+    setError("");
+    setSuccess(
+      `${reviewerVerificationStatusLabel(
+        decision.outcome,
+      )} decision recorded for ${submission.startup_name}.`,
+    );
+
+    await loadQueue({
+      showLoading: false,
+    });
+  }
+
+  return (
+    <div className="page-stack">
+      <PageHeader
+        actions={(
+          <button
+            className="button button-secondary"
+            disabled={loading}
+            onClick={() => loadQueue()}
+            type="button"
+          >
+            {loading ? "Refreshing…" : "Refresh queue"}
+          </button>
+        )}
+        description="Review founder-submitted manual eligibility claims, inspect protected evidence and create immutable approve or reject decisions."
+        eyebrow="AUTHORIZED REVIEW OPERATIONS"
+        title="Reviewer verification queue"
+      />
+
+      <section className="reviewer-access-banner">
+        <div>
+          <span className="section-kicker">
+            SERVER-AUTHORIZED ACCESS
+          </span>
+          <h2>
+            {currentUser?.roleLabel
+              || "Eligibility reviewer"}
+          </h2>
+          <p>
+            Eligibility-review capability was granted
+            by the authenticated identity endpoint.
+            Queue records, evidence and decisions remain
+            protected by backend authorization.
+          </p>
+        </div>
+        <span className="reviewer-access-pill">
+          Authorized
+        </span>
+      </section>
+
+      {error && (
+        <InlineNotice tone="danger">
+          {error}
+        </InlineNotice>
+      )}
+
+      {success && (
+        <InlineNotice tone="success">
+          {success}
+        </InlineNotice>
+      )}
+
+      <section className="reviewer-queue-controls">
+        <div className="reviewer-summary-grid">
+          {[
+            ["pending", "Pending"],
+            ["approved", "Approved"],
+            ["rejected", "Rejected"],
+            ["expired", "Expired"],
+          ].map(([status, label]) => (
+            <div
+              className="reviewer-summary-card"
+              key={status}
+            >
+              <strong>
+                {statusCounts[status] || 0}
+              </strong>
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
+
+        <label className="field reviewer-status-filter">
+          <span>Show submissions</span>
+          <select
+            aria-label="Filter verification submissions"
+            onChange={(event) =>
+              setStatusFilter(event.target.value)
+            }
+            value={statusFilter}
+          >
+            <option value="all">All statuses</option>
+            <option value="pending">
+              Pending review
+            </option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="expired">Expired</option>
+          </select>
+        </label>
+      </section>
+
+      {loading ? (
+        <div
+          className="dashboard-loader"
+          role="status"
+        >
+          <span
+            aria-hidden="true"
+            className="spinner"
+          />
+          Loading reviewer verification queue…
+        </div>
+      ) : !visibleSubmissions.length ? (
+        <section className="dashboard-card">
+          <span className="section-kicker">
+            QUEUE CLEAR
+          </span>
+          <h2>No matching submissions</h2>
+          <p className="muted">
+            No verification submissions currently match
+            the selected status.
+          </p>
+        </section>
+      ) : (
+        <div className="reviewer-submission-list">
+          {visibleSubmissions.map((submission) => {
+            const tone =
+              reviewerVerificationStatusTone(
+                submission.status,
+              );
+
+            return (
+              <article
+                className="reviewer-submission-card"
+                key={submission.id}
+              >
+                <header className="reviewer-submission-header">
+                  <div>
+                    <span className="section-kicker">
+                      {submission.scheme_name}
+                    </span>
+                    <h2>{submission.startup_name}</h2>
+                    <p>
+                      {submission.field_path}
+                      {" · "}
+                      {submission.operator}
+                    </p>
+                  </div>
+
+                  <span
+                    className={[
+                      "reviewer-status-pill",
+                      `reviewer-status-${tone}`,
+                    ].join(" ")}
+                  >
+                    {reviewerVerificationStatusLabel(
+                      submission.status,
+                    )}
+                  </span>
+                </header>
+
+                <div className="reviewer-claim-grid">
+                  <div>
+                    <span>Founder claim</span>
+                    <strong>
+                      {formatReviewerValue(
+                        submission.claim_value,
+                      )}
+                    </strong>
+                    {submission.claim_text && (
+                      <p>{submission.claim_text}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <span>Expected rule value</span>
+                    <strong>
+                      {formatReviewerValue(
+                        submission.expected_value,
+                      )}
+                    </strong>
+                    <p>
+                      {submission.evidence_text
+                        || "No evidence guidance supplied."}
+                    </p>
+                  </div>
+                </div>
+
+                <section className="reviewer-evidence-section">
+                  <div className="reviewer-section-heading">
+                    <div>
+                      <span className="section-kicker">
+                        PROTECTED EVIDENCE
+                      </span>
+                      <h3>
+                        {submission.evidence_count || 0}
+                        {" "}
+                        file
+                        {submission.evidence_count === 1
+                          ? ""
+                          : "s"}
+                      </h3>
+                    </div>
+                  </div>
+
+                  {!submission.evidence?.length ? (
+                    <p className="muted">
+                      No evidence files were uploaded.
+                    </p>
+                  ) : (
+                    <div className="reviewer-evidence-list">
+                      {submission.evidence.map(
+                        (evidence) => (
+                          <div
+                            className="reviewer-evidence-row"
+                            key={evidence.id}
+                          >
+                            <div>
+                              <strong>
+                                {evidence.filename}
+                              </strong>
+                              <span>
+                                {evidence.mime_type
+                                  || "Unknown file type"}
+                                {" · "}
+                                {evidence.size_bytes || 0}
+                                {" bytes"}
+                              </span>
+                            </div>
+
+                            <button
+                              className="button button-ghost"
+                              disabled={
+                                downloadingEvidenceId
+                                === evidence.id
+                              }
+                              onClick={() =>
+                                handleEvidenceDownload(
+                                  evidence,
+                                )
+                              }
+                              type="button"
+                            >
+                              {downloadingEvidenceId
+                              === evidence.id
+                                ? "Downloading…"
+                                : `Download ${evidence.filename}`}
+                            </button>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </section>
+
+                {submission.decision && (
+                  <section className="reviewer-existing-decision">
+                    <span className="section-kicker">
+                      CURRENT EFFECTIVE DECISION
+                    </span>
+                    <h3>
+                      {reviewerVerificationStatusLabel(
+                        submission.status,
+                      )}
+                    </h3>
+                    <p>
+                      {submission.decision.review_notes
+                        || "No reviewer notes supplied."}
+                    </p>
+                    <dl>
+                      <div>
+                        <dt>Verified value</dt>
+                        <dd>
+                          {formatReviewerValue(
+                            submission.decision
+                              .verified_value,
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Valid from</dt>
+                        <dd>
+                          {submission.decision.valid_from}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Expires on</dt>
+                        <dd>
+                          {submission.decision.expires_on
+                            || "No expiry"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </section>
+                )}
+
+                {submission.status === "pending" && (
+                  <ReviewerDecisionForm
+                    defaultValidFrom={queue.asOfDate}
+                    onDecisionCreated={
+                      handleDecisionCreated
+                    }
+                    submission={submission}
+                  />
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function EmptyProfileState({ onStart }) {
   return (
     <section className="empty-state empty-state-page">
@@ -2604,6 +3331,7 @@ function EmptyProfileState({ onStart }) {
 }
 
 function Workspace({ onSignOut }) {
+  const [currentUser, setCurrentUser] = useState(null);
   const [profiles, setProfiles] = useState([]);
   const [selectedProfileId, setSelectedProfileId] = useState("");
   const [dashboardData, setDashboardData] = useState(null);
@@ -2654,15 +3382,26 @@ function Workspace({ onSignOut }) {
       setLoadingProfiles(true);
       setError("");
       try {
-        const result = await loadCatalogData({
-          listStartupProfiles,
-          listSchemes,
-          listExternalSchemes,
-          listExternalCapitalSupport,
-          listExternalCertificationRequirements,
-        });
+        const [
+          identityPayload,
+          result,
+        ] = await Promise.all([
+          getCurrentUser(),
+          loadCatalogData({
+            listStartupProfiles,
+            listSchemes,
+            listExternalSchemes,
+            listExternalCapitalSupport,
+            listExternalCertificationRequirements,
+          }),
+        ]);
         if (!active) return;
 
+        const identity = normalizeCurrentUser(
+          identityPayload,
+        );
+
+        setCurrentUser(identity);
         setProfiles(result.profiles);
         setSchemes(result.schemes);
         setExternalSchemes(result.externalSchemes);
@@ -2677,6 +3416,14 @@ function Workspace({ onSignOut }) {
             ? currentId
             : result.profiles[0]?.id || "",
         );
+
+        if (
+          canAccessReviewerWorkspace(identity)
+          && !result.profiles.length
+        ) {
+          setActiveView("reviewer-verifications");
+        }
+
         setError(partialLoadWarning(result.warningLabels));
       } catch (requestError) {
         if (active) handleRequestError(requestError);
@@ -2953,7 +3700,17 @@ function Workspace({ onSignOut }) {
   }
 
   let page = null;
-  if (activeView === "assessment") {
+  if (
+    activeView === "reviewer-verifications"
+    && canAccessReviewerWorkspace(currentUser)
+  ) {
+    page = (
+      <ReviewerVerificationWorkspace
+        currentUser={currentUser}
+        onRequestError={handleRequestError}
+      />
+    );
+  } else if (activeView === "assessment") {
     page = (
       <AssessmentWizard
         onCancel={() => handleNavigate(profiles.length ? "startup" : "overview")}
@@ -3055,7 +3812,15 @@ function Workspace({ onSignOut }) {
 
   return (
     <div className="product-shell">
-      <ProductSidebar activeView={activeView} metrics={metrics} onNavigate={handleNavigate} profile={selectedProfile} />
+      <ProductSidebar
+        activeView={activeView}
+        canReviewEligibility={
+          canAccessReviewerWorkspace(currentUser)
+        }
+        metrics={metrics}
+        onNavigate={handleNavigate}
+        profile={selectedProfile}
+      />
       <main className="product-main">
         <ProductTopbar loadingProfiles={loadingProfiles} onLogout={handleLogout} onProfileChange={setSelectedProfileId} profiles={profiles} query={query} selectedProfileId={selectedProfileId} setQuery={setQuery} />
         <div className="product-content">
@@ -3064,13 +3829,15 @@ function Workspace({ onSignOut }) {
           {success && <InlineNotice tone="success">{success}</InlineNotice>}
           {!loadingProfiles &&
           !profiles.length &&
-          activeView !== "assessment" ? (
+          activeView !== "assessment" &&
+          activeView !== "reviewer-verifications" ? (
             <EmptyProfileState
               onStart={() => handleNavigate("assessment")}
             />
           ) : loadingWorkspace &&
             !dashboardData &&
-            activeView !== "assessment" ? (
+            activeView !== "assessment" &&
+            activeView !== "reviewer-verifications" ? (
             <div className="dashboard-loader" role="status">
               <span className="spinner" aria-hidden="true" />
               Loading verified founder records…
