@@ -2978,6 +2978,116 @@ body {
   text-decoration: underline;
 }
 
+.scheme-card-footer-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  justify-content: flex-end;
+}
+
+.scheme-card-footer-actions button {
+  background: transparent;
+  border: 0;
+  color: #5537ce;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0;
+}
+
+.scheme-card-footer-actions button:hover {
+  text-decoration: underline;
+}
+
+.external-detail-notice {
+  background: #fff7e8;
+  border: 1px solid #f1d7a7;
+  border-radius: 14px;
+  color: #76521d;
+  padding: 0.9rem 1rem;
+}
+
+.external-detail-notice-reviewed {
+  background: #eefaf3;
+  border-color: #bfe5cc;
+  color: #245d3a;
+}
+
+.external-detail-notice strong {
+  display: block;
+  font-size: 0.76rem;
+}
+
+.external-detail-notice p {
+  font-size: 0.7rem;
+  line-height: 1.55;
+  margin: 0.35rem 0 0;
+}
+
+.external-detail-metadata {
+  display: grid;
+  gap: 0;
+  margin: 0.8rem 0 0;
+}
+
+.external-detail-metadata div {
+  align-items: start;
+  border-top: 1px solid #edf0f5;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: minmax(110px, 0.8fr) minmax(0, 1.2fr);
+  padding: 0.65rem 0;
+}
+
+.external-detail-metadata dt {
+  color: #7a8699;
+  font-size: 0.65rem;
+}
+
+.external-detail-metadata dd {
+  color: #34415c;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.scheme-detail-grid .dashboard-card > p {
+  color: var(--slate);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.text-link {
+  color: #5537ce;
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-top: 0.65rem;
+  text-decoration: none;
+}
+
+.text-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 680px) {
+  .scheme-card-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .scheme-card-footer-actions {
+    justify-content: flex-start;
+  }
+
+  .external-detail-metadata div {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Eligibility explanation and application-deadline indicators */
 .application-badge.deadline-open,
 .application-badge.deadline-rolling {

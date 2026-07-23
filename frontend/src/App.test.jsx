@@ -166,6 +166,18 @@ const reviewedExternalScheme = {
   external_id: "EXT002",
   scheme_name: "Reviewed Climate Innovation Grant",
   normalized_name: "reviewed climate innovation grant",
+  dpiit_required: "Required",
+  startup_age_limit: "Up to 10 years from incorporation",
+  revenue_criteria: "Annual turnover below INR 100 crore",
+  women_eligible: "Yes",
+  sc_st_eligible: "Yes",
+  documents_required: [
+    "DPIIT recognition certificate",
+    "Pitch deck",
+  ],
+  application_process:
+    "Apply through the authority portal during an active call.",
+  official_website_label: "Climate Innovation Authority",
   official_application_url:
     "https://authority.gov.in/climate-grant",
   review_status: "verified",
@@ -766,6 +778,71 @@ describe("functional user dashboard", () => {
         name: /Startup India Seed Fund Scheme/,
       }),
     ).not.toBeInTheDocument();
+  });
+
+  test("shows reviewed external scheme facts and official application guidance", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /View all schemes/,
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Reviewed Climate Innovation Grant",
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Reviewed Climate Innovation Grant",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Official source reviewed"),
+    ).toHaveLength(2);
+    expect(
+      screen.getByText("Up to 10 years from incorporation"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/DPIIT recognition certificate/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Apply through the authority portal during an active call.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "Open official source",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://authority.gov.in/climate-grant",
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "Programme details",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", {
+        name: "Founder verification",
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "← Back to schemes",
+      }),
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "Explore schemes",
+      }),
+    ).toBeInTheDocument();
   });
 
   test("keeps external schemes out of canonical requirements and funding pages", async () => {
