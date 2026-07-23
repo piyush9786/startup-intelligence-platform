@@ -16,8 +16,10 @@ const api = vi.hoisted(() => ({
   clearSession: vi.fn(),
   createStartupAssessmentDraft: vi.fn(),
   describeApiFailure: vi.fn(() => "Request failed"),
+  createEligibilityVerificationSubmission: vi.fn(),
   generateGroundedBriefing: vi.fn(),
   getCurrentBriefing: vi.fn(),
+  getEligibilityVerificationGates: vi.fn(),
   getCurrentStartupAdvisorBriefingJob: vi.fn(),
   getSession: vi.fn(),
   getStartupAdvisorBriefing: vi.fn(),
@@ -33,6 +35,7 @@ const api = vi.hoisted(() => ({
   login: vi.fn(),
   submitStartupAssessmentDraft: vi.fn(),
   updateStartupAssessmentDraft: vi.fn(),
+  uploadEligibilityVerificationEvidence: vi.fn(),
 }));
 
 vi.mock("./api", () => api);
@@ -349,6 +352,27 @@ function configureAuthenticatedWorkspace({
 beforeEach(() => {
   vi.resetAllMocks();
   configureAuthenticatedWorkspace();
+  api.getEligibilityVerificationGates.mockResolvedValue({
+    startup_profile_id: profile.id,
+    scheme_id: loanScheme.id,
+    scheme_version_id: "loan-version-one",
+    as_of_date: "2026-07-23",
+    gate_count: 0,
+    unresolved_count: 0,
+    gates: [],
+  });
+  api.createEligibilityVerificationSubmission.mockResolvedValue({
+    id: "verification-submission-one",
+    is_current: true,
+    claim_value: true,
+    claim_text: "",
+  });
+  api.uploadEligibilityVerificationEvidence.mockResolvedValue({
+    id: "verification-evidence-one",
+    filename: "endorsement.pdf",
+    mime_type: "application/pdf",
+    size_bytes: 8,
+  });
   api.login.mockResolvedValue({ access: "access-token", refresh: "refresh-token" });
   api.getStartupAdvisorBriefing.mockResolvedValue(makeBriefing());
   api.getStartupAdvisorBriefingJob.mockResolvedValue(
@@ -657,6 +681,182 @@ describe("functional user dashboard", () => {
       "href",
       "https://authority.example/loan/apply",
     );
+  });
+
+
+
+  test("submits a founder verification claim and uploads evidence", async () => {
+    const manualGate = {
+      eligibility_rule_id: "manual-rule-one",
+      field_path: "manual.incubator_endorsement",
+      operator: "equals",
+      expected_value: true,
+      mandatory: true,
+      rule_group: "",
+      evidence_text: "Incubator endorsement is required.",
+      evidence_page: null,
+      status: "not_submitted",
+      resolved: false,
+      submission: null,
+      decision: null,
+    };
+
+    api.getEligibilityVerificationGates
+      .mockResolvedValueOnce({
+        startup_profile_id: profile.id,
+        scheme_id: loanScheme.id,
+        scheme_version_id: "loan-version-one",
+        as_of_date: "2026-07-23",
+        gate_count: 1,
+        unresolved_count: 1,
+        gates: [manualGate],
+      })
+      .mockResolvedValueOnce({
+        startup_profile_id: profile.id,
+        scheme_id: loanScheme.id,
+        scheme_version_id: "loan-version-one",
+        as_of_date: "2026-07-23",
+        gate_count: 1,
+        unresolved_count: 1,
+        gates: [
+          {
+            ...manualGate,
+            status: "pending",
+            submission: {
+              id: "verification-submission-one",
+              claim_value: true,
+              claim_text: "Endorsement obtained.",
+              evidence_count: 0,
+              created_at: "2026-07-23T07:00:00Z",
+            },
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        startup_profile_id: profile.id,
+        scheme_id: loanScheme.id,
+        scheme_version_id: "loan-version-one",
+        as_of_date: "2026-07-23",
+        gate_count: 1,
+        unresolved_count: 1,
+        gates: [
+          {
+            ...manualGate,
+            status: "pending",
+            submission: {
+              id: "verification-submission-one",
+              claim_value: true,
+              claim_text: "Endorsement obtained.",
+              evidence_count: 1,
+              created_at: "2026-07-23T07:00:00Z",
+            },
+          },
+        ],
+      });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Funding & loans",
+      }),
+    );
+
+    const loanCard = screen
+      .getByRole("heading", {
+        name: "Startup Working Capital Loan",
+      })
+      .closest("article");
+
+    await user.click(
+      within(loanCard).getByRole("button", {
+        name: "Review eligibility and apply",
+      }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Manual eligibility verification",
+      }),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("Evidence required"),
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: "Claim details for Incubator endorsement is required.",
+      }),
+      "Endorsement obtained.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Submit claim",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(
+        api.createEligibilityVerificationSubmission,
+      ).toHaveBeenCalledWith({
+        startupProfileId: profile.id,
+        schemeId: loanScheme.id,
+        eligibilityRuleId: "manual-rule-one",
+        claimValue: true,
+        claimText: "Endorsement obtained.",
+      });
+    });
+
+    expect(
+      await screen.findByText("Awaiting review"),
+    ).toBeInTheDocument();
+
+    const evidenceFile = new File(
+      ["evidence"],
+      "endorsement.pdf",
+      {
+        type: "application/pdf",
+      },
+    );
+
+    await user.upload(
+      screen.getByLabelText(
+        "Evidence file for Incubator endorsement is required.",
+      ),
+      evidenceFile,
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Upload evidence",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(
+        api.uploadEligibilityVerificationEvidence,
+      ).toHaveBeenCalledWith({
+        submissionId: "verification-submission-one",
+        file: evidenceFile,
+      });
+    });
+
+    expect(
+      await screen.findByText(
+        "Evidence uploaded. It remains pending reviewer approval.",
+      ),
+    ).toBeInTheDocument();
+
+    const evidenceCountRow = screen
+      .getByText("Evidence uploaded")
+      .closest("div");
+
+    expect(
+      within(evidenceCountRow).getByText("1"),
+    ).toBeInTheDocument();
   });
 
   test("shows evaluated schemes when no eligible recommendation exists", async () => {

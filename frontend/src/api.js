@@ -375,3 +375,69 @@ export async function generateGroundedBriefing(
 export function describeApiFailure(error) {
   return humanizeApiError(error);
 }
+
+
+export async function getEligibilityVerificationGates({
+  startupProfileId,
+  schemeId,
+  asOfDate,
+}) {
+  const params = {
+    startup_profile_id: startupProfileId,
+    scheme_id: schemeId,
+  };
+
+  if (asOfDate) {
+    params.as_of_date = asOfDate;
+  }
+
+  const response = await client.get(
+    "/eligibility/verifications/gates/",
+    { params },
+  );
+  return response.data;
+}
+
+
+export async function createEligibilityVerificationSubmission({
+  startupProfileId,
+  schemeId,
+  eligibilityRuleId,
+  claimValue,
+  claimText = "",
+}) {
+  const response = await client.post(
+    "/eligibility/verifications/submissions/",
+    {
+      startup_profile_id: startupProfileId,
+      scheme_id: schemeId,
+      eligibility_rule_id: eligibilityRuleId,
+      claim_value: claimValue,
+      claim_text: claimText,
+    },
+  );
+  return response.data;
+}
+
+
+export async function uploadEligibilityVerificationEvidence({
+  submissionId,
+  file,
+}) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await client.post(
+    (
+      "/eligibility/verifications/submissions/"
+      + `${submissionId}/evidence/`
+    ),
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+  return response.data;
+}
