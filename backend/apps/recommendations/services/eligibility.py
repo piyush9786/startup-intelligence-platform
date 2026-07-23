@@ -9,7 +9,7 @@ from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from typing import Any
 
-ENGINE_VERSION = "rules-v2"
+ENGINE_VERSION = "rules-v3"
 _MISSING = object()
 _TOKEN_RE = re.compile(r"[^a-z0-9]+")
 
@@ -180,13 +180,17 @@ def resolve_profile_field(
     data = _profile_data(startup_profile)
 
     if normalized == "eligible_entity_type":
-        if "entity_types" in data:
-            return ResolvedValue(value=data["entity_types"])
-        if "entity_type" in data:
-            return ResolvedValue(value=data["entity_type"])
+        entity_types = data.get("entity_types")
+        if _is_present(entity_types):
+            return ResolvedValue(value=entity_types)
 
-        # StartupProfile is explicitly a startup-facing profile. This default makes
-        # startup-only schemes evaluable while correctly failing AIF-only schemes.
+        entity_type = data.get("entity_type")
+        if _is_present(entity_type):
+            return ResolvedValue(value=entity_type)
+
+        # StartupProfile is explicitly a startup-facing profile. Blank or omitted
+        # entity types therefore use the startup default, while explicit non-startup
+        # entity types remain authoritative.
         return ResolvedValue(value=["startup"])
 
     if normalized == "regulatory_registration":
