@@ -45,6 +45,7 @@ seed:
 
 test:
 	docker compose run --rm backend pytest
+	docker compose run --rm frontend npm test
 	docker compose run --rm frontend npm run build
 
 lint:

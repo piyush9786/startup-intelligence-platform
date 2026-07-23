@@ -31,9 +31,11 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install -r backend/requirements.txt
+      - run: python backend/manage.py check
       - run: python backend/manage.py makemigrations --check --dry-run
       - run: pytest backend
       - run: ruff check backend
+      - run: git diff --check
 
   frontend:
     runs-on: ubuntu-latest
