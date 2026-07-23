@@ -118,6 +118,12 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 25,
+    "DEFAULT_THROTTLE_RATES": {
+        "assistant_chat_turn": os.getenv(
+            "ASSISTANT_CHATBOT_TURN_RATE",
+            "20/hour",
+        ),
+    },
 }
 
 SIMPLE_JWT = {

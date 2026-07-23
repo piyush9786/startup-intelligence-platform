@@ -30,6 +30,7 @@ import {
   uploadEligibilityVerificationEvidence,
 } from "./api";
 import AssessmentWizard from "./AssessmentWizard";
+import ChatbotDrawer from "./ChatbotDrawer";
 import OnboardingTour from "./OnboardingTour";
 import {
   canAccessReviewerWorkspace,
@@ -4084,6 +4085,14 @@ function Workspace({ onSignOut }) {
           )}
         </div>
       </main>
+
+      {currentUser?.role === "founder" && (
+        <ChatbotDrawer
+          activeView={activeView}
+          onNavigate={handleNavigate}
+          startupProfile={selectedProfile}
+        />
+      )}
     </div>
   );
 }

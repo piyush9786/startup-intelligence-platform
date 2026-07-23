@@ -25,7 +25,8 @@ The following major capabilities are operational:
 - concurrency-safe verification submissions;
 - verified eligibility provenance in backend snapshots and founder UI;
 - persisted first-open founder onboarding;
-- shared agent-orchestration persistence and audit foundation.
+- shared agent-orchestration persistence and audit foundation;
+- persistent site-wide founder chatbot.
 
 ## Completed Phase 45: first-open onboarding tour
 
@@ -49,6 +50,38 @@ Implemented scope:
 
 See
 [First-open onboarding tour](frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md).
+
+## Completed Phase 44: site-wide founder chatbot
+
+Purpose: provide persistent product navigation, workspace definitions, and
+startup-profile-aware explanations without weakening the deterministic trust
+boundary.
+
+Implemented scope:
+
+- founder-only persistent launcher and responsive drawer;
+- authenticated global and startup-scoped chatbot sessions;
+- complete persisted conversation history;
+- page-aware context treated only as convenience context;
+- deterministic platform-help and navigation responses;
+- startup-profile explanations through the registered
+  `get_startup_profile@v1` tool;
+- claim references to successful tool calls and canonical output hashes;
+- bounded 20-turn founder sessions;
+- scoped request throttling through `assistant_chat_turn`;
+- ownership enforcement and non-disclosure of other founders' profiles;
+- reviewer-workspace exclusion;
+- focused API, frontend, accessibility, and integration tests;
+- successful full backend and frontend validation.
+
+The chatbot remains read-only.
+
+It does not modify startup profiles, assessment drafts, readiness findings,
+eligibility results, recommendations, verification decisions, deadlines,
+funding amounts, or prerequisite ordering.
+
+See
+[Site-wide founder chatbot](architecture/SITE_WIDE_CHATBOT_V1.md).
 
 ## Remaining implementation order
 
@@ -83,23 +116,7 @@ See
 
 ## Remaining implementation order
 
-### 1. Site-wide chatbot — Phase 44
-
-Purpose: provide product navigation, definitions, and profile-specific
-explanations.
-
-Scope:
-
-- persistent dashboard widget;
-- page-aware context;
-- platform-help answers;
-- startup-specific answers through deterministic tools;
-- verified or grounded sourcing for regulatory and scheme facts;
-- escalation to the existing advisor briefing for deep synthesis.
-
-The chatbot must not directly modify authoritative profile data.
-
-### 2. Concierge state machine — Phases 46 and 47
+### 1. Concierge state machine — Phases 46 and 47
 
 Purpose: guide a founder from an empty profile to a useful starting plan.
 
@@ -117,7 +134,7 @@ The Concierge must reuse `StartupAssessmentDraft`.
 
 It must not create a second authoritative profile representation.
 
-### 3. Scheme dependency graph — Phase 48
+### 2. Scheme dependency graph — Phase 48
 
 Purpose: represent prerequisites and unlock relationships with provenance.
 
@@ -133,7 +150,7 @@ Scope:
 
 LLM-extracted edges must not become authoritative without review.
 
-### 4. Funding plan engine — Phase 49
+### 3. Funding plan engine — Phase 49
 
 Purpose: produce an ordered, dependency-aware funding and readiness plan.
 
@@ -151,7 +168,7 @@ single nullable `depends_on` field.
 
 The LLM may narrate the generated plan but must not choose its ordering.
 
-### 5. Progress feedback — Phase 50
+### 4. Progress feedback — Phase 50
 
 Purpose: connect plan execution back to readiness and recommendations.
 

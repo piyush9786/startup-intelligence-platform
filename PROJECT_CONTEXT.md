@@ -140,6 +140,7 @@ The system is a modular monolith with asynchronous workers.
 - PostgreSQL-backed domain models;
 - persisted shared agent-orchestration foundation;
 - append-only tool-call and claim audit records;
+- authenticated persistent founder chatbot API;
 - Celery workers and scheduled jobs.
 
 ### Data and infrastructure
@@ -275,13 +276,36 @@ The shared orchestration foundation now adds:
 - a Phase 43 prohibition on write-capable tools;
 - the read-only `get_startup_profile` tool.
 
-There is not yet a general multi-turn agent runner, site-wide chatbot, or
-concierge workflow.
+The site-wide founder chatbot is implemented as a bounded deterministic
+conversation layer over the shared orchestration foundation.
+
+There is not yet a general LLM turn runner or concierge workflow.
 
 The advisor and future agents must preserve deterministic results as
 authoritative and must not invent eligibility, funding amounts, legal
 conclusions, application deadlines, reviewer decisions, or prerequisite
 ordering.
+
+## 9.1 Site-wide founder chatbot
+
+Phase 44 adds:
+
+- a persistent founder-only chatbot launcher and responsive drawer;
+- authenticated global and startup-scoped chatbot sessions;
+- persisted conversation history;
+- bounded founder turns and scoped API request throttling;
+- deterministic platform-help and navigation responses;
+- startup-profile explanations through `get_startup_profile@v1`;
+- page-aware context that is not treated as authorization;
+- claim references to successful tool-call logs and canonical output hashes;
+- reviewer-workspace exclusion;
+- focused backend, frontend, accessibility, and integration tests.
+
+The chatbot remains read-only and does not replace deterministic domain
+services or the grounded founder-advisor workflow.
+
+See
+[Site-wide founder chatbot](docs/architecture/SITE_WIDE_CHATBOT_V1.md).
 
 ## 10. Planned conversational layer
 
@@ -290,12 +314,11 @@ implemented.
 
 The remaining agreed implementation order is:
 
-1. site-wide chatbot;
-2. bounded concierge state machine;
-3. consolidated deterministic starting plan;
-4. verified scheme-prerequisite graph;
-5. dependency-aware funding-plan engine and timeline;
-6. founder progress tracking with verification-aware feedback.
+1. bounded concierge state machine;
+2. consolidated deterministic starting plan;
+3. verified scheme-prerequisite graph;
+4. dependency-aware funding-plan engine and timeline;
+5. founder progress tracking with verification-aware feedback.
 
 Future conversational interfaces must execute only versioned, registered tools.
 
@@ -451,21 +474,23 @@ Do not mix unrelated refactors into a milestone.
 
 ## 16. Immediate next milestone
 
-The next milestone is the site-wide chatbot.
+The next milestone is the bounded concierge state machine.
 
 Initial scope:
 
-- add a persistent founder-facing chatbot entry point;
-- use the existing shared `AgentSession` and `AgentMessage` models;
-- execute startup-specific reads only through the whitelisted tool registry;
-- begin with platform navigation and profile-aware explanations;
-- retain page-aware context without treating frontend state as authorization;
-- add additional read-only tools for readiness, recommendations, schemes, and
-  action roadmaps;
-- attach startup-specific claims to successful tool-call logs;
-- preserve bounded turn execution and explicit rate limits;
-- keep deep synthesis in the existing grounded advisor workflow.
+- guide a founder from an empty or incomplete profile to a useful starting
+  plan;
+- reuse the existing `StartupAssessmentDraft` representation;
+- use explicit bounded conversation states;
+- allow language-model phrasing and structured answer interpretation only;
+- keep draft-field updates behind separately reviewed write tools;
+- require confirmation and correction before assessment submission;
+- submit through existing serializers and validation services;
+- run deterministic readiness, roadmap, eligibility, and recommendation
+  services after confirmed submission;
+- preserve complete session, tool-call, and field-change audit records.
 
-The chatbot must not directly modify startup profiles, submit assessments,
-approve verification evidence, or replace deterministic readiness,
-eligibility, ranking, recommendation, deadline, or prerequisite decisions.
+The concierge must not create a second authoritative startup-profile
+representation, bypass assessment validation, directly modify submitted
+profiles, or allow language models to choose eligibility, ranking,
+recommendation, funding, deadline, or prerequisite decisions.

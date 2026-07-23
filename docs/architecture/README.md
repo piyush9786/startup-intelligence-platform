@@ -220,3 +220,5 @@ Likely future extraction candidates are:
 
 Public APIs and versioned contracts should remain stable if an internal module
 is extracted.
+
+- [Site-wide founder chatbot](SITE_WIDE_CHATBOT_V1.md)
