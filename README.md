@@ -18,6 +18,11 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 - persisted first-open founder onboarding with empty-profile and
   returning-founder variants;
 - resumable, dismissible onboarding with no repeat after completion;
+- shared agent-orchestration persistence foundation;
+- bounded owner-scoped agent sessions;
+- append-only messages, immutable tool-call logs, and claim references;
+- versioned whitelisted read-only tool registry with authorization snapshots
+  and canonical output hashes;
 - startup profile and assessment-draft workflow;
 - document-assisted profile autofill;
 - deterministic startup-readiness assessment;
@@ -56,6 +61,7 @@ architecture, safety, and implementation context.
 ## Documentation
 
 - [Documentation index](docs/README.md)
+- [Shared agent orchestration](docs/architecture/SHARED_AGENT_ORCHESTRATION_V1.md)
 - [First-open onboarding tour](docs/frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md)
 - [Project roadmap](docs/ROADMAP.md)
 - [Architecture](docs/architecture/README.md)
@@ -108,12 +114,14 @@ git diff --check
 
 ## Next product phase
 
-The next milestone is shared agent orchestration with persisted sessions,
-immutable tool-call logs, authorization context, and a versioned whitelist of
-read-only deterministic tools.
+The next milestone is a site-wide chatbot built on the persisted shared
+orchestration foundation.
 
-It will be followed by a site-wide chatbot, bounded concierge workflow,
-verified scheme-dependency graph, and dependency-aware funding planning.
+It will use bounded sessions, append-only messages, registered read-only tools,
+authorization snapshots, output hashes, and claim-to-tool-call references.
+
+It will be followed by the bounded concierge workflow, verified
+scheme-dependency graph, and dependency-aware funding planning.
 
 These additions must remain conversational interfaces over the existing
 deterministic and verified core.

@@ -34,28 +34,35 @@ Current repository baseline:
 - persisted onboarding contract: `founder-onboarding-v1`;
 - empty-profile and returning-founder onboarding variants;
 - resumable, dismissible, and non-repeating onboarding progress;
-- direct onboarding handoff to the existing startup assessment wizard;
+- shared agent-orchestration persistence foundation;
+- owner-scoped and bounded `AgentSession` records;
+- append-only agent messages, tool-call logs, and claim references;
+- versioned, whitelisted, read-only tool registry;
+- authorization context and canonical output hashes on every tool call;
+- initial `get_startup_profile` tool at version `v1`;
 - full backend test suite passing;
 - 105 frontend tests passing;
 - frontend production build passing;
-- Ruff, Django checks, migration checks, and CI validation commands passing.
+- Ruff, Django checks, and migration checks passing.
 
 The main founder workflow is operational:
 
-```text
-First-open founder onboarding
-→ startup assessment
-→ startup profile
-→ deterministic readiness evaluation
-→ readiness action plan
-→ verified scheme eligibility assessment
-→ deterministic recommendation ranking
-→ manual verification for unresolved gates
-→ reviewer decision
-→ recommendation regeneration
-→ founder-facing verified provenance
-→ grounded advisor briefing
-```
+    First-open founder onboarding
+    → startup assessment
+    → startup profile
+    → deterministic readiness evaluation
+    → readiness action plan
+    → verified scheme eligibility assessment
+    → deterministic recommendation ranking
+    → manual verification for unresolved gates
+    → reviewer decision
+    → recommendation regeneration
+    → founder-facing verified provenance
+    → grounded advisor briefing
+
+The orchestration foundation is infrastructure for later conversational
+interfaces. It does not yet provide a site-wide chatbot or autonomous agent
+runtime.
 
 ## 3. Non-negotiable engineering principles
 
@@ -131,6 +138,8 @@ The system is a modular monolith with asynchronous workers.
 - JWT and session authentication;
 - drf-spectacular OpenAPI schema;
 - PostgreSQL-backed domain models;
+- persisted shared agent-orchestration foundation;
+- append-only tool-call and claim audit records;
 - Celery workers and scheduled jobs.
 
 ### Data and infrastructure
@@ -165,9 +174,10 @@ The current installed domain apps are:
 - `startups` — profiles, assessment drafts, persisted onboarding progress,
   readiness, action plans, and advisor briefings;
 - `recommendations` — eligibility assessments, recommendations, generation
-  runs, verification submissions, evidence, and decisions.
-
-The planned `assistant` application has not been implemented yet.
+  runs, verification submissions, evidence, and decisions;
+- `assistant` — bounded agent sessions, append-only messages, immutable
+  tool-call logs, claim references, canonical hashing, and the whitelisted
+  read-only tool registry.
 
 ## 6. Deterministic readiness
 
@@ -239,7 +249,8 @@ locations, reviewer notes, or reviewer identity.
 
 ## 9. Current AI boundary
 
-The existing founder advisor is a controlled, grounded generation workflow.
+The existing founder advisor remains a controlled, grounded generation
+workflow.
 
 It uses:
 
@@ -250,55 +261,86 @@ It uses:
 - local Ollama generation;
 - persisted briefing and job history.
 
-The system is not yet a general multi-turn agent platform.
+The shared orchestration foundation now adds:
 
-The advisor must preserve deterministic results as authoritative and must not
-invent eligibility, funding amounts, legal conclusions, or application
-deadlines.
+- owner-scoped `AgentSession` persistence;
+- one active session per founder, agent type, and startup scope;
+- bounded founder turn counts;
+- append-only `AgentMessage` records;
+- immutable `AgentToolCallLog` records;
+- canonical SHA-256 hashes over tool outputs;
+- captured authorization context;
+- structured `AgentClaimReference` records;
+- a versioned, explicit tool registry;
+- a Phase 43 prohibition on write-capable tools;
+- the read-only `get_startup_profile` tool.
+
+There is not yet a general multi-turn agent runner, site-wide chatbot, or
+concierge workflow.
+
+The advisor and future agents must preserve deterministic results as
+authoritative and must not invent eligibility, funding amounts, legal
+conclusions, application deadlines, reviewer decisions, or prerequisite
+ordering.
 
 ## 10. Planned conversational layer
 
-The first-open founder onboarding tour is now implemented as a deterministic,
-persisted product workflow. It does not use an autonomous agent and does not
-alter readiness, eligibility, recommendation, or verification decisions.
-
-The next product expansion introduces conversation as a controlled interface
-over the existing platform.
+The first-open founder onboarding tour and shared orchestration foundation are
+implemented.
 
 The remaining agreed implementation order is:
 
-1. shared agent orchestration and whitelisted tool registry;
-2. site-wide chatbot;
-3. bounded concierge state machine;
-4. consolidated deterministic starting plan;
-5. verified scheme-prerequisite graph;
-6. dependency-aware funding-plan engine and timeline;
-7. founder progress tracking with verification-aware feedback.
+1. site-wide chatbot;
+2. bounded concierge state machine;
+3. consolidated deterministic starting plan;
+4. verified scheme-prerequisite graph;
+5. dependency-aware funding-plan engine and timeline;
+6. founder progress tracking with verification-aware feedback.
 
-Agents will use logged, whitelisted tools.
+Future conversational interfaces must execute only versioned, registered tools.
 
-They will not receive unrestricted database access.
+They must not receive unrestricted database access.
 
-Conversational writes must update assessment drafts only.
+Conversational writes must update assessment drafts only and remain disabled
+until a separately reviewed write-tool milestone.
 
 Profile submission must continue through the existing validation and
 confirmation workflow.
 
 ## 11. Agent design rules
 
-Future agent responses that make startup-specific claims must be traceable to
-tool-call outputs.
+Startup-specific agent claims must be traceable to successful tool-call outputs.
 
-The planned tool boundary includes read-mostly operations such as:
+The implemented foundation provides:
 
-```text
-get_startup_profile
-get_readiness_assessment
-get_current_recommendations
-search_schemes
-get_scheme_detail
-get_action_roadmap
-```
+    get_startup_profile
+
+Additional planned read-only tools include:
+
+    get_readiness_assessment
+    get_current_recommendations
+    search_schemes
+    get_scheme_detail
+    get_action_roadmap
+
+Every tool execution must:
+
+- resolve through the explicit registry;
+- have a version;
+- validate the actor and session owner;
+- enforce allowed agent types;
+- preserve the session and startup scope;
+- record input parameters;
+- record authorization context;
+- record status and duration;
+- snapshot the output or safe failure;
+- store a canonical output hash.
+
+Unregistered, unauthorized, closed-session, and write-capable tool requests
+must be denied and logged.
+
+Agent messages, tool-call logs, and claim references are append-only through
+the model service boundary.
 
 A draft-scoped field update may be allowed later, but it must:
 
@@ -316,6 +358,7 @@ evidence, not unsupported model knowledge.
 ```text
 backend/
   apps/
+    assistant/
   config/
   scripts/
 
@@ -408,22 +451,21 @@ Do not mix unrelated refactors into a milestone.
 
 ## 16. Immediate next milestone
 
-The next milestone is shared agent orchestration and a whitelisted tool
-registry.
+The next milestone is the site-wide chatbot.
 
 Initial scope:
 
-- create the `apps/assistant` Django application;
-- persist `AgentSession`, `AgentMessage`, and immutable tool-call records;
-- establish an authorization context for every tool invocation;
-- register versioned, whitelisted tools rather than exposing unrestricted
-  database access;
-- begin with read-only tools over startup profiles, readiness, recommendations,
-  schemes, roadmaps, and persisted evidence;
-- retain tool inputs, outputs, status, duration, version, and output hashes;
-- provide claim-to-tool-call traceability for startup-specific responses;
-- add rate limits and bounded turn execution.
+- add a persistent founder-facing chatbot entry point;
+- use the existing shared `AgentSession` and `AgentMessage` models;
+- execute startup-specific reads only through the whitelisted tool registry;
+- begin with platform navigation and profile-aware explanations;
+- retain page-aware context without treating frontend state as authorization;
+- add additional read-only tools for readiness, recommendations, schemes, and
+  action roadmaps;
+- attach startup-specific claims to successful tool-call logs;
+- preserve bounded turn execution and explicit rate limits;
+- keep deep synthesis in the existing grounded advisor workflow.
 
-This milestone must not add unrestricted profile writes or allow an LLM to
-override deterministic readiness, eligibility, ranking, verification, funding
-amount, deadline, or sequencing decisions.
+The chatbot must not directly modify startup profiles, submit assessments,
+approve verification evidence, or replace deterministic readiness,
+eligibility, ranking, recommendation, deadline, or prerequisite decisions.
