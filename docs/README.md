@@ -33,6 +33,7 @@ workflow, and immediate next milestone.
 ## Founder frontend
 
 - [Founder dashboard shell](frontend/FOUNDER_DASHBOARD_SHELL_V1.md)
+- [Founder dashboard motion and hierarchy](frontend/FOUNDER_DASHBOARD_MOTION_V1.md)
 - [First-open onboarding tour](frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md)
 - [Startup assessment wizard](frontend/STARTUP_ASSESSMENT_WIZARD_V1.md)
 - [Founder advisor briefing workspace](frontend/FOUNDER_ADVISOR_BRIEFING_WORKSPACE_V1.md)

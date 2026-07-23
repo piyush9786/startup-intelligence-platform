@@ -29,6 +29,27 @@ The following major capabilities are operational:
 - persistent site-wide founder chatbot.
 - bounded founder concierge state machine;
 - persisted consolidated deterministic starting plan.
+- ordered, responsive founder dashboard with accessible Motion transitions.
+
+## Completed frontend polish: founder dashboard motion and hierarchy
+
+Purpose: make the founder workspace easier to scan and act on without changing
+the deterministic source of any displayed decision.
+
+Implemented scope:
+
+- reordered workspace navigation around the founder journey;
+- next-best-action command center sourced from the persisted action plan;
+- readiness-first progress metrics;
+- separated decision and supporting-tool sections;
+- responsive desktop, tablet, and mobile composition;
+- Motion-powered navigation, progress, card, page, and notice transitions;
+- operating-system reduced-motion support;
+- `LazyMotion` bundle optimization;
+- focused dashboard hierarchy coverage and full frontend validation.
+
+See
+[Founder dashboard motion and hierarchy](frontend/FOUNDER_DASHBOARD_MOTION_V1.md).
 
 ## Completed Phase 45: first-open onboarding tour
 
