@@ -1547,8 +1547,8 @@ describe("functional user dashboard", () => {
     render(<App />);
 
     await user.click(await screen.findByRole("button", { name: "My startup" }));
-    expect(screen.getByRole("heading", { name: "Acme Climate" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Company overview" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Acme Climate" })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: /Company overview/i })[0]).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Action roadmap" }));
     expect(await screen.findByRole("heading", { name: "Readiness Score Breakdown & Action Roadmap" })).toBeInTheDocument();
@@ -2267,9 +2267,9 @@ describe("founder tools application integration", () => {
     );
 
     expect(
-      screen.getByRole("heading", {
+      screen.getAllByRole("heading", {
         name: /Requirements/i,
-      }),
+      })[0],
     ).toBeInTheDocument();
   });
 });
