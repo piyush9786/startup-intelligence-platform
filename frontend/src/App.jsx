@@ -44,7 +44,7 @@ import FounderIntelligencePage from "./FounderIntelligencePage";
 import FundingPage from "./FundingPage";
 import FundingPlanPage from "./FundingPlanPage";
 import MyStartupPage from "./MyStartupPage";
-import OnboardingTour from "./OnboardingTour";
+import WebsiteTour from "./WebsiteTour";
 import PublicEntry from "./PublicEntry";
 import RequirementsPage from "./RequirementsPage";
 import ReviewerVerificationWorkspace from "./ReviewerVerificationWorkspace";
@@ -506,6 +506,7 @@ function Navigation({
           </span>
           {group.items.map(([id, icon, label]) => (
             <m.button
+              id={`nav-item-${id}`}
               aria-current={
                 activeView === id ? "page" : undefined
               }
@@ -566,7 +567,7 @@ function ProductSidebar({
     : 0;
 
   return (
-    <aside className="product-sidebar">
+    <aside id="product-sidebar" className="product-sidebar">
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-mark" aria-hidden="true">
@@ -3536,12 +3537,10 @@ function Workspace({ onSignOut }) {
 
           {onboardingProgress?.should_show &&
             activeView !== "reviewer-verifications" && (
-              <OnboardingTour
-                busy={onboardingBusy}
+              <WebsiteTour
+                run={true}
                 onComplete={handleOnboardingComplete}
                 onDismiss={handleOnboardingDismiss}
-                onStepChange={handleOnboardingStep}
-                progress={onboardingProgress}
               />
             )}
 
