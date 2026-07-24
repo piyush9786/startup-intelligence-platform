@@ -18,13 +18,14 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 - persisted first-open founder onboarding with empty-profile and
   returning-founder variants;
 - resumable, dismissible onboarding with no repeat after completion;
+- interactive react-joyride website tour;
 - shared agent-orchestration persistence foundation;
 - bounded owner-scoped agent sessions;
 - append-only messages, immutable tool-call logs, and claim references;
 - versioned whitelisted read-only tool registry with authorization snapshots
   and canonical output hashes;
-- persistent founder-only site-wide chatbot with bounded sessions, page-aware
-  context, deterministic navigation, and grounded claim provenance;
+- persistent founder-only site-wide chatbot integrated with local Qwen 3:4b LLM
+  via Ollama, featuring page-aware context and deterministic navigation;
 - startup profile and assessment-draft workflow;
 - document-assisted profile autofill;
 - deterministic startup-readiness assessment;
@@ -44,10 +45,11 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 - effective and expiring reviewer approvals;
 - founder-facing reviewer-approved evidence provenance;
 - Qdrant-backed evidence retrieval;
-- grounded Ollama founder-advisor briefings with citations;
+- grounded Ollama founder-advisor briefings with robust validation handling
+  for LLM hallucination and fallback citations;
 - founder and reviewer React workspaces;
 - readiness-first responsive founder dashboard with accessible Motion
-  transitions.
+  transitions and premium modern UI/UX (glassmorphism, vibrant palettes).
 
 ## System architecture
 
