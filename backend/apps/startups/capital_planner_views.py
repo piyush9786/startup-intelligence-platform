@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.startups.models import StartupCapitalPlan, StartupProfile
+from apps.startups.utils import get_current_startup_profile
 
 from .capital_planner_serializers import (
     StartupCapitalPlanGenerateSerializer,
@@ -29,11 +30,8 @@ logger = logging.getLogger(__name__)
 
 
 def _get_current_profile(user) -> StartupProfile | None:
-    return (
-        StartupProfile.objects.filter(owner=user)
-        .order_by("-created_at")
-        .first()
-    )
+    return get_current_startup_profile(user)
+
 
 
 class StartupCapitalPlanCurrentView(APIView):
