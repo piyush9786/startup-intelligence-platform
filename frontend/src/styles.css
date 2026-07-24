@@ -6275,6 +6275,7 @@ body {
 .public-preview-priority h2 {
   font-size: 1.35rem;
   margin: 0.65rem 0;
+  color: white;
 }
 
 .public-preview-priority p {
