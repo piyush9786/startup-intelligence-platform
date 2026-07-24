@@ -49,7 +49,9 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
   for LLM hallucination and fallback citations;
 - founder and reviewer React workspaces;
 - readiness-first responsive founder dashboard with accessible Motion
-  transitions and premium modern UI/UX (glassmorphism, vibrant palettes).
+  transitions and premium modern UI/UX (glassmorphism, vibrant palettes);
+- interactive user journey routing dialogue for new founders vs existing startups;
+- AI Capital Planner UI with runway, burn, and deterministic scenario modeling.
 
 ## System architecture
 

@@ -27,6 +27,7 @@ const api = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   getCurrentStartupOnboarding: vi.fn(),
   getEligibilityVerificationGates: vi.fn(),
+  getPublicSchemeCount: vi.fn(),
   getCurrentStartupAdvisorBriefingJob: vi.fn(),
   getSession: vi.fn(),
   getStartupAdvisorBriefing: vi.fn(),
@@ -640,6 +641,7 @@ beforeEach(() => {
     should_show: false,
   });
   api.login.mockResolvedValue({ access: "access-token", refresh: "refresh-token" });
+  api.getPublicSchemeCount.mockResolvedValue({ count: 42 });
   api.registerFounder.mockResolvedValue({
     id: "registered-founder",
     username: "new-founder",
@@ -1720,17 +1722,20 @@ describe("functional user dashboard", () => {
     );
   });
 
-  test("starts founder onboarding when no startup profile exists", async () => {
+  test("shows journey dialog when no startup profile exists", async () => {
     configureAuthenticatedWorkspace({ profiles: [] });
     const user = userEvent.setup();
     render(<App />);
 
-    const startButton = await screen.findByRole("button", {
-      name: "Start startup assessment",
+    expect(
+      await screen.findByRole("heading", {
+        name: "Where are you in your journey?",
+      }),
+    ).toBeInTheDocument();
+
+    const startButton = screen.getByRole("button", {
+      name: "I have an existing startup",
     });
-    const adminLink = screen.getByRole("link", { name: "Open data admin" });
-    expect(adminLink).toHaveAttribute("href", api.adminUrl);
-    expect(adminLink).toHaveAttribute("rel", "noopener noreferrer");
 
     await user.click(startButton);
 
@@ -1801,8 +1806,8 @@ describe("functional user dashboard", () => {
     );
 
     expect(
-      screen.queryByRole("button", {
-        name: "Start startup assessment",
+      screen.queryByRole("heading", {
+        name: "Where are you in your journey?",
       }),
     ).not.toBeInTheDocument();
 

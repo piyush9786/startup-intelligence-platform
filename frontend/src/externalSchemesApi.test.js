@@ -96,7 +96,7 @@ describe("external scheme API client", () => {
 
     expect(mocks.client.get).toHaveBeenNthCalledWith(
       2,
-      nextUrl,
+      "/knowledge/external-schemes/?page=2",
       {
         params: undefined,
       },
