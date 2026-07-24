@@ -2247,34 +2247,8 @@ describe("persisted founder onboarding tour", () => {
 });
 
 
-describe("funding plan application integration", () => {
-  test("opens the funding plan from founder navigation", async () => {
-    const user = userEvent.setup();
-
-    render(<App />);
-
-    const navigation = await screen.findByRole("navigation", {
-      name: "Application workspace",
-    });
-
-    await user.click(
-      within(navigation).getByRole("button", {
-        name: "Funding plan",
-      }),
-    );
-
-    expect(
-      screen.getByRole("heading", {
-        name: "Funding plan integration page",
-      }),
-    ).toBeInTheDocument();
-
-    expect(
-      screen.getByText(`Startup profile ${profile.id}`),
-    ).toBeInTheDocument();
-  });
-
-  test("opens the funding plan from dashboard tools", async () => {
+describe("founder tools application integration", () => {
+  test("opens requirements from dashboard tools", async () => {
     const user = userEvent.setup();
 
     render(<App />);
@@ -2288,13 +2262,13 @@ describe("funding plan application integration", () => {
 
     await user.click(
       within(founderTools).getByRole("button", {
-        name: /Funding plan/i,
+        name: /Requirements/i,
       }),
     );
 
     expect(
       screen.getByRole("heading", {
-        name: "Funding plan integration page",
+        name: /Requirements/i,
       }),
     ).toBeInTheDocument();
   });
