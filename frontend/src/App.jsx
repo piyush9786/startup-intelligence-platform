@@ -711,6 +711,7 @@ function ProductTopbar({ query, setQuery }) {
           value={query}
         />
       </label>
+      <LanguageSwitcher />
     </header>
   );
 }
@@ -3678,7 +3679,7 @@ function Workspace({ onSignOut }) {
             startupProfile={selectedProfile}
           />
         )}
-        <LanguageSwitcher />
+
         </div>
       </MotionConfig>
     </LazyMotion>
