@@ -16,6 +16,7 @@ workflow, and immediate next milestone.
 - [System architecture](architecture/README.md)
 - [Shared agent orchestration](architecture/SHARED_AGENT_ORCHESTRATION_V1.md)
 - [Site-wide founder chatbot](architecture/SITE_WIDE_CHATBOT_V1.md)
+- [Verified scheme prerequisite graph](architecture/SCHEME_PREREQUISITE_GRAPH_V1.md)
 
 ## Eligibility and recommendations
 
