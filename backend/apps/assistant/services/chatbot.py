@@ -1,14 +1,22 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 from ..models import AgentMessage, AgentSession
+from .chatbot_llm import (
+    ChatbotLLMError,
+    extract_navigation_hint,
+    get_llm_chatbot_reply,
+)
 from .sessions import (
     add_claim_reference,
     append_agent_message,
 )
 from .tool_registry import execute_registered_tool
+
+logger = logging.getLogger(__name__)
 
 CHATBOT_VERSION = "site-chatbot-v1"
 
@@ -487,6 +495,95 @@ def _navigation_reply(
     return replies[intent]
 
 
+def _build_llm_reply(
+    *,
+    session: AgentSession,
+    actor: Any,
+    triggering_message: AgentMessage,
+    page_context: dict[str, Any],
+) -> ChatbotReply | None:
+    """Attempt to get a reply from the local LLM. Returns None on failure."""
+    # Collect conversation history from the session (excluding the current message).
+    history: list[dict[str, str]] = []
+    session_messages = (
+        session.messages.filter(
+            role__in=[AgentMessage.Role.USER, AgentMessage.Role.AGENT],
+        )
+        .exclude(pk=triggering_message.pk)
+        .order_by("created_at")
+        .values("role", "content")
+    )
+    for msg in session_messages:
+        role = msg["role"]
+        # Map agent → assistant for Ollama format.
+        ollama_role = "assistant" if role == AgentMessage.Role.AGENT else "user"
+        history.append({"role": ollama_role, "content": msg["content"]})
+
+    # Fetch startup profile for context injection (direct DB read — no audit log).
+    startup_profile: dict[str, Any] | None = None
+    if session.startup_profile_id is not None:
+        try:
+            from apps.startups.models import StartupProfile  # noqa: PLC0415
+            from apps.startups.serializers import StartupProfileSerializer  # noqa: PLC0415
+
+            profile_obj = StartupProfile.objects.filter(
+                pk=session.startup_profile_id,
+                owner_id=session.founder_id,
+            ).first()
+            if profile_obj is not None:
+                startup_profile = dict(StartupProfileSerializer(profile_obj).data)
+        except Exception:  # noqa: BLE001
+            pass  # Non-critical — the LLM will still reply without profile data.
+
+    current_view = page_context.get("current_view")
+
+    try:
+        reply_text = get_llm_chatbot_reply(
+            history=history,
+            current_message=triggering_message.content,
+            current_view=current_view,
+            startup_profile=startup_profile,
+        )
+    except ChatbotLLMError as exc:
+        logger.info("Chatbot LLM unavailable, using rule-based fallback: %s", exc)
+        return None
+
+    # Extract an optional navigation hint from the LLM's plain-text reply.
+    nav_view = extract_navigation_hint(reply_text)
+    navigation: ChatbotNavigation | None = None
+    if nav_view:
+        label_map = {
+            "schemes": "Open Scheme Explorer",
+            "roadmap": "Open Action Roadmap",
+            "advisor": "Open Founder Advisor",
+            "milestones": "Open Execution & Milestones",
+            "capital-planner": "Open Capital Planner",
+            "builder": "Open Startup Builder",
+            "funding": "Open Funding & Loans",
+            "requirements": "Open Requirements",
+            "startup": "Open My Startup",
+            "dashboard": "Open Dashboard",
+            "assessment": "Start Assessment",
+        }
+        if nav_view == "assessment":
+            navigation = ChatbotNavigation(
+                action="start_assessment",
+                label=label_map.get(nav_view, "Open page"),
+            )
+        else:
+            navigation = ChatbotNavigation(
+                action="navigate",
+                view=nav_view,
+                label=label_map.get(nav_view, "Open page"),
+            )
+
+    return ChatbotReply(
+        content=reply_text,
+        intent="llm",
+        navigation=navigation,
+    )
+
+
 def build_chatbot_reply(
     *,
     session: AgentSession,
@@ -494,6 +591,17 @@ def build_chatbot_reply(
     triggering_message: AgentMessage,
     page_context: dict[str, Any],
 ) -> ChatbotReply:
+    # ── Try LLM first ──────────────────────────────────────────────────────
+    llm_reply = _build_llm_reply(
+        session=session,
+        actor=actor,
+        triggering_message=triggering_message,
+        page_context=page_context,
+    )
+    if llm_reply is not None:
+        return llm_reply
+
+    # ── Rule-based fallback ─────────────────────────────────────────────────
     intent = _classify_intent(triggering_message.content)
     copilot_context = getattr(session, "copilot_context", None) or {}
 

@@ -142,6 +142,7 @@ def test_reviewer_cannot_create_founder_chat_session():
     assert AgentSession.objects.count() == 0
 
 
+@override_settings(CHATBOT_LLM_ENABLED=False)
 def test_message_endpoint_persists_user_and_agent_messages():
     founder = make_user("chatbot-message-founder")
 
@@ -176,6 +177,7 @@ def test_message_endpoint_persists_user_and_agent_messages():
     assert AgentToolCallLog.objects.count() == 0
 
 
+@override_settings(CHATBOT_LLM_ENABLED=False)
 def test_profile_question_uses_registered_tool_and_claim():
     founder = make_user("chatbot-tool-founder")
     profile = make_profile(
@@ -220,6 +222,7 @@ def test_profile_question_uses_registered_tool_and_claim():
     assert AgentClaimReference.objects.count() == 1
 
 
+@override_settings(CHATBOT_LLM_ENABLED=False)
 def test_global_profile_question_returns_grounded_null_claim():
     founder = make_user("chatbot-null-profile")
 
@@ -241,6 +244,7 @@ def test_global_profile_question_returns_grounded_null_claim():
     assert AgentToolCallLog.objects.count() == 1
 
 
+@override_settings(CHATBOT_LLM_ENABLED=False)
 def test_navigation_question_does_not_invent_domain_results():
     founder = make_user("chatbot-roadmap-founder")
 
@@ -264,6 +268,27 @@ def test_navigation_question_does_not_invent_domain_results():
     assert "does not change their sequence" in (agent_message["content"])
     assert agent_message["claims"] == []
     assert AgentToolCallLog.objects.count() == 0
+
+
+def test_llm_reply_is_used_when_chatbot_llm_enabled():
+    """When CHATBOT_LLM_ENABLED is true the intent stored is 'llm'."""
+    founder = make_user("chatbot-llm-enabled-founder")
+
+    response = authenticated_client(founder).post(
+        MESSAGE_ENDPOINT,
+        {
+            "message": "Hello",
+            "page_context": {"current_view": "dashboard"},
+        },
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    agent_message = response.data["messages"][-1]
+    # With Ollama running locally, intent will be 'llm'; if Ollama is
+    # unavailable the service falls back to rule-based ('platform_help').
+    assert agent_message["metadata"]["intent"] in ("llm", "platform_help")
+    assert agent_message["content"]
 
 
 def test_page_context_must_be_bounded_json_object():
