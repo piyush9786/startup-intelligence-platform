@@ -1,6 +1,6 @@
 # Startup Intelligence Platform — Project Context
 
-Last updated: 23 July 2026
+Last updated: 24 July 2026
 
 This is the primary orientation document for developers and coding agents
 working on this repository. Update it after every major merged product or
@@ -34,6 +34,7 @@ Current repository baseline:
 - persisted onboarding contract: `founder-onboarding-v1`;
 - bounded concierge contract: `founder-concierge-v1`;
 - consolidated starting-plan contract: `startup-starting-plan-v1`;
+- verified dependency-graph contract: `scheme-prerequisite-graph-v1`;
 - ordered founder dashboard with accessible Motion transitions;
 - empty-profile and returning-founder onboarding variants;
 - resumable, dismissible, and non-repeating onboarding progress;
@@ -44,8 +45,8 @@ Current repository baseline:
   capability;
 - authorization context and canonical output hashes on every tool call;
 - initial `get_startup_profile` tool at version `v1`;
-- 473 backend tests passing;
-- 129 frontend tests passing;
+- 489 backend tests passing;
+- 130 frontend tests passing;
 - frontend production build passing;
 - Ruff, Django checks, and migration checks passing.
 
@@ -155,7 +156,7 @@ The system is a modular monolith with asynchronous workers.
 | MinIO | Raw source documents and private founder eligibility evidence |
 | Redis | Celery transport, result backend, caching, and temporary coordination |
 | Qdrant | Derived document embeddings and evidence retrieval |
-| Neo4j | Ecosystem relationships and future scheme-prerequisite graph |
+| Neo4j | Derived, rebuildable verified scheme-prerequisite graph projection |
 | Ollama | Local embeddings and controlled open-source LLM generation |
 | Mailpit | Local email capture |
 | Docker Compose | Local development orchestration |
@@ -175,7 +176,7 @@ The current installed domain apps are:
 - `documents` — extraction, chunking, and document processing;
 - `discovery` — discovered URLs, crawl frontier, and quality assessment;
 - `knowledge` — extracted candidates, review, and publication workflows;
-- `schemes` — canonical schemes, versions, benefits, requirements, and rules;
+- `schemes` — canonical schemes, versions, benefits, requirements, rules, verified prerequisites, reviewed unlock relationships, and the derived graph projection;
 - `startups` — profiles, assessment drafts, persisted onboarding progress,
   readiness, action plans, consolidated starting plans, and advisor briefings;
 - `recommendations` — eligibility assessments, recommendations, generation
@@ -336,6 +337,29 @@ verified graph and funding-plan phases.
 See
 [Consolidated deterministic starting plan](docs/startups/STARTING_PLAN_V1.md).
 
+## 9.3 Verified scheme-prerequisite graph
+
+Phase 48 adds the versioned `scheme-prerequisite-graph-v1` contract.
+
+PostgreSQL stores the authoritative prerequisite concepts,
+scheme-to-prerequisite relationships, unlock relationships, official source
+evidence, and reviewer provenance. Extracted and imported relationships remain
+non-authoritative until explicitly verified.
+
+Verified unlocks reject self-dependencies and directed cycles during normal
+model saves. The schema supports multiple predecessors per scheme.
+
+A deterministic canonical snapshot is projected into Neo4j. Projection rebuilds
+use a PostgreSQL advisory lock, retain persisted run audit records, and can be
+checked against PostgreSQL by graph version, source hash, identifiers, counts,
+and metadata.
+
+Phase 48 does not reorder the consolidated starting plan. Dependency-aware
+ordering remains Phase 49 scope.
+
+See
+[Verified scheme prerequisite graph](docs/architecture/SCHEME_PREREQUISITE_GRAPH_V1.md).
+
 ## 10. Planned conversational and planning layer
 
 The first-open onboarding, shared orchestration foundation, site chatbot,
@@ -343,9 +367,8 @@ bounded concierge, and consolidated starting plan are implemented.
 
 The remaining agreed implementation order is:
 
-1. verified scheme-prerequisite graph;
-2. dependency-aware funding-plan engine and timeline;
-3. founder progress tracking with verification-aware feedback.
+1. dependency-aware funding-plan engine and timeline;
+2. founder progress tracking with verification-aware feedback.
 
 Future conversational interfaces must execute only versioned, registered tools.
 
@@ -501,18 +524,19 @@ Do not mix unrelated refactors into a milestone.
 
 ## 16. Immediate next milestone
 
-The next milestone is the verified scheme-dependency graph.
+The next milestone is the deterministic dependency-aware funding-plan engine.
 
-Initial scope:
+Initial Phase 49 scope:
 
-- define canonical prerequisite concepts in PostgreSQL;
-- define scheme-to-prerequisite and unlock relationships;
-- retain official source and reviewer provenance for every relationship;
-- support multiple predecessors rather than one nullable dependency;
-- validate cycles before publication;
-- project reviewed canonical relationships into Neo4j;
-- provide rebuild and PostgreSQL/Neo4j consistency checks;
-- keep automatically extracted relationships non-authoritative until review.
+- consume only verified Phase 48 graph relationships;
+- support multiple predecessors per plan step;
+- order hard prerequisites before dependent opportunities;
+- incorporate verified application windows;
+- use sourced processing-time ranges;
+- account for founder urgency and funding relevance;
+- represent steps that may run in parallel;
+- persist the generated plan and source snapshots;
+- keep ordering algorithmic and testable.
 
-Phase 48 must not reorder the Phase 47 starting plan until the graph is
-verified. Dependency-aware funding-plan ordering belongs to Phase 49.
+The language model may explain the resulting plan but must not select or modify
+its ordering.

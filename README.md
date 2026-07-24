@@ -31,6 +31,8 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 - persisted readiness action plans;
 - persisted, versioned consolidated starting plans with source provenance;
 - verified canonical scheme catalog and versioning;
+- verified prerequisite concepts and reviewed scheme dependency relationships;
+- deterministic cycle validation and rebuildable Neo4j graph projection;
 - executable deterministic eligibility engine (`rules-v5`);
 - immutable eligibility assessments and recommendation runs;
 - deterministic recommendation ranking;
@@ -56,7 +58,7 @@ Django REST Framework
       ├── Redis / Celery — asynchronous work
       ├── MinIO — raw documents and private evidence
       ├── Qdrant — derived embeddings and retrieval
-      ├── Neo4j — relationships and future dependency graph
+      ├── Neo4j — derived verified dependency-graph projection
       └── Ollama — local embeddings and controlled generation
 ```
 
@@ -70,6 +72,7 @@ architecture, safety, and implementation context.
 - [Site-wide founder chatbot](docs/architecture/SITE_WIDE_CHATBOT_V1.md)
 - [First-open onboarding tour](docs/frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md)
 - [Consolidated starting plan](docs/startups/STARTING_PLAN_V1.md)
+- [Verified scheme prerequisite graph](docs/architecture/SCHEME_PREREQUISITE_GRAPH_V1.md)
 - [Project roadmap](docs/ROADMAP.md)
 - [Architecture](docs/architecture/README.md)
 - [Eligibility engine](docs/eligibility/ENGINE_V1.md)
@@ -121,14 +124,14 @@ git diff --check
 
 ## Next product phase
 
-The next milestone is the verified scheme-dependency graph.
+The next milestone is the deterministic dependency-aware funding-plan engine.
 
-It will introduce canonical prerequisite concepts and reviewed scheme
-relationships in PostgreSQL, with a rebuildable Neo4j projection.
+It will consume only reviewed Phase 48 graph relationships and will support
+multiple predecessors, verified application windows, sourced processing-time
+ranges, founder urgency, funding relevance, and parallel plan steps.
 
-Automatically extracted relationships will remain non-authoritative until
-reviewed, and dependency-aware plan ordering will remain disabled until the
-graph contract is complete.
+Ordering will remain algorithmic and testable. Language models may explain the
+generated plan but will not select its ordering.
 
 <!-- phase-46-founder-concierge:start -->
 ## Phase 46: Bounded founder concierge
