@@ -29,6 +29,7 @@ The following major capabilities are operational:
 - persistent site-wide founder chatbot.
 - bounded founder concierge state machine;
 - persisted consolidated deterministic starting plan.
+- verified scheme-prerequisite graph with a rebuildable Neo4j projection.
 - ordered, responsive founder dashboard with accessible Motion transitions.
 
 ## Completed frontend polish: founder dashboard motion and hierarchy
@@ -137,53 +138,61 @@ frontend chatbot.
 See
 [Shared agent orchestration](architecture/SHARED_AGENT_ORCHESTRATION_V1.md).
 
-## Remaining implementation order
+## Completed Phase 48: verified scheme-prerequisite graph
 
-### 1. Scheme dependency graph — Phase 48
+Purpose: represent prerequisites and unlock relationships with reviewed
+provenance while preserving PostgreSQL as the authoritative store.
 
-Purpose: represent prerequisites and unlock relationships with provenance.
+Implemented scope:
 
-Scope:
+canonical prerequisite concepts;
+reviewed scheme-to-prerequisite relationships;
+reviewed scheme-unlock relationships;
+multiple predecessors per scheme;
+hard and supporting prerequisite classifications;
+official-source and reviewer provenance;
+non-authoritative extracted and imported candidate states;
+save-time self-dependency and cycle validation;
+deterministic canonical graph snapshots and SHA-256 hashes;
+versioned, rebuildable Neo4j projection;
+PostgreSQL advisory locking for rebuild concurrency;
+persisted projection-run audit records;
+PostgreSQL-to-Neo4j identifier, count, metadata, and hash consistency checks;
+no Phase 47 starting-plan reordering.
 
-- verified prerequisite concepts;
-- scheme-to-prerequisite edges;
-- unlock relationships;
-- source and review provenance for every graph edge;
-- PostgreSQL canonical records with Neo4j projection;
-- cycle validation;
-- graph rebuild and consistency checks.
+See
+Verified scheme prerequisite graph.
 
-LLM-extracted edges must not become authoritative without review.
-
-### 2. Funding plan engine — Phase 49
+Remaining implementation order
+1. Funding plan engine — Phase 49
 
 Purpose: produce an ordered, dependency-aware funding and readiness plan.
 
 Ordering must be algorithmic and consider:
 
-- hard prerequisite dependencies;
-- verified application windows;
-- sourced processing-time ranges;
-- founder urgency;
-- funding relevance;
-- steps that may run in parallel.
+hard prerequisite dependencies;
+verified application windows;
+sourced processing-time ranges;
+founder urgency;
+funding relevance;
+steps that may run in parallel.
 
 Use a dependency table that supports multiple predecessors per step instead of a
-single nullable `depends_on` field.
+single nullable depends_on field.
 
 The LLM may narrate the generated plan but must not choose its ordering.
 
-### 3. Progress feedback — Phase 50
+2. Progress feedback — Phase 50
 
 Purpose: connect plan execution back to readiness and recommendations.
 
 Use explicit states such as:
 
-- `not_started`;
-- `in_progress`;
-- `founder_reported_complete`;
-- `evidence_submitted`;
-- `verified`.
+not_started;
+in_progress;
+founder_reported_complete;
+evidence_submitted;
+verified.
 
 Founder-reported completion must not automatically become a verified
 eligibility fact.
