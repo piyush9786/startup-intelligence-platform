@@ -658,4 +658,11 @@ export async function downloadEligibilityVerificationReviewerEvidence({
   };
 }
 
+export async function getPublicSchemeCount() {
+  const response = await client.get("/schemes/", {
+    params: { limit: 1 },
+  });
+  return response.data?.count || 0;
+}
+
 export { client as authenticatedApiClient };
