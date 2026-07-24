@@ -8215,3 +8215,331 @@ body {
   box-shadow: 0 10px 30px rgba(22, 78, 50, 0.05);
   padding: 1.5rem;
 }
+
+/* ── Executive Startup Factsheet (Resume-Style View) ── */
+.startup-resume-container {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.startup-resume-card {
+  background: #ffffff;
+  border: 1px solid #e1e7f0;
+  border-radius: 24px;
+  box-shadow: 0 12px 40px rgba(15, 35, 25, 0.06);
+  overflow: hidden;
+}
+
+/* Resume Header */
+.resume-header {
+  background: linear-gradient(135deg, #0d2b1a 0%, #15452a 65%, #0e341f 100%);
+  border-bottom: 3px solid #ccf054;
+  color: #ffffff;
+  padding: 1.8rem 2rem;
+  position: relative;
+}
+
+.resume-header-top {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+}
+
+.resume-doc-kicker {
+  color: rgba(204, 240, 84, 0.85);
+  font-size: 0.65rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.resume-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.resume-badge {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.9);
+  display: inline-flex;
+  font-size: 0.68rem;
+  font-weight: 700;
+  gap: 0.3rem;
+  padding: 0.25rem 0.65rem;
+}
+
+.badge-dpiit {
+  background: rgba(204, 240, 84, 0.14);
+  border-color: rgba(204, 240, 84, 0.35);
+  color: #ccf054;
+}
+
+.badge-stage {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.badge-score {
+  background: rgba(204, 240, 84, 0.2);
+  color: #ccf054;
+}
+
+.resume-title-block {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.resume-logo-avatar {
+  align-items: center;
+  background: linear-gradient(135deg, #ccf054, #a8d63a);
+  border-radius: 18px;
+  color: #0b2d1c;
+  display: flex;
+  flex-shrink: 0;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.8rem;
+  font-weight: 850;
+  height: 60px;
+  justify-content: center;
+  width: 60px;
+}
+
+.resume-identity {
+  display: grid;
+  flex: 1;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.resume-startup-name {
+  color: #ffffff;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.resume-legal-name {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.resume-location-pill {
+  color: rgba(204, 240, 84, 0.8);
+  font-size: 0.74rem;
+  margin-top: 0.2rem;
+}
+
+.resume-update-cta {
+  background: #ccf054 !important;
+  color: #0b2d1c !important;
+  font-weight: 800 !important;
+}
+
+.resume-metrics-strip {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  padding: 0.85rem 1.1rem;
+}
+
+.resume-metric-item {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.resume-metric-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.resume-metric-value {
+  color: #ffffff;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 750;
+}
+
+/* Resume Body */
+.resume-body {
+  display: grid;
+  gap: 1.8rem;
+  padding: 1.8rem;
+}
+
+.resume-section {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.resume-section-title {
+  align-items: center;
+  color: var(--forest);
+  display: flex;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 750;
+  gap: 0.45rem;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.title-icon {
+  color: #138a5b;
+}
+
+.resume-overview-text {
+  background: #f8fafc;
+  border-left: 3px solid var(--forest);
+  border-radius: 0 12px 12px 0;
+  color: #334155;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  margin: 0;
+  padding: 0.9rem 1.1rem;
+}
+
+/* Two-column Resume Cards Grid */
+.resume-grid {
+  display: grid;
+  gap: 1.35rem;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+}
+
+.resume-section-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  padding: 1.2rem;
+
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.resume-section-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.resume-section-card-header {
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
+}
+
+.resume-section-card-header h3 {
+  align-items: center;
+  color: #1e293b;
+  display: flex;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.02rem;
+  font-weight: 700;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.section-card-icon {
+  font-size: 1.05rem;
+}
+
+.resume-field-count {
+  background: #f1f5f9;
+  border-radius: 999px;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+}
+
+/* Fields List in Resume Card */
+.resume-fields-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.resume-field-row {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.6rem 0.8rem;
+}
+
+.row-filled {
+  background: #f8fafc;
+}
+
+.row-empty {
+  background: #fafafa;
+  opacity: 0.7;
+}
+
+.resume-field-term {
+  align-items: center;
+  color: #64748b;
+  display: flex;
+  font-size: 0.7rem;
+  font-weight: 700;
+  justify-content: space-between;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.resume-field-desc {
+  color: #0f172a;
+  font-size: 0.84rem;
+  font-weight: 600;
+  margin: 0;
+  word-break: break-word;
+}
+
+/* Resume Footer */
+.resume-footer {
+  align-items: center;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1.1rem 1.8rem;
+}
+
+.resume-footer-info {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.resume-footer-info span {
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.resume-footer-info small {
+  color: #94a3b8;
+  font-size: 0.68rem;
+}
