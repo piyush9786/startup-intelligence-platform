@@ -93,6 +93,11 @@ class AgentSession(TimeStampedModel):
         null=True,
         blank=True,
     )
+    copilot_context = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Active workspace context injected by the Universal AI Copilot.",
+    )
 
     class Meta:
         ordering = [

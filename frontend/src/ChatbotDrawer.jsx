@@ -10,16 +10,62 @@ import {
   getCurrentChatbot,
   sendCurrentChatbotMessage,
 } from "./api";
+import { injectCopilotContext } from "./copilotApi";
 
-const QUICK_PROMPTS = [
-  "What can you help with?",
-  "Which startup profile are you using?",
-  "What should I do next?",
-];
+
+// Workspace-aware quick prompts for the Universal AI Copilot.
+// Each key maps to the active sidebar view slug.
+const WORKSPACE_QUICK_PROMPTS = {
+  milestones: [
+    "Which milestones should I prioritize?",
+    "How do I set up milestone dependencies?",
+    "Which milestones block my funding round?",
+  ],
+  "capital-planner": [
+    "Is my runway healthy?",
+    "How can I extend my runway?",
+    "What does the Conservative scenario mean?",
+  ],
+  builder: [
+    "How do I define my customer persona?",
+    "What makes a good validation experiment?",
+    "How should I structure my pricing strategy?",
+  ],
+  schemes: [
+    "Which schemes apply to my startup?",
+    "How do I apply to DPIIT Startup India?",
+    "What documents do I need for scheme eligibility?",
+  ],
+  roadmap: [
+    "What should I do next?",
+    "Explain my action roadmap priorities.",
+    "Which readiness gaps are most critical?",
+  ],
+  funding: [
+    "What funding options are available?",
+    "What is the difference between grants and loans?",
+    "How do I prepare a funding plan?",
+  ],
+  startup: [
+    "What does profile completeness affect?",
+    "How is my readiness score calculated?",
+    "Which profile fields are most important?",
+  ],
+  _default: [
+    "What can you help with?",
+    "Which startup profile are you using?",
+    "What should I do next?",
+  ],
+};
+
+function getWorkspacePrompts(view) {
+  return WORKSPACE_QUICK_PROMPTS[view] || WORKSPACE_QUICK_PROMPTS._default;
+}
 
 const VIEW_ALIASES = {
   dashboard: "overview",
 };
+
 
 function navigationView(navigation) {
   if (!navigation || typeof navigation !== "object") {
@@ -174,6 +220,15 @@ export default function ChatbotDrawer({
       cancelled = true;
     };
   }, [open, startupProfileId]);
+
+  // Inject workspace context whenever the drawer is open and the active view changes.
+  useEffect(() => {
+    if (!open) return;
+    injectCopilotContext(activeView, {}).catch(() => {
+      // Non-critical — context injection failure does not block the chat.
+    });
+  }, [open, activeView]);
+
 
   useEffect(() => {
     if (open && !loading) {
@@ -359,8 +414,8 @@ export default function ChatbotDrawer({
                     and founder-advisor briefing.
                   </p>
 
-                  <div className="chatbot-quick-prompts">
-                    {QUICK_PROMPTS.map((prompt) => (
+                <div className="chatbot-quick-prompts">
+                    {getWorkspacePrompts(activeView).map((prompt) => (
                       <button
                         disabled={sending}
                         key={prompt}

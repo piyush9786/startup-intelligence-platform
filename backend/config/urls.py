@@ -14,6 +14,7 @@ from apps.accounts.views import (
     CurrentUserView,
     FounderRegistrationView,
 )
+from apps.assistant.copilot_context_views import CopilotContextView
 from apps.assistant.views import (
     ChatbotCurrentView,
     ChatbotMessageCreateView,
@@ -180,6 +181,11 @@ urlpatterns = [
         "api/v1/assistant/chatbot/current/messages/",
         ChatbotMessageCreateView.as_view(),
         name="assistant-chatbot-message-create",
+    ),
+    path(
+        "api/v1/assistant/chatbot/current/copilot-context/",
+        CopilotContextView.as_view(),
+        name="assistant-chatbot-copilot-context",
     ),
     path(
         "api/v1/auth/register/",
