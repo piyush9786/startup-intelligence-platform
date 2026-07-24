@@ -1,0 +1,191 @@
+// Hindi translations — हिन्दी
+const hi = {
+  // ── Brand ──────────────────────────────────────────────────────────────
+  "brand.name": "Startup Intelligence",
+  "brand.tagline": "Founder OS",
+  "brand.tagline.public": "AI फाउंडर ऑपरेटिंग सिस्टम",
+
+  // ── Navigation ─────────────────────────────────────────────────────────
+  "nav.group.workspace": "आपका कार्यक्षेत्र",
+  "nav.group.discover": "सहायता खोजें",
+  "nav.group.guidance": "मार्गदर्शन",
+  "nav.group.review": "समीक्षा संचालन",
+  "nav.group.account": "खाता",
+  "nav.intelligence": "इंटेलिजेंस",
+  "nav.dashboard": "डैशबोर्ड",
+  "nav.my_startup": "मेरा स्टार्टअप",
+  "nav.builder": "स्टार्टअप बिल्डर",
+  "nav.capital_planner": "पूंजी योजनाकार",
+  "nav.roadmap": "एक्शन रोडमैप",
+  "nav.schemes": "योजनाएं",
+  "nav.requirements": "आवश्यकताएं",
+  "nav.funding": "फंडिंग और लोन",
+  "nav.advisor": "फाउंडर सलाहकार",
+  "nav.reviewer_verification": "समीक्षक सत्यापन",
+  "nav.sign_out": "साइन आउट",
+
+  // ── Sidebar ─────────────────────────────────────────────────────────────
+  "sidebar.schemes": "योजनाएं",
+  "sidebar.actions": "क्रियाएं",
+  "sidebar.verified_data": "सत्यापित डेटा",
+
+  // ── Search / Topbar ─────────────────────────────────────────────────────
+  "search.placeholder": "योजनाएं, आवश्यकताएं और फंडिंग खोजें…",
+  "search.sr_label": "योजनाएं और आवश्यकताएं खोजें",
+
+  // ── Common actions ───────────────────────────────────────────────────────
+  "action.save": "सहेजें",
+  "action.cancel": "रद्द करें",
+  "action.submit": "जमा करें",
+  "action.continue": "जारी रखें",
+  "action.back": "वापस",
+  "action.skip": "छोड़ें",
+  "action.close": "बंद करें",
+  "action.view_details": "विवरण देखें",
+  "action.learn_more": "अधिक जानें",
+  "action.get_started": "शुरू करें",
+  "action.loading": "लोड हो रहा है…",
+  "action.retry": "पुनः प्रयास करें",
+  "action.sign_in": "साइन इन करें",
+  "action.register": "खाता बनाएं",
+  "action.sign_out": "साइन आउट",
+  "action.forgot_password": "पासवर्ड भूल गए?",
+
+  // ── Auth forms ──────────────────────────────────────────────────────────
+  "auth.email": "ईमेल पता",
+  "auth.password": "पासवर्ड",
+  "auth.username": "उपयोगकर्ता नाम",
+  "auth.full_name": "पूरा नाम",
+  "auth.sign_in.title": "अपने खाते में साइन इन करें",
+  "auth.sign_in.subtitle": "अपने फाउंडर कार्यक्षेत्र तक पहुंचें",
+  "auth.register.title": "अपना खाता बनाएं",
+  "auth.register.subtitle": "Startup Intelligence से जुड़ें",
+  "auth.recovery.title": "पासवर्ड पुनर्प्राप्ति",
+  "auth.recovery.subtitle": "रीसेट निर्देश प्राप्त करने के लिए अपना ईमेल दर्ज करें",
+  "auth.recovery.instructions": "पासवर्ड रीसेट निर्देशों के लिए अपना ईमेल जांचें।",
+  "auth.no_account": "खाता नहीं है?",
+  "auth.have_account": "पहले से खाता है?",
+  "auth.error.invalid": "अमान्य क्रेडेंशियल। कृपया पुनः प्रयास करें।",
+  "auth.error.generic": "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
+
+  // ── Journey dialog ──────────────────────────────────────────────────────
+  "journey.title": "आप अपनी यात्रा में कहाँ हैं?",
+  "journey.subtitle": "आपको सर्वोत्तम अनुभव देने के लिए, कृपया हमें बताएं कि आप अभी कहाँ हैं:",
+  "journey.existing_startup": "मेरे पास एक मौजूदा स्टार्टअप है",
+  "journey.new_idea": "मेरे पास एक विचार है / मैं एक बनाना चाहता हूं",
+
+  // ── Dashboard ────────────────────────────────────────────────────────────
+  "dashboard.title": "अपना स्टार्टअप सहायता डैशबोर्ड बनाएं",
+  "dashboard.subtitle": "अपनी प्रोफ़ाइल बनाने, तैयारी की गणना करने, एक्शन रोडमैप उत्पन्न करने और प्रासंगिक योजनाओं का मिलान करने के लिए फाउंडर मूल्यांकन पूरा करें।",
+  "dashboard.start_assessment": "स्टार्टअप मूल्यांकन शुरू करें",
+  "dashboard.readiness": "तैयारी",
+  "dashboard.top_schemes": "शीर्ष योजनाएं",
+  "dashboard.action_items": "क्रिया आइटम",
+  "dashboard.no_schemes": "अभी तक कोई योजना मेल नहीं खाई",
+  "dashboard.no_actions": "कोई लंबित क्रिया नहीं",
+  "dashboard.verified_evidence": "सत्यापित प्रमाण",
+  "dashboard.complete_profile": "योजना मिलान अनलॉक करने के लिए अपनी प्रोफ़ाइल पूरी करें।",
+
+  // ── Public landing page ───────────────────────────────────────────────────
+  "landing.hero.eyebrow": "AI-संचालित फाउंडर ऑपरेटिंग सिस्टम",
+  "landing.hero.title": "सत्यापित सरकारी समर्थन के साथ अपना स्टार्टअप बनाएं",
+  "landing.hero.subtitle": "आधिकारिक स्रोतों द्वारा समर्थित AI मार्गदर्शन के साथ पात्र योजनाएं खोजें, अपनी पूंजी की योजना बनाएं और भारत के स्टार्टअप इकोसिस्टम में आगे बढ़ें।",
+  "landing.hero.cta_primary": "मुफ्त में शुरू करें",
+  "landing.hero.cta_secondary": "साइन इन करें",
+  "landing.schemes_count": "{count}+ सत्यापित सरकारी योजनाएं",
+  "landing.how_it_works": "यह कैसे काम करता है",
+  "landing.capabilities": "क्षमताएं",
+  "landing.trust": "विश्वास",
+  "landing.step1": "अपने स्टार्टअप का विवरण दें या मौजूदा दस्तावेज़ अपलोड करें।",
+  "landing.step2": "निकाले गए तथ्यों, तैयारी की कमियों और सत्यापित अवसरों की समीक्षा करें।",
+  "landing.step3": "एक संरचित योजना का पालन करें और प्रासंगिक मार्गदर्शन के लिए AI कोपायलट से पूछें।",
+  "landing.cap1.title": "सत्यापित सहायता खोजें",
+  "landing.cap1.desc": "समीक्षित पात्रता नियमों, आधिकारिक स्रोतों और पारदर्शी प्रमाण का उपयोग करके अपने स्टार्टअप को सरकारी योजनाओं से मिलाएं।",
+  "landing.cap2.title": "व्यावहारिक मार्गदर्शन के साथ बनाएं",
+  "landing.cap2.desc": "संरचित AI-सहायता वर्कफ़्लो के माध्यम से प्रारंभिक विचार से ग्राहकों, सत्यापन, बिक्री, फंडिंग और निष्पादन तक जाएं।",
+  "landing.cap3.title": "पूंजी का सोच-समझकर उपयोग करें",
+  "landing.cap3.desc": "आज फंडिंग एक्सेस की योजना बनाएं और निर्धारित बर्न, रनवे और पूंजी-आवंटन परिदृश्यों के लिए तैयार हों।",
+  "landing.footer.tagline": "भारतीय फाउंडर्स के लिए बनाया गया। आधिकारिक सरकारी स्रोतों द्वारा समर्थित।",
+  "landing.footer.disclaimer": "केवल सूचनात्मक उद्देश्यों के लिए। आधिकारिक सरकारी पोर्टलों से सभी जानकारी सत्यापित करें।",
+
+  // ── Assessment ────────────────────────────────────────────────────────────
+  "assessment.title": "अपने स्टार्टअप के बारे में बताएं",
+  "assessment.subtitle": "व्यक्तिगत योजना मिलान और मार्गदर्शन अनलॉक करने के लिए फाउंडर प्रोफ़ाइल पूरी करें।",
+  "assessment.startup_name": "स्टार्टअप का नाम",
+  "assessment.stage": "चरण",
+  "assessment.sector": "क्षेत्र",
+  "assessment.team_size": "टीम का आकार",
+  "assessment.founded_year": "स्थापना वर्ष",
+  "assessment.location": "स्थान (राज्य)",
+  "assessment.description": "आपका स्टार्टअप क्या करता है?",
+  "assessment.revenue": "मासिक राजस्व (₹)",
+  "assessment.funding_raised": "अब तक जुटाई गई फंडिंग (₹)",
+  "assessment.save_draft": "ड्राफ्ट सहेजें",
+  "assessment.submit": "मूल्यांकन जमा करें",
+  "assessment.step_of": "चरण {current} / {total}",
+
+  // ── Capital Planner ────────────────────────────────────────────────────────
+  "capital.title": "AI पूंजी योजनाकार",
+  "capital.subtitle": "अपने वित्तीय परिदृश्यों को मॉडल करें और पूंजी आवंटन की योजना बनाएं।",
+  "capital.input_title": "वित्तीय मापदंड दर्ज करें",
+  "capital.capital_model": "पूंजी और लागत मॉडल",
+  "capital.liquid_capital": "उपलब्ध तरल पूंजी (₹)",
+  "capital.mrr": "मासिक आवर्ती राजस्व (₹)",
+  "capital.fixed_costs": "निश्चित लागत / माह (₹)",
+  "capital.variable_costs": "परिवर्तनीय लागत / माह (₹)",
+  "capital.burn_rate": "मासिक बर्न रेट",
+  "capital.runway": "रनवे",
+  "capital.net_cashflow": "शुद्ध मासिक कैशफ्लो",
+  "capital.months": "महीने",
+  "capital.infinite": "असीमित",
+  "capital.net_profit": "शुद्ध लाभ",
+  "capital.analyse": "विश्लेषण करें",
+
+  // ── Action Roadmap ──────────────────────────────────────────────────────────
+  "roadmap.title": "एक्शन रोडमैप",
+  "roadmap.subtitle": "सरकारी समर्थन अनलॉक करने के लिए आपकी व्यक्तिगत योजना।",
+  "roadmap.no_plan": "अपना एक्शन रोडमैप उत्पन्न करने के लिए फाउंडर मूल्यांकन पूरा करें।",
+  "roadmap.loading": "आपका रोडमैप तैयार हो रहा है…",
+
+  // ── Schemes ──────────────────────────────────────────────────────────────────
+  "schemes.title": "योजनाएं",
+  "schemes.subtitle": "अपने स्टार्टअप से मिलान की गई सरकारी योजनाएं खोजें।",
+  "schemes.eligible": "पात्र",
+  "schemes.not_eligible": "अपात्र",
+  "schemes.likely_eligible": "संभवतः पात्र",
+  "schemes.more_info": "अधिक जानकारी आवश्यक",
+  "schemes.verification_required": "सत्यापन आवश्यक",
+  "schemes.closed": "आवेदन बंद",
+  "schemes.apply": "अभी आवेदन करें",
+  "schemes.official_link": "आधिकारिक लिंक",
+
+  // ── Requirements ─────────────────────────────────────────────────────────────
+  "requirements.title": "आवश्यकताएं",
+  "requirements.subtitle": "योजना आवेदनों के लिए आवश्यक दस्तावेज़ और प्रमाणपत्र।",
+
+  // ── Funding ──────────────────────────────────────────────────────────────────
+  "funding.title": "फंडिंग और लोन",
+  "funding.subtitle": "आपके स्टार्टअप के लिए अनुदान, सब्सिडी और ऋण योजनाएं।",
+
+  // ── Advisor ───────────────────────────────────────────────────────────────────
+  "advisor.title": "फाउंडर सलाहकार",
+  "advisor.subtitle": "आधिकारिक सरकारी स्रोतों में आधारित AI-संचालित मार्गदर्शन।",
+  "advisor.generate": "मार्गदर्शन उत्पन्न करें",
+  "advisor.generating": "उत्पन्न हो रहा है…",
+  "advisor.no_briefing": "अभी तक कोई संग्रहीत ब्रीफिंग नहीं",
+  "advisor.no_briefing_desc": "वर्तमान सलाहकार प्रमाण को स्नैपशॉट में फ्रीज करने और ग्राउंडेड फाउंडर मार्गदर्शन बनाने के लिए एक ब्रीफिंग उत्पन्न करें।",
+
+  // ── Reviewer ──────────────────────────────────────────────────────────────────
+  "reviewer.title": "समीक्षक सत्यापन कतार",
+  "reviewer.approve": "स्वीकृत करें",
+  "reviewer.reject": "अस्वीकार करें",
+  "reviewer.pending": "समीक्षा लंबित",
+
+  // ── Errors ────────────────────────────────────────────────────────────────────
+  "error.generic": "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
+  "error.session_expired": "आपका सत्र समाप्त हो गया है। कृपया पुनः साइन इन करें।",
+  "error.no_startup": "कोई स्टार्टअप प्रोफ़ाइल नहीं मिली।",
+  "error.load_failed": "डेटा लोड करने में विफल।",
+};
+
+export default hi;
