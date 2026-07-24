@@ -457,7 +457,7 @@ export default function SchemeExplorerPage({
                           {deadline.label}
                         </span>
                         {rec.rank && <span className="rank-badge">Rank: #{rec.rank}</span>}
-                        <span className="score-pill">Match: {rec.score}%</span>
+                        <span className="score-pill">Match: {rec.score <= 1 ? Math.round(rec.score * 100) : Math.round(rec.score)}%</span>
                       </div>
                       <h3>{scheme.canonical_name || scheme.scheme_name}</h3>
                       <p className="scheme-authority">{scheme.authority_name || "Authority not published"}</p>
