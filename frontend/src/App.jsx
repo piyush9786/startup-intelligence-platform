@@ -2951,8 +2951,6 @@ function Workspace({ onSignOut }) {
           setActiveView("reviewer-verifications");
         } else if (!result.profiles.length && identity?.role !== "reviewer") {
           setShowJourneyDialog(true);
-        } else if (result.profiles.length > 0) {
-          setActiveView("startup");
         }
 
         setError(
