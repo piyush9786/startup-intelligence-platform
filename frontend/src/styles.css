@@ -6099,13 +6099,12 @@ body {
 .public-hero {
   align-items: center;
   display: grid;
-  gap: clamp(3rem, 7vw, 7rem);
+  gap: clamp(2rem, 4vw, 4rem);
   grid-template-columns: minmax(0, 1fr) minmax(420px, 0.82fr);
   margin: 0 auto;
   max-width: 1440px;
-  min-height: calc(100vh - 92px);
-  padding: clamp(3.5rem, 7vw, 7.5rem)
-    clamp(1.25rem, 5vw, 4.5rem);
+  min-height: auto;
+  padding: clamp(1.5rem, 4vw, 4rem) clamp(1.25rem, 5vw, 4.5rem);
 }
 
 .public-hero-copy {
@@ -8631,7 +8630,7 @@ body {
 
 .lang-switcher {
   position: fixed;
-  bottom: 1.5rem;
+  top: 1.5rem;
   right: 1.5rem;
   z-index: 10000;
   display: flex;
