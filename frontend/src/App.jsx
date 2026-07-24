@@ -666,14 +666,6 @@ function ProductTopbar({
             ))}
           </select>
         </label>
-        <a
-          className="topbar-link"
-          href={apiDocsUrl}
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          API docs
-        </a>
         <button className="button button-ghost" onClick={onLogout} type="button">
           Sign out
         </button>
