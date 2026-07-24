@@ -48,119 +48,7 @@ function SectionBadge({ field, profile }) {
   );
 }
 
-function SectionEditModal({
-  editingSection,
-  onClose,
-  onSave,
-  profile,
-  saving,
-}) {
-  const [formData, setFormData] = useState(() => {
-    const initial = {};
-    editingSection.fields.forEach((field) => {
-      const current = getFieldValue(profile, field);
-      if (field.isArray) {
-        initial[field.key] = Array.isArray(current) ? current.join(", ") : current || "";
-      } else {
-        initial[field.key] = current !== null && current !== undefined ? String(current) : "";
-      }
-    });
-    return initial;
-  });
 
-  function handleChange(field, value) {
-    setFormData((prev) => ({
-      ...prev,
-      [field.key]: value,
-    }));
-  }
-
-  function handleSubmit(event) {
-    event.preventDefault();
-    const updatePayload = {};
-    const profileDataUpdates = {};
-
-    editingSection.fields.forEach((field) => {
-      let rawVal = formData[field.key];
-      let parsedVal = rawVal;
-
-      if (field.isArray) {
-        parsedVal = typeof rawVal === "string" ? rawVal.split(",").map((s) => s.trim()).filter(Boolean) : [];
-      } else if (field.isBoolean) {
-        parsedVal = rawVal === "true" || rawVal === true;
-      } else if (field.isNumber || field.isCurrency) {
-        parsedVal = rawVal ? Number(rawVal) : null;
-      }
-
-      if (field.fromProfileData) {
-        profileDataUpdates[field.key] = parsedVal;
-      } else {
-        updatePayload[field.key] = parsedVal;
-      }
-    });
-
-    if (Object.keys(profileDataUpdates).length > 0) {
-      updatePayload.profile_data = {
-        ...(profile.profile_data || {}),
-        ...profileDataUpdates,
-      };
-    }
-
-    onSave(updatePayload);
-  }
-
-  return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div className="modal-card">
-        <header className="modal-header">
-          <div>
-            <span className="section-kicker">Edit section</span>
-            <h2 id="modal-title">{editingSection.title}</h2>
-          </div>
-          <button className="button-icon" onClick={onClose} type="button" aria-label="Close modal">
-            ✕
-          </button>
-        </header>
-
-        <form onSubmit={handleSubmit} className="modal-body">
-          <div className="modal-form-grid">
-            {editingSection.fields.map((field) => (
-              <label key={field.key} className="form-field">
-                <span>{field.label}</span>
-                {field.isBoolean ? (
-                  <select
-                    value={String(formData[field.key])}
-                    onChange={(e) => handleChange(field, e.target.value)}
-                  >
-                    <option value="">Not specified</option>
-                    <option value="true">Yes / Registered</option>
-                    <option value="false">No / Not registered</option>
-                  </select>
-                ) : (
-                  <input
-                    type={field.isNumber || field.isCurrency ? "number" : "text"}
-                    value={formData[field.key] || ""}
-                    placeholder={field.isArray ? "Comma-separated values" : "Enter value..."}
-                    onChange={(e) => handleChange(field, e.target.value)}
-                  />
-                )}
-              </label>
-            ))}
-          </div>
-
-          <footer className="modal-footer">
-            <button className="button button-secondary" onClick={onClose} type="button">
-              Cancel
-            </button>
-            <button className="button button-primary" disabled={saving} type="submit">
-              {saving ? "Saving..." : "Save section updates"}
-            </button>
-          </footer>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 export default function MyStartupPage({
   initialTab = "profile",
@@ -171,24 +59,11 @@ export default function MyStartupPage({
   startupProfileId,
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [editingSection, setEditingSection] = useState(null);
-  const [saving, setSaving] = useState(false);
 
   const completeness = useMemo(
     () => calculateProfileCompleteness(profile),
     [profile]
   );
-
-  async function handleSaveSection(updatePayload) {
-    if (!onUpdateProfile) return;
-    setSaving(true);
-    try {
-      await onUpdateProfile(updatePayload);
-      setEditingSection(null);
-    } finally {
-      setSaving(false);
-    }
-  }
 
   const readinessScore = profile?.readiness_score ?? null;
   const readinessLabel = readinessScore !== null ? readinessStatusLabel(readinessScore) : null;
@@ -307,10 +182,11 @@ export default function MyStartupPage({
                       </span>
                       <button
                         className="button button-secondary button-small"
-                        onClick={() => setEditingSection(section)}
+                        onClick={() => setActiveTab("assessment")}
                         type="button"
+                        title="Update information via Startup Assessment"
                       >
-                        Edit section
+                        Update via Assessment →
                       </button>
                     </div>
                   </div>
@@ -377,18 +253,6 @@ export default function MyStartupPage({
               profile={profile}
             />
           </m.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {editingSection && (
-          <SectionEditModal
-            editingSection={editingSection}
-            onClose={() => setEditingSection(null)}
-            onSave={handleSaveSection}
-            profile={profile}
-            saving={saving}
-          />
         )}
       </AnimatePresence>
     </div>

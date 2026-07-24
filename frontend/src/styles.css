@@ -2671,23 +2671,26 @@ body {
 .assessment-wizard-header {
   align-items: flex-start;
   background:
-    radial-gradient(circle at 90% 20%, rgba(99, 77, 255, 0.16), transparent 35%),
-    linear-gradient(135deg, #ffffff, #f6f4ff);
-  border: 1px solid #ddd8ff;
+    radial-gradient(ellipse at 85% 0%, rgba(204, 240, 84, 0.15) 0%, transparent 50%),
+    linear-gradient(135deg, #0d2b1a 0%, #174b2d 60%, #0f3721 100%);
+  border: 1px solid rgba(204, 240, 84, 0.2);
   border-radius: 24px;
+  color: white;
   display: flex;
   gap: 24px;
   justify-content: space-between;
-  padding: clamp(24px, 4vw, 42px);
+  padding: clamp(24px, 4vw, 36px);
+  position: relative;
 }
 
 .assessment-wizard-header h1 {
+  color: white;
   margin: 8px 0 12px;
   max-width: 760px;
 }
 
 .assessment-wizard-header p {
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.7);
   line-height: 1.7;
   margin: 0;
   max-width: 760px;
@@ -2695,8 +2698,8 @@ body {
 
 .assessment-completion {
   align-items: center;
-  background: #ffffff;
-  border: 1px solid #ded9ff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(204, 240, 84, 0.25);
   border-radius: 18px;
   display: flex;
   flex: 0 0 auto;
@@ -2707,12 +2710,13 @@ body {
 }
 
 .assessment-completion strong {
-  color: #5640e8;
+  color: var(--lime);
+  font-family: "Outfit", sans-serif;
   font-size: 2rem;
 }
 
 .assessment-completion span {
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.65);
   font-size: 0.78rem;
 }
 
@@ -2724,7 +2728,7 @@ body {
 }
 
 .assessment-stepper {
-  background: #ffffff;
+  background: white;
   border: 1px solid var(--border);
   border-radius: 20px;
   display: grid;
@@ -2745,17 +2749,19 @@ body {
   grid-template-columns: 34px 1fr;
   padding: 12px;
   text-align: left;
+  transition: all 0.2s ease;
 }
 
 .assessment-stepper button:hover,
 .assessment-stepper button:focus-visible {
-  background: #f6f4ff;
+  background: rgba(22, 78, 50, 0.05);
 }
 
 .assessment-stepper button > span {
   align-items: center;
-  background: #f1effb;
+  background: #f0f4f1;
   border-radius: 999px;
+  color: var(--muted);
   display: flex;
   font-size: 0.78rem;
   font-weight: 800;
@@ -2776,13 +2782,13 @@ body {
 }
 
 .assessment-stepper .assessment-step-active {
-  background: #eeeaff;
-  color: #4933df;
+  background: rgba(22, 78, 50, 0.08);
+  color: var(--forest);
 }
 
 .assessment-stepper .assessment-step-active > span {
-  background: #5f49ef;
-  color: #ffffff;
+  background: var(--forest);
+  color: var(--lime);
 }
 
 .assessment-panel {

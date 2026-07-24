@@ -73,27 +73,22 @@ describe("MyStartupPage component", () => {
     ).toBeInTheDocument();
   });
 
-  test("opens section edit modal and triggers profile update", async () => {
-    const handleUpdate = vi.fn().mockResolvedValue({});
+  test("clicking Update via Assessment switches to Assessment tab", async () => {
     const user = userEvent.setup();
 
     render(
       <MyStartupPage
         onAssessmentSubmitted={vi.fn()}
-        onUpdateProfile={handleUpdate}
+        onUpdateProfile={vi.fn()}
         profile={sampleProfile}
         startupProfileId="profile-1"
       />
     );
 
-    const editButtons = screen.getAllByRole("button", { name: "Edit section" });
-    await user.click(editButtons[0]);
+    const updateButtons = screen.getAllByRole("button", { name: /Update via Assessment/i });
+    await user.click(updateButtons[0]);
 
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Save section updates" }));
-    expect(handleUpdate).toHaveBeenCalled();
+    expect(screen.getByTestId("assessment-wizard")).toBeInTheDocument();
   });
 
   test("switching to Assessment tab renders AssessmentWizard", async () => {
