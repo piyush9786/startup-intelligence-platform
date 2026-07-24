@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -404,8 +405,7 @@ class StartupStartingPlan(TimeStampedModel):
             models.CheckConstraint(
                 condition=models.Q(
                     total_item_count=(
-                        models.F("readiness_item_count")
-                        + models.F("recommendation_item_count")
+                        models.F("readiness_item_count") + models.F("recommendation_item_count")
                     ),
                 ),
                 name="startup_start_plan_counts_match",
@@ -427,6 +427,234 @@ class StartupStartingPlan(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.startup_profile} starting plan {self.plan_version}"
+
+
+class StartupFundingPlan(TimeStampedModel):
+    PLAN_VERSION = "startup-funding-plan-v1"
+
+    IMMUTABLE_FIELDS = (
+        "requested_by_id",
+        "startup_profile_id",
+        "source_starting_plan_id",
+        "as_of_date",
+        "source_hash",
+        "source_snapshot",
+        "plan_snapshot",
+        "step_count",
+        "dependency_count",
+        "execution_wave_count",
+        "next_step_ids",
+        "plan_version",
+    )
+
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="startup_funding_plans",
+    )
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="funding_plans",
+    )
+    source_starting_plan = models.ForeignKey(
+        StartupStartingPlan,
+        on_delete=models.PROTECT,
+        related_name="funding_plans",
+    )
+    as_of_date = models.DateField()
+    source_hash = models.CharField(
+        max_length=64,
+        db_index=True,
+    )
+    source_snapshot = models.JSONField(
+        default=dict,
+    )
+    plan_snapshot = models.JSONField(
+        default=dict,
+    )
+    step_count = models.PositiveIntegerField(
+        default=0,
+    )
+    dependency_count = models.PositiveIntegerField(
+        default=0,
+    )
+    execution_wave_count = models.PositiveIntegerField(
+        default=0,
+    )
+    next_step_ids = models.JSONField(
+        default=list,
+    )
+    plan_version = models.CharField(
+        max_length=64,
+        default=PLAN_VERSION,
+    )
+    is_current = models.BooleanField(
+        default=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-created_at",
+            "-id",
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "startup_profile",
+                    "-created_at",
+                ],
+                name=("startup_fund_profile_created"),
+            ),
+            models.Index(
+                fields=[
+                    "source_starting_plan",
+                    "source_hash",
+                ],
+                name="startup_fund_source_hash",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "source_starting_plan",
+                    "as_of_date",
+                    "source_hash",
+                    "plan_version",
+                ],
+                name=("startup_unique_funding_source"),
+            ),
+            models.UniqueConstraint(
+                fields=["startup_profile"],
+                condition=models.Q(
+                    is_current=True,
+                ),
+                name=("startup_unique_current_funding"),
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+
+        errors = {}
+
+        if (
+            self.startup_profile_id
+            and self.source_starting_plan_id
+            and (self.source_starting_plan.startup_profile_id != self.startup_profile_id)
+        ):
+            errors["source_starting_plan"] = (
+                "The funding plan and starting plan must belong to the same startup."
+            )
+
+        if len(self.source_hash) != 64:
+            errors["source_hash"] = "The source hash must be a SHA-256 hexadecimal digest."
+
+        source_snapshot = self.source_snapshot
+
+        if not isinstance(
+            source_snapshot,
+            dict,
+        ):
+            errors["source_snapshot"] = "The source snapshot must be an object."
+
+        plan_snapshot = self.plan_snapshot
+
+        if not isinstance(
+            plan_snapshot,
+            dict,
+        ):
+            errors["plan_snapshot"] = "The plan snapshot must be an object."
+        else:
+            steps = plan_snapshot.get("steps")
+            dependencies = plan_snapshot.get("dependencies")
+            execution_waves = plan_snapshot.get("execution_waves")
+            next_step_ids = plan_snapshot.get("next_step_ids")
+
+            if not isinstance(steps, list):
+                errors["plan_snapshot"] = "The plan snapshot must contain a step list."
+            elif len(steps) != self.step_count:
+                errors["step_count"] = "The stored step count does not match the snapshot."
+
+            if not isinstance(
+                dependencies,
+                list,
+            ):
+                errors["plan_snapshot"] = "The plan snapshot must contain a dependency list."
+            elif len(dependencies) != self.dependency_count:
+                errors["dependency_count"] = (
+                    "The stored dependency count does not match the snapshot."
+                )
+
+            if not isinstance(
+                execution_waves,
+                list,
+            ):
+                errors["plan_snapshot"] = "The plan snapshot must contain execution waves."
+            elif len(execution_waves) != self.execution_wave_count:
+                errors["execution_wave_count"] = (
+                    "The stored execution-wave count does not match the snapshot."
+                )
+
+            if not isinstance(
+                self.next_step_ids,
+                list,
+            ):
+                errors["next_step_ids"] = "Next-step IDs must be a list."
+            elif (
+                isinstance(
+                    next_step_ids,
+                    list,
+                )
+                and next_step_ids != self.next_step_ids
+            ):
+                errors["next_step_ids"] = "The stored next-step IDs do not match the snapshot."
+
+            snapshot_version = plan_snapshot.get("plan_version")
+
+            if snapshot_version and snapshot_version != self.plan_version:
+                errors["plan_version"] = "The stored plan version does not match the snapshot."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding and self.pk is not None:
+            persisted = type(self).objects.get(pk=self.pk)
+            changed_fields = [
+                field_name
+                for field_name in self.IMMUTABLE_FIELDS
+                if getattr(
+                    persisted,
+                    field_name,
+                )
+                != getattr(
+                    self,
+                    field_name,
+                )
+            ]
+
+            if changed_fields:
+                raise ValidationError(
+                    {
+                        "__all__": (
+                            "Funding-plan snapshots "
+                            "are immutable. Changed "
+                            "fields: " + ", ".join(changed_fields)
+                        )
+                    }
+                )
+
+        self.full_clean()
+        return super().save(
+            *args,
+            **kwargs,
+        )
+
+    def __str__(self) -> str:
+        return f"{self.startup_profile} funding plan {self.plan_version} as of {self.as_of_date}"
 
 
 class StartupAdvisorSnapshot(TimeStampedModel):

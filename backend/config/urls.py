@@ -71,6 +71,10 @@ from apps.startups.onboarding_views import (
     StartupOnboardingCurrentView,
 )
 from apps.startups.views import (
+    StartupFundingPlanCurrentView,
+    StartupFundingPlanDetailView,
+    StartupFundingPlanGenerateView,
+    StartupFundingPlanListView,
     StartupProfileDocumentAutofillView,
     StartupProfileViewSet,
     StartupReadinessActionPlanCurrentView,
@@ -280,6 +284,26 @@ urlpatterns = [
         "api/v1/startup-readiness/action-plans/",
         StartupReadinessActionPlanListView.as_view(),
         name="startup-readiness-action-plan-list",
+    ),
+    path(
+        "api/v1/startup-funding-plans/generate/",
+        StartupFundingPlanGenerateView.as_view(),
+        name="startup-funding-plan-generate",
+    ),
+    path(
+        "api/v1/startup-funding-plans/current/",
+        StartupFundingPlanCurrentView.as_view(),
+        name="startup-funding-plan-current",
+    ),
+    path(
+        "api/v1/startup-funding-plans/",
+        StartupFundingPlanListView.as_view(),
+        name="startup-funding-plan-list",
+    ),
+    path(
+        "api/v1/startup-funding-plans/<uuid:funding_plan_id>/",
+        StartupFundingPlanDetailView.as_view(),
+        name="startup-funding-plan-detail",
     ),
     path(
         "api/v1/startup-starting-plans/generate/",
