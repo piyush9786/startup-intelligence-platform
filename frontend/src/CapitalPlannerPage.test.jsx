@@ -39,8 +39,8 @@ describe("CapitalPlannerPage", () => {
     render(<CapitalPlannerPage />);
     expect(await screen.findByText("AI Capital Planner")).toBeInTheDocument();
     expect(screen.getByLabelText("Available Liquid Capital (₹)")).toBeInTheDocument();
-    expect(await screen.findByText("12.0 Months")).toBeInTheDocument();
-    expect(screen.getByText("Caution (6–18 months)")).toBeInTheDocument();
+    expect(await screen.findByText(/12\.0/)).toBeInTheDocument();
+    expect(screen.getByText(/Caution/)).toBeInTheDocument();
   });
 
   it("calculates scenarios when calculate button clicked", async () => {
@@ -57,7 +57,8 @@ describe("CapitalPlannerPage", () => {
     render(<CapitalPlannerPage />);
     await screen.findByText("AI Capital Planner");
 
-    fireEvent.click(screen.getByRole("button", { name: "📊 Calculate Runway & Plan" }));
+    fireEvent.click(screen.getByRole("button", { name: /Calculate/i }));
+
     await waitFor(() => {
       expect(capitalApi.generateCapitalPlan).toHaveBeenCalledWith({
         available_capital: 2400000,

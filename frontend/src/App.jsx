@@ -40,7 +40,6 @@ import AssessmentWizard from "./AssessmentWizard";
 import CapitalPlannerPage from "./CapitalPlannerPage";
 import ChatbotDrawer from "./ChatbotDrawer";
 import DocumentIntakeWorkspace from "./DocumentIntakeWorkspace";
-import ExecutionMilestonesPage from "./ExecutionMilestonesPage";
 import FounderIntelligencePage from "./FounderIntelligencePage";
 import FundingPage from "./FundingPage";
 import FundingPlanPage from "./FundingPlanPage";
@@ -465,7 +464,6 @@ function Navigation({
         ["startup", "◉", "My startup"],
         ["builder", "🛠", "Startup Builder"],
         ["capital-planner", "📊", "Capital planner"],
-        ["milestones", "🎯", "Execution & milestones"],
         ["document-intake", "📄", "Document intake"],
         ["assessment", "＋", "Startup assessment"],
         ["starting-plan", "◎", "Starting plan"],
@@ -3431,12 +3429,6 @@ function Workspace({ onSignOut }) {
   } else if (activeView === "capital-planner") {
     page = (
       <CapitalPlannerPage
-        onNavigate={handleNavigate}
-      />
-    );
-  } else if (activeView === "milestones") {
-    page = (
-      <ExecutionMilestonesPage
         onNavigate={handleNavigate}
       />
     );
