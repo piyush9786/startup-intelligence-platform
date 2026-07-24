@@ -58,7 +58,7 @@ describe("DocumentIntakeWorkspace component", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: "AI Startup Document Intake" }),
+      screen.getByRole("heading", { name: "AI Document Intake" }),
     ).toBeInTheDocument();
 
     expect(

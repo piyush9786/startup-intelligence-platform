@@ -464,7 +464,6 @@ function Navigation({
         ["startup", "◉", "My startup"],
         ["builder", "🛠", "Startup Builder"],
         ["capital-planner", "📊", "Capital planner"],
-        ["document-intake", "📄", "Document intake"],
         ["assessment", "＋", "Startup assessment"],
         ["starting-plan", "◎", "Starting plan"],
         ["funding-plan", "≋", "Funding plan"],

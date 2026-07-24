@@ -10,8 +10,14 @@ import {
   isFieldFilled,
 } from "./profileCompleteness";
 import { readinessStatusLabel } from "./dashboard";
+import DocumentIntakeWorkspace from "./DocumentIntakeWorkspace";
 
 const MOTION_EASE = [0.22, 1, 0.36, 1];
+
+const TABS = [
+  { id: "profile", label: "Startup Profile", icon: "◉" },
+  { id: "documents", label: "Document Intake", icon: "📄" },
+];
 
 function SectionBadge({ field, profile }) {
   const value = getFieldValue(profile, field);
@@ -159,6 +165,7 @@ export default function MyStartupPage({
   onUpdateProfile,
   profile,
 }) {
+  const [activeTab, setActiveTab] = useState("profile");
   const [editingSection, setEditingSection] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -178,116 +185,182 @@ export default function MyStartupPage({
     }
   }
 
+  const readinessScore = profile?.readiness_score ?? null;
+  const readinessLabel = readinessScore !== null ? readinessStatusLabel(readinessScore) : null;
+
   return (
     <div className="page-stack my-startup-workspace">
-      <header className="page-header">
-        <div>
-          <span className="section-kicker">FOUNDER PROFILE</span>
-          <h1>{profile?.startup_name || "My Startup"}</h1>
-          <p>
-            Structured company overview, team background, market positioning, revenue, capital, and verified evidence.
-          </p>
+      {/* ── Hero Header ── */}
+      <header className="mystartup-hero">
+        <div className="mystartup-hero-content">
+          <div className="mystartup-hero-identity">
+            <div className="mystartup-avatar">
+              {(profile?.startup_name || "S").slice(0, 1).toUpperCase()}
+            </div>
+            <div>
+              <span className="section-kicker">Founder profile</span>
+              <h1>{profile?.startup_name || "My Startup"}</h1>
+              <p className="mystartup-subtitle">
+                {[profile?.sectors?.join(", "), profile?.state].filter(Boolean).join(" · ") || "Complete your profile to get started"}
+              </p>
+            </div>
+          </div>
+
+          <div className="mystartup-hero-stats">
+            <div className="mystartup-stat-card">
+              <span className="mystartup-stat-value">{completeness.overallPercent}%</span>
+              <span className="mystartup-stat-label">Profile complete</span>
+            </div>
+            {readinessScore !== null && (
+              <div className="mystartup-stat-card">
+                <span className="mystartup-stat-value">{readinessScore}</span>
+                <span className="mystartup-stat-label">{readinessLabel}</span>
+              </div>
+            )}
+            <div className="mystartup-stat-card">
+              <span className="mystartup-stat-value">{completeness.filledFields}</span>
+              <span className="mystartup-stat-label">of {completeness.totalFields} facts</span>
+            </div>
+          </div>
         </div>
-        <div className="page-header-actions">
+
+        {/* Completeness bar */}
+        <div className="mystartup-progress-section">
+          <div className="mystartup-progress-track" aria-label="Profile completeness progress">
+            <m.div
+              className="mystartup-progress-fill"
+              initial={{ width: 0 }}
+              animate={{ width: `${completeness.overallPercent}%` }}
+              transition={{ duration: 0.8, ease: MOTION_EASE }}
+            />
+          </div>
+          <div className="mystartup-section-chips">
+            {SECTION_DEFINITIONS.map((sec) => {
+              const score = completeness.sectionScores[sec.id] || {};
+              const isPerfect = score.percent === 100;
+              return (
+                <span key={sec.id} className={`mystartup-section-chip ${isPerfect ? "chip-complete" : ""}`}>
+                  <span className="chip-icon">{sec.icon}</span>
+                  <span>{sec.title}</span>
+                  <strong>{score.percent}%</strong>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="mystartup-hero-cta">
           <button className="button button-secondary" onClick={onAssess} type="button">
             Update assessment
           </button>
         </div>
       </header>
 
-      <section className="dashboard-card completeness-banner">
-        <div className="completeness-summary">
-          <div>
-            <span className="section-kicker">PROFILE COMPLETENESS</span>
-            <h2>{completeness.overallPercent}% complete</h2>
-            <p>
-              {completeness.filledFields} of {completeness.totalFields} facts populated across 9 domain sections.
-            </p>
-          </div>
-          <div className="completeness-badge">
-            <span className="completeness-score-number">{completeness.overallPercent}%</span>
-          </div>
-        </div>
-
-        <div className="completeness-bar-track" aria-label="Profile completeness progress">
-          <m.div
-            className="completeness-bar-fill"
-            initial={{ width: 0 }}
-            animate={{ width: `${completeness.overallPercent}%` }}
-            transition={{ duration: 0.6, ease: MOTION_EASE }}
-          />
-        </div>
-
-        <div className="section-scores-strip">
-          {SECTION_DEFINITIONS.map((sec) => {
-            const score = completeness.sectionScores[sec.id] || {};
-            return (
-              <div key={sec.id} className="section-score-pill">
-                <span>{sec.icon} {sec.title}</span>
-                <strong>{score.percent}%</strong>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <div className="domain-sections-grid">
-        {SECTION_DEFINITIONS.map((section) => {
-          const score = completeness.sectionScores[section.id] || {};
-          const isComplete = score.percent === 100;
-
-          return (
-            <section key={section.id} className="dashboard-card domain-section-card">
-              <div className="domain-card-header">
-                <div className="domain-title-group">
-                  <span className="domain-icon" aria-hidden="true">{section.icon}</span>
-                  <div>
-                    <h2>{section.title}</h2>
-                    <p>{section.description}</p>
-                  </div>
-                </div>
-
-                <div className="domain-actions">
-                  <span className={`status-pill ${isComplete ? "status-pill-pass" : "status-pill-neutral"}`}>
-                    {score.filled}/{score.total} fields
-                  </span>
-                  <button
-                    className="button button-secondary button-small"
-                    onClick={() => setEditingSection(section)}
-                    type="button"
-                  >
-                    Edit section
-                  </button>
-                </div>
-              </div>
-
-              <dl className="profile-fields-grid">
-                {section.fields.map((field) => {
-                  const filled = isFieldFilled(profile, field);
-                  const displayValue = formatFieldValue(profile, field);
-
-                  return (
-                    <div key={field.key} className={`profile-field-cell ${filled ? "field-filled" : "field-empty"}`}>
-                      <div className="field-label-row">
-                        <dt>{field.label}</dt>
-                        <SectionBadge field={field} profile={profile} />
-                      </div>
-                      <dd>{displayValue}</dd>
-                    </div>
-                  );
-                })}
-              </dl>
-
-              {!isComplete && (
-                <div className="section-empty-guidance">
-                  <span className="guidance-icon" aria-hidden="true">💡</span>
-                  <p>{section.emptyGuidance}</p>
-                </div>
-              )}
-            </section>
-          );
-        })}
+      {/* ── Tabs ── */}
+      <div className="mystartup-tabs" role="tablist" aria-label="My startup sections">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            className={`mystartup-tab ${activeTab === tab.id ? "mystartup-tab-active" : ""}`}
+            onClick={() => setActiveTab(tab.id)}
+            type="button"
+          >
+            <span className="mystartup-tab-icon" aria-hidden="true">{tab.icon}</span>
+            {tab.label}
+            {tab.id === "documents" && (
+              <span className="mystartup-tab-badge">AI</span>
+            )}
+          </button>
+        ))}
       </div>
+
+      {/* ── Tab content ── */}
+      <AnimatePresence mode="wait">
+        {activeTab === "profile" && (
+          <m.div
+            key="profile-tab"
+            className="domain-sections-grid"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.28, ease: MOTION_EASE }}
+          >
+            {SECTION_DEFINITIONS.map((section) => {
+              const score = completeness.sectionScores[section.id] || {};
+              const isComplete = score.percent === 100;
+
+              return (
+                <section key={section.id} className="dashboard-card domain-section-card">
+                  <div className="domain-card-header">
+                    <div className="domain-title-group">
+                      <span className="domain-icon" aria-hidden="true">{section.icon}</span>
+                      <div>
+                        <h2>{section.title}</h2>
+                        <p>{section.description}</p>
+                      </div>
+                    </div>
+
+                    <div className="domain-actions">
+                      <span className={`status-pill ${isComplete ? "status-pill-pass" : "status-pill-neutral"}`}>
+                        {score.filled}/{score.total} fields
+                      </span>
+                      <button
+                        className="button button-secondary button-small"
+                        onClick={() => setEditingSection(section)}
+                        type="button"
+                      >
+                        Edit section
+                      </button>
+                    </div>
+                  </div>
+
+                  <dl className="profile-fields-grid">
+                    {section.fields.map((field) => {
+                      const filled = isFieldFilled(profile, field);
+                      const displayValue = formatFieldValue(profile, field);
+
+                      return (
+                        <div key={field.key} className={`profile-field-cell ${filled ? "field-filled" : "field-empty"}`}>
+                          <div className="field-label-row">
+                            <dt>{field.label}</dt>
+                            <SectionBadge field={field} profile={profile} />
+                          </div>
+                          <dd>{displayValue}</dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+
+                  {!isComplete && (
+                    <div className="section-empty-guidance">
+                      <span className="guidance-icon" aria-hidden="true">💡</span>
+                      <p>{section.emptyGuidance}</p>
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </m.div>
+        )}
+
+        {activeTab === "documents" && (
+          <m.div
+            key="documents-tab"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.28, ease: MOTION_EASE }}
+          >
+            <DocumentIntakeWorkspace
+              onApplyConfirmedFacts={onUpdateProfile}
+              profile={profile}
+            />
+          </m.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {editingSection && (

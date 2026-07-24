@@ -25,7 +25,7 @@ const sampleProfile = {
 };
 
 describe("MyStartupPage component", () => {
-  test("renders completeness banner and 9 domain section cards", () => {
+  test("renders hero header with startup name and profile stats", () => {
     render(
       <MyStartupPage
         onAssess={vi.fn()}
@@ -34,14 +34,29 @@ describe("MyStartupPage component", () => {
       />
     );
 
+    // Startup name heading appears in hero
     expect(
       screen.getByRole("heading", { name: "Acme Climate" }),
     ).toBeInTheDocument();
 
-    expect(
-      screen.getByRole("heading", { name: /complete/i }),
-    ).toBeInTheDocument();
+    // Profile completeness stat is shown
+    expect(screen.getByText(/complete/i)).toBeInTheDocument();
 
+    // Tabs are rendered
+    expect(screen.getByRole("tab", { name: /Startup Profile/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Document Intake/i })).toBeInTheDocument();
+  });
+
+  test("profile tab renders domain section cards by default", () => {
+    render(
+      <MyStartupPage
+        onAssess={vi.fn()}
+        onUpdateProfile={vi.fn()}
+        profile={sampleProfile}
+      />
+    );
+
+    // Profile tab is active by default so domain cards are visible
     expect(
       screen.getAllByRole("heading", { name: "Company overview" })[0],
     ).toBeInTheDocument();
@@ -75,5 +90,24 @@ describe("MyStartupPage component", () => {
     await user.click(screen.getByRole("button", { name: "Save section updates" }));
 
     expect(handleUpdate).toHaveBeenCalled();
+  });
+
+  test("switching to Document Intake tab renders intake content", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MyStartupPage
+        onAssess={vi.fn()}
+        onUpdateProfile={vi.fn()}
+        profile={sampleProfile}
+      />
+    );
+
+    const docTab = screen.getByRole("tab", { name: /Document Intake/i });
+    await user.click(docTab);
+
+    expect(
+      screen.getByRole("heading", { name: /AI Document Intake/i }),
+    ).toBeInTheDocument();
   });
 });

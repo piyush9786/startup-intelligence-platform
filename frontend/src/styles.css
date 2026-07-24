@@ -6589,8 +6589,226 @@ body {
 
 .my-startup-workspace {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.75rem;
 }
+
+/* ── My Startup Hero ── */
+.mystartup-hero {
+  background: linear-gradient(135deg, var(--forest-dark) 0%, #1a5e3a 60%, #0f3d26 100%);
+  border-radius: 24px;
+  display: grid;
+  gap: 1.5rem;
+  overflow: hidden;
+  padding: 2rem 2rem 1.5rem;
+  position: relative;
+}
+
+.mystartup-hero::before {
+  background:
+    radial-gradient(ellipse at 80% 0%, rgba(204, 240, 84, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse at 20% 100%, rgba(212, 240, 223, 0.12) 0%, transparent 50%);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.mystartup-hero-content {
+  align-items: flex-start;
+  display: flex;
+  gap: 2rem;
+  justify-content: space-between;
+  position: relative;
+}
+
+.mystartup-hero-identity {
+  align-items: flex-start;
+  display: flex;
+  gap: 1.25rem;
+}
+
+.mystartup-avatar {
+  align-items: center;
+  background: linear-gradient(135deg, var(--lime) 0%, #a8d63a 100%);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(204, 240, 84, 0.35);
+  color: var(--forest-dark);
+  display: flex;
+  flex-shrink: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  height: 68px;
+  justify-content: center;
+  width: 68px;
+}
+
+.mystartup-hero-identity .section-kicker {
+  color: rgba(204, 240, 84, 0.75);
+  letter-spacing: 0.1em;
+}
+
+.mystartup-hero-identity h1 {
+  color: white;
+  font-size: 1.9rem;
+  font-weight: 800;
+  margin: 0.2rem 0 0.2rem;
+}
+
+.mystartup-subtitle {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.mystartup-hero-stats {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.75rem;
+}
+
+.mystartup-stat-card {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 80px;
+  padding: 0.85rem 1rem;
+  text-align: center;
+}
+
+.mystartup-stat-value {
+  color: var(--lime);
+  font-family: "Outfit", sans-serif;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.mystartup-stat-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mystartup-progress-section {
+  display: grid;
+  gap: 0.9rem;
+  position: relative;
+}
+
+.mystartup-progress-track {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.mystartup-progress-fill {
+  background: linear-gradient(90deg, var(--lime) 0%, #a8e050 100%);
+  border-radius: inherit;
+  height: 100%;
+}
+
+.mystartup-section-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mystartup-section-chip {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 550;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  transition: background 0.2s;
+}
+
+.mystartup-section-chip.chip-complete {
+  background: rgba(204, 240, 84, 0.12);
+  border-color: rgba(204, 240, 84, 0.3);
+  color: var(--lime);
+}
+
+.mystartup-section-chip strong {
+  font-weight: 750;
+}
+
+.chip-icon {
+  font-size: 0.8rem;
+}
+
+.mystartup-hero-cta {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  position: relative;
+}
+
+/* ── Tabs ── */
+.mystartup-tabs {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.35rem;
+}
+
+.mystartup-tab {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font-size: 0.88rem;
+  font-weight: 600;
+  gap: 0.5rem;
+  outline: none;
+  padding: 0.6rem 1.1rem;
+  transition: all 0.2s ease;
+}
+
+.mystartup-tab:hover {
+  background: rgba(22, 78, 50, 0.06);
+  color: var(--ink);
+}
+
+.mystartup-tab-active {
+  background: white;
+  box-shadow: 0 2px 10px rgba(22, 78, 50, 0.10);
+  color: var(--forest);
+}
+
+.mystartup-tab-icon {
+  font-size: 1rem;
+}
+
+.mystartup-tab-badge {
+  background: linear-gradient(135deg, var(--forest), #1a5e3a);
+  border-radius: 999px;
+  color: var(--lime);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.4rem;
+}
+
 
 .completeness-banner {
   background: var(--forest-dark);
@@ -6859,6 +7077,42 @@ body {
   display: grid;
   gap: 1.5rem;
 }
+
+.intake-intro-banner {
+  align-items: center;
+  background: linear-gradient(135deg, #f0f8f3 0%, #e6f5ec 100%);
+  border: 1px solid #c8e8d4;
+  border-radius: 18px;
+  display: flex;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.intake-intro-icon {
+  align-items: center;
+  background: white;
+  border: 1px solid #c8e8d4;
+  border-radius: 14px;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 1.75rem;
+  height: 56px;
+  justify-content: center;
+  width: 56px;
+}
+
+.intake-intro-banner h2 {
+  font-size: 1.2rem;
+  margin: 0 0 0.3rem;
+}
+
+.intake-intro-banner p {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
 
 .upload-intake-card {
   display: grid;
