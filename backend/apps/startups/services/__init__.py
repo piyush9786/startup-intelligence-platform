@@ -43,6 +43,22 @@ from .document_autofill import (
     build_startup_profile_autofill,
     normalize_autofill_mime_type,
 )
+from .funding_plan import (
+    FUNDING_PLAN_VERSION,
+    FundingPlanDependency,
+    FundingPlanInputError,
+    FundingPlanStep,
+    order_funding_plan,
+)
+from .funding_plan_persistence import (
+    FundingPlanPersistenceResult,
+    create_startup_funding_plan,
+)
+from .funding_plan_sources import (
+    FundingPlanSourceBundle,
+    FundingPlanSourceError,
+    build_funding_plan_source_bundle,
+)
 from .llm_provider import (
     LLMGenerationResult,
     LLMProviderError,
@@ -118,4 +134,14 @@ __all__ = [
     "snapshot_startup_profile",
     "snapshot_to_llm_input",
     "validate_startup_advisor_briefing",
+    "FUNDING_PLAN_VERSION",
+    "FundingPlanDependency",
+    "FundingPlanInputError",
+    "FundingPlanPersistenceResult",
+    "FundingPlanSourceBundle",
+    "FundingPlanSourceError",
+    "FundingPlanStep",
+    "build_funding_plan_source_bundle",
+    "create_startup_funding_plan",
+    "order_funding_plan",
 ]
