@@ -60,8 +60,9 @@ Current repository baseline:
 - AI capital planner workspace with deterministic burn rate, runway months, scenario modeling (conservative, balanced, growth), category capital allocations, sensitivity analysis, and CFO AI tradeoff notes;
 - execution & milestones engine workspace across 5 domain categories with dependency graph enforcement, completion evidence submission, and chronological progress update logs;
 - universal AI copilot with workspace-aware context injection, per-workspace quick prompts, copilot_context session field, and workspace-specific help for milestones, capital-planner, builder, schemes, startup, and assessment workspaces;
-- 536 backend tests passing;
-- 198 frontend tests passing;
+- founder intelligence command-center dashboard aggregating live metrics from all workspaces (readiness, capital runway, milestones, builder progress, scheme matches, recent activity feed) with weakest-workspace focus navigation;
+- 543 backend tests passing;
+- 203 frontend tests passing;
 - frontend production build passing;
 - Ruff, Django checks, and migration checks passing.
 
