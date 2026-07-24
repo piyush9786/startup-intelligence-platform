@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useT } from "./i18n/index.jsx";
+import LanguageSwitcher from "./LanguageSwitcher.jsx";
 import {
   AnimatePresence,
   LazyMotion,
@@ -456,49 +458,50 @@ function Navigation({
   onNavigate,
   onLogout,
 }) {
+  const { t } = useT();
   const groups = [
     {
-      label: "Your workspace",
+      label: t("nav.group.workspace"),
       items: [
-        ["intelligence", "✦", "Intelligence"],
-        ["overview", "⌂", "Dashboard"],
-        ["startup", "◉", "My startup"],
-        ["builder", "🛠", "Startup Builder"],
-        ["capital-planner", "📊", "Capital planner"],
-        ["roadmap", "↗", "Action roadmap"],
+        ["intelligence", "✦", t("nav.intelligence")],
+        ["overview", "⌂", t("nav.dashboard")],
+        ["startup", "◉", t("nav.my_startup")],
+        ["builder", "🛠", t("nav.builder")],
+        ["capital-planner", "📊", t("nav.capital_planner")],
+        ["roadmap", "↗", t("nav.roadmap")],
       ],
     },
     {
-      label: "Discover support",
+      label: t("nav.group.discover"),
       items: [
-        ["schemes", "◇", "Schemes"],
-        ["requirements", "✓", "Requirements"],
-        ["funding", "₹", "Funding & loans"],
+        ["schemes", "◇", t("nav.schemes")],
+        ["requirements", "✓", t("nav.requirements")],
+        ["funding", "₹", t("nav.funding")],
       ],
     },
     {
-      label: "Guidance",
-      items: [["advisor", "✦", "Founder advisor"]],
+      label: t("nav.group.guidance"),
+      items: [["advisor", "✦", t("nav.advisor")]],
     },
   ];
 
   if (canReviewEligibility) {
     groups.push({
-      label: "Review operations",
+      label: t("nav.group.review"),
       items: [
         [
           "reviewer-verifications",
           "⎙",
-          "Reviewer verification",
+          t("nav.reviewer_verification"),
         ],
       ],
     });
   }
 
   groups.push({
-    label: "Account",
+    label: t("nav.group.account"),
     items: [
-      ["logout", "⎋", "Sign out"],
+      ["logout", "⎋", t("nav.sign_out")],
     ],
   });
 
@@ -573,6 +576,7 @@ function ProductSidebar({
   onLogout,
   profile,
 }) {
+  const { t } = useT();
   const completenessPercent = profile
     ? Math.round(
         (Object.keys(profile).filter((k) => profile[k] !== null && profile[k] !== undefined && profile[k] !== "").length /
@@ -589,8 +593,8 @@ function ProductSidebar({
           <span>SI</span>
         </div>
         <div className="sidebar-brand-text">
-          <strong>Startup Intelligence</strong>
-          <span>Founder OS</span>
+          <strong>{t("brand.name")}</strong>
+          <span>{t("brand.tagline")}</span>
         </div>
       </div>
 
@@ -625,15 +629,15 @@ function ProductSidebar({
         <div className="sidebar-stat-row">
           <span className="sidebar-stat-chip">
             <b>{metrics.recommendations}</b>
-            <span>schemes</span>
+            <span>{t("sidebar.schemes")}</span>
           </span>
           <span className="sidebar-stat-chip">
             <b>{metrics.actions}</b>
-            <span>actions</span>
+            <span>{t("sidebar.actions")}</span>
           </span>
           <span className="sidebar-stat-chip sidebar-stat-chip-green">
             <b>✓</b>
-            <span>verified data</span>
+            <span>{t("sidebar.verified_data")}</span>
           </span>
         </div>
       </div>
@@ -642,15 +646,67 @@ function ProductSidebar({
 }
 
 
+function JourneyDialog({ onExistingStartup, onNewIdea }) {
+  const { t } = useT();
+  return (
+    <m.div
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0.95, opacity: 0 }}
+      initial={{ scale: 0.95, opacity: 0 }}
+      style={{
+        backgroundColor: "#fff",
+        borderRadius: "12px",
+        padding: "2rem",
+        maxWidth: "480px",
+        width: "100%",
+        boxShadow:
+          "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      }}
+    >
+      <h2 style={{ margin: "0 0 1rem 0", color: "#0f172a" }}>
+        {t("journey.title")}
+      </h2>
+      <p style={{ margin: "0 0 1.5rem 0", color: "#475569", lineHeight: 1.5 }}>
+        {t("journey.subtitle")}
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <button
+          className="button button-primary"
+          onClick={onExistingStartup}
+          style={{
+            width: "100%",
+            justifyContent: "center",
+            padding: "0.75rem",
+          }}
+        >
+          {t("journey.existing_startup")}
+        </button>
+        <button
+          className="button button-secondary"
+          onClick={onNewIdea}
+          style={{
+            width: "100%",
+            justifyContent: "center",
+            padding: "0.75rem",
+          }}
+        >
+          {t("journey.new_idea")}
+        </button>
+      </div>
+    </m.div>
+  );
+}
+
 function ProductTopbar({ query, setQuery }) {
+  const { t } = useT();
   return (
     <header className="product-topbar">
       <label className="dashboard-search">
         <span aria-hidden="true">⌕</span>
-        <span className="sr-only">Search schemes and requirements</span>
+        <span className="sr-only">{t("search.sr_label")}</span>
         <input
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search schemes, requirements and funding…"
+          placeholder={t("search.placeholder")}
           type="search"
           value={query}
         />
@@ -3493,46 +3549,16 @@ function Workspace({ onSignOut }) {
                 padding: "1rem"
               }}
             >
-              <m.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                style={{
-                  backgroundColor: "#fff",
-                  borderRadius: "12px",
-                  padding: "2rem",
-                  maxWidth: "480px",
-                  width: "100%",
-                  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+              <JourneyDialog
+                onExistingStartup={() => {
+                  setShowJourneyDialog(false);
+                  setActiveView("assessment");
                 }}
-              >
-                <h2 style={{ margin: "0 0 1rem 0", color: "#0f172a" }}>Where are you in your journey?</h2>
-                <p style={{ margin: "0 0 1.5rem 0", color: "#475569", lineHeight: 1.5 }}>
-                  To give you the best experience, please let us know where you are right now:
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  <button
-                    className="button button-primary"
-                    onClick={() => {
-                      setShowJourneyDialog(false);
-                      setActiveView("assessment");
-                    }}
-                    style={{ width: "100%", justifyContent: "center", padding: "0.75rem" }}
-                  >
-                    I have an existing startup
-                  </button>
-                  <button
-                    className="button button-secondary"
-                    onClick={() => {
-                      setShowJourneyDialog(false);
-                      setActiveView("builder");
-                    }}
-                    style={{ width: "100%", justifyContent: "center", padding: "0.75rem" }}
-                  >
-                    I have an idea / want to build one
-                  </button>
-                </div>
-              </m.div>
+                onNewIdea={() => {
+                  setShowJourneyDialog(false);
+                  setActiveView("builder");
+                }}
+              />
             </m.div>
           )}
         </AnimatePresence>
@@ -3652,6 +3678,7 @@ function Workspace({ onSignOut }) {
             startupProfile={selectedProfile}
           />
         )}
+        <LanguageSwitcher />
         </div>
       </MotionConfig>
     </LazyMotion>

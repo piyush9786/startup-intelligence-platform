@@ -55,6 +55,75 @@ const api = vi.hoisted(() => ({
 
 vi.mock("./api", () => api);
 
+// Inline English translations for tests — dynamic import() doesn't work inside vi.mock hoisting
+vi.mock("./i18n/index.jsx", () => {
+  const translations = {
+    "brand.name": "Startup Intelligence",
+    "brand.tagline": "Founder OS",
+    "brand.tagline.public": "AI founder operating system",
+    "nav.group.workspace": "Your workspace",
+    "nav.group.discover": "Discover support",
+    "nav.group.guidance": "Guidance",
+    "nav.group.review": "Review operations",
+    "nav.group.account": "Account",
+    "nav.intelligence": "Intelligence",
+    "nav.dashboard": "Dashboard",
+    "nav.my_startup": "My startup",
+    "nav.builder": "Startup Builder",
+    "nav.capital_planner": "Capital planner",
+    "nav.roadmap": "Action roadmap",
+    "nav.schemes": "Schemes",
+    "nav.requirements": "Requirements",
+    "nav.funding": "Funding & loans",
+    "nav.advisor": "Founder advisor",
+    "nav.reviewer_verification": "Reviewer verification",
+    "nav.sign_out": "Sign out",
+    "sidebar.schemes": "schemes",
+    "sidebar.actions": "actions",
+    "sidebar.verified_data": "verified data",
+    "search.placeholder": "Search schemes, requirements and funding\u2026",
+    "search.sr_label": "Search schemes and requirements",
+    "action.sign_in": "Sign in",
+    "action.register": "Create account",
+    "action.sign_out": "Sign out",
+    "journey.title": "Where are you in your journey?",
+    "journey.subtitle": "To give you the best experience, please let us know where you are right now:",
+    "journey.existing_startup": "I have an existing startup",
+    "journey.new_idea": "I have an idea / want to build one",
+    "landing.hero.eyebrow": "AI-powered founder operating system",
+    "landing.hero.title": "Build your startup with verified government support",
+    "landing.hero.subtitle": "Discover eligible schemes, plan your capital, and navigate India's startup ecosystem with AI guidance backed by official sources.",
+    "landing.hero.cta_primary": "Start for free",
+    "landing.hero.cta_secondary": "Sign in",
+    "landing.schemes_count": "{count}+ verified government schemes",
+    "landing.how_it_works": "How it works",
+    "landing.capabilities": "Capabilities",
+    "landing.trust": "Trust",
+    "landing.step1": "Describe your startup or upload an existing document.",
+    "landing.step2": "Review extracted facts, readiness gaps, and verified opportunities.",
+    "landing.step3": "Follow a structured plan and ask the AI copilot for contextual guidance.",
+    "landing.cap1.title": "Discover verified support",
+    "landing.cap1.desc": "Match your startup with government schemes using reviewed eligibility rules, official sources, and transparent evidence.",
+    "landing.cap2.title": "Build with practical guidance",
+    "landing.cap2.desc": "Move from an initial idea to customers, validation, sales, funding, and execution through structured AI-assisted workflows.",
+    "landing.cap3.title": "Use capital deliberately",
+    "landing.cap3.desc": "Plan funding access today and prepare for deterministic burn, runway, and capital-allocation scenarios.",
+  };
+  const t = (key, vars = {}) => {
+    let value = translations[key] ?? key;
+    Object.entries(vars).forEach(([k, v]) => {
+      value = value.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+    });
+    return value;
+  };
+  return {
+    LANGUAGES: [{ code: "en", label: "English", nativeLabel: "English" }],
+    useT: () => ({ t, language: "en" }),
+    useLanguage: () => ({ language: "en", setLanguage: () => {}, t }),
+    LanguageProvider: ({ children }) => children,
+  };
+});
+
 vi.mock("./FounderConcierge", () => ({
   default: () => null,
 }));
@@ -687,7 +756,7 @@ describe("founder authentication", () => {
     render(<App />);
 
     await user.click(
-      screen.getByRole("button", { name: "Sign in" }),
+      screen.getAllByRole("button", { name: "Sign in" })[0],
     );
     await user.type(screen.getByLabelText("Username"), "founder");
     await user.type(screen.getByLabelText("Password"), "safe-password");
@@ -709,13 +778,13 @@ describe("founder authentication", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: /Build your startup with clarity/,
+        name: /Build your startup with verified government support/,
       }),
     ).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", {
-        name: "Start building",
+        name: "Start for free",
       }),
     );
 
@@ -777,7 +846,7 @@ describe("founder authentication", () => {
     render(<App />);
 
     await user.click(
-      screen.getByRole("button", { name: "Sign in" }),
+      screen.getAllByRole("button", { name: "Sign in" })[0],
     );
 
     await user.click(
@@ -822,7 +891,7 @@ describe("founder authentication", () => {
     render(<App />);
 
     await user.click(
-      screen.getByRole("button", { name: "Sign in" }),
+      screen.getAllByRole("button", { name: "Sign in" })[0],
     );
     await user.type(screen.getByLabelText("Username"), "founder");
     await user.type(screen.getByLabelText("Password"), "wrong-password");
@@ -2020,7 +2089,7 @@ describe("functional user dashboard", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: /Build your startup with clarity/,
+        name: /Build your startup with verified government support/,
       }),
     ).toBeInTheDocument();
   });
