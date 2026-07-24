@@ -149,11 +149,7 @@ function LandingPage({
       <main>
         <section className="public-hero">
           <div className="public-hero-copy">
-            <span className="public-pill">
-              {schemeCount > 0
-                ? t("landing.schemes_count", { count: schemeCount })
-                : t("landing.hero.eyebrow")}
-            </span>
+
 
             <h1>
               {t("landing.hero.title")}
