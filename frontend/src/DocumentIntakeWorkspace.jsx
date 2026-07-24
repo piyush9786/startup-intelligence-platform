@@ -101,16 +101,17 @@ export default function DocumentIntakeWorkspace({
   }
 
   return (
-    <div className="page-stack document-intake-workspace">
-      <header className="page-header">
+    <div className="document-intake-workspace">
+      <div className="intake-intro-banner">
+        <div className="intake-intro-icon" aria-hidden="true">📄</div>
         <div>
-          <span className="section-kicker">DOCUMENT PARSER & PROVENANCE</span>
-          <h1>AI Startup Document Intake</h1>
+          <h2>AI Document Intake</h2>
           <p>
             Upload pitch decks, executive summaries, incorporation certificates, or Udyam MSME documents to extract structured facts with page-level text evidence.
+            Nothing is saved until you review, select, and apply suggestions.
           </p>
         </div>
-      </header>
+      </div>
 
       <section className="dashboard-card upload-intake-card">
         <h2>Upload startup document</h2>
