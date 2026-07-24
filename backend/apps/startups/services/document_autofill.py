@@ -20,6 +20,35 @@ DOCUMENT_TYPE_CHOICES = (
     ("auto", "Auto-detect"),
     ("incorporation_certificate", "Incorporation certificate"),
     ("udyam_registration", "Udyam registration"),
+    ("pitch_deck", "Pitch deck / Executive summary"),
+)
+
+PITCH_DECK_SIGNALS = (
+    re.compile(r"(?i)\bpitch deck\b"),
+    re.compile(r"(?i)\bexecutive summary\b"),
+    re.compile(r"(?i)\bbusiness model\b"),
+    re.compile(r"(?i)\bproblem statement\b"),
+    re.compile(r"(?i)\bmarket opportunity\b"),
+)
+
+FUNDING_REQ_PATTERN = re.compile(
+    r"(?im)^\s*(?:funding (?:required|ask)|capital (?:required|needed)|seeking)"
+    r"\s*[:\-]?\s*(?:INR|Rs\.?|\$)?\s*(?P<value>\d+[\d,.]*(?:\s*(?:Lakh|Crore|k|M|Mn|Million|Cr))?)",
+)
+
+TEAM_SIZE_PATTERN = re.compile(
+    r"(?im)^\s*(?:team size|headcount|employees|full[\s-]time team)"
+    r"\s*[:\-]\s*(?P<value>\d{1,4})",
+)
+
+SECTOR_PATTERN = re.compile(
+    r"(?im)^\s*(?:sector|industry|domain)"
+    r"\s*[:\-]\s*(?P<value>[^\n]{2,100})",
+)
+
+TECH_PATTERN = re.compile(
+    r"(?im)^\s*(?:technologies|tech stack|key tech)"
+    r"\s*[:\-]\s*(?P<value>[^\n]{2,120})",
 )
 
 MIME_BY_SUFFIX = {".pdf": "application/pdf", ".txt": "text/plain"}
@@ -195,6 +224,10 @@ def _detect_type(payload: ExtractionPayload):
         located = incorporation or cin
         return "incorporation_certificate", 95, _evidence(located)
 
+    pitch_match = _find_match(payload.sections, PITCH_DECK_SIGNALS)
+    if pitch_match:
+        return "pitch_deck", 90, _evidence(pitch_match)
+
     return "unknown", 0, None
 
 
@@ -334,6 +367,58 @@ def _extract_suggestions(
                 reason="The registered address identifies the district.",
                 evidence=_evidence(district_match),
             )
+
+    sector_match = _find_match(payload.sections, (SECTOR_PATTERN,))
+    if sector_match:
+        sectors_raw = _clean(sector_match[1].group("value"))
+        sectors_list = [s.strip() for s in sectors_raw.split(",") if s.strip()]
+        _add(
+            suggestions,
+            field="sectors",
+            value=sectors_list,
+            confidence=85,
+            reason="Industry sector explicitly labeled in document.",
+            evidence=_evidence(sector_match),
+        )
+
+    tech_match = _find_match(payload.sections, (TECH_PATTERN,))
+    if tech_match:
+        tech_raw = _clean(tech_match[1].group("value"))
+        tech_list = [t.strip() for t in tech_raw.split(",") if t.strip()]
+        _add(
+            suggestions,
+            field="technologies",
+            value=tech_list,
+            confidence=85,
+            reason="Technologies labeled in document text.",
+            evidence=_evidence(tech_match),
+        )
+
+    funding_match = _find_match(payload.sections, (FUNDING_REQ_PATTERN,))
+    if funding_match:
+        _add(
+            suggestions,
+            field="funding_required",
+            value=_clean(funding_match[1].group("value")),
+            confidence=82,
+            reason="Funding requirement ask identified in document.",
+            evidence=_evidence(funding_match),
+        )
+
+    team_match = _find_match(payload.sections, (TEAM_SIZE_PATTERN,))
+    if team_match:
+        try:
+            team_val = int(_clean(team_match[1].group("value")))
+            _add(
+                suggestions,
+                field="team_size",
+                value=team_val,
+                confidence=88,
+                reason="Team headcount identified in document.",
+                evidence=_evidence(team_match),
+            )
+        except ValueError:
+            pass
 
     order = {
         "startup_name": 0,

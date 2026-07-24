@@ -32,16 +32,25 @@ import {
   listSchemes,
   listStartupAdvisorBriefings,
   listStartupProfiles,
-  login,
   updateCurrentStartupOnboarding,
   uploadEligibilityVerificationEvidence,
 } from "./api";
+import ActionRoadmapPage from "./ActionRoadmapPage";
 import AssessmentWizard from "./AssessmentWizard";
+import CapitalPlannerPage from "./CapitalPlannerPage";
 import ChatbotDrawer from "./ChatbotDrawer";
-import FounderConcierge from "./FounderConcierge";
+import DocumentIntakeWorkspace from "./DocumentIntakeWorkspace";
+import ExecutionMilestonesPage from "./ExecutionMilestonesPage";
+import FundingPage from "./FundingPage";
 import FundingPlanPage from "./FundingPlanPage";
+import MyStartupPage from "./MyStartupPage";
 import OnboardingTour from "./OnboardingTour";
+import PublicEntry from "./PublicEntry";
+import RequirementsPage from "./RequirementsPage";
+import ReviewerVerificationWorkspace from "./ReviewerVerificationWorkspace";
+import SchemeExplorerPage from "./SchemeExplorerPage";
 import StartingPlanPage from "./StartingPlanPage";
+import StartupBuilderPage from "./StartupBuilderPage";
 import {
   canAccessReviewerWorkspace,
   normalizeCurrentUser,
@@ -153,93 +162,6 @@ function InlineNotice({ children, tone = "info" }) {
     >
       {children}
     </div>
-  );
-}
-
-function LoginPanel({ onAuthenticated }) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError("");
-
-    try {
-      await login({ username, password });
-      onAuthenticated();
-    } catch (requestError) {
-      setError(humanizeApiError(requestError));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <main className="auth-shell">
-      <section className="auth-intro">
-        <span className="eyebrow">VERIFIED STARTUP INTELLIGENCE</span>
-        <h1>Turn grounded startup evidence into the next clear decision.</h1>
-        <p>
-          Sign in to review readiness, recommended schemes, roadmap, and
-          founder guidance from one evidence-backed workspace.
-        </p>
-        <div className="trust-row" aria-label="Platform safeguards">
-          <span>Deterministic scoring</span>
-          <span>Persisted evidence</span>
-          <span>Source-level citations</span>
-        </div>
-      </section>
-
-      <section className="auth-card" aria-labelledby="signin-title">
-        <div>
-          <span className="section-kicker">Founder access</span>
-          <h2 id="signin-title">Sign in</h2>
-          <p className="muted">
-            Use the username and password configured for your platform
-            account.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <label>
-            Username
-            <input
-              autoComplete="username"
-              name="username"
-              onChange={(event) => setUsername(event.target.value)}
-              required
-              value={username}
-            />
-          </label>
-
-          <label>
-            Password
-            <input
-              autoComplete="current-password"
-              name="password"
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              type="password"
-              value={password}
-            />
-          </label>
-
-          {error && <InlineNotice tone="danger">{error}</InlineNotice>}
-
-          <button className="button button-primary button-wide" disabled={submitting} type="submit">
-            {submitting ? "Signing in…" : "Open founder dashboard"}
-          </button>
-        </form>
-
-        <p className="session-note">
-          Authentication tokens are kept only in this browser tab’s session
-          storage.
-        </p>
-      </section>
-    </main>
   );
 }
 
@@ -539,6 +461,10 @@ function Navigation({
       items: [
         ["overview", "⌂", "Dashboard"],
         ["startup", "◉", "My startup"],
+        ["builder", "🛠", "Startup Builder"],
+        ["capital-planner", "📊", "Capital planner"],
+        ["milestones", "🎯", "Execution & milestones"],
+        ["document-intake", "📄", "Document intake"],
         ["assessment", "＋", "Startup assessment"],
         ["starting-plan", "◎", "Starting plan"],
         ["funding-plan", "≋", "Funding plan"],
@@ -2044,571 +1970,9 @@ function SchemeExplorer({
 }
 
 
-function RequirementsPage({
-  externalRequirements,
-  onOpenScheme,
-  query,
-  schemes,
-}) {
-  const applicable = filterSchemes(schemes, query).filter(
-    (scheme) =>
-      schemeRequirements(scheme).length ||
-      schemeEligibilityRules(scheme).length ||
-      schemeApplicationSteps(scheme).length,
-  );
 
-  const external = filterExternalCertificationRequirements(
-    externalRequirements,
-    query,
-  );
 
-  return (
-    <div className="page-stack">
-      <PageHeader
-        eyebrow="APPLICATION READINESS"
-        title="Requirements and certifications"
-        description="Review verified scheme requirements separately from external certification records awaiting verification."
-      />
 
-      <section className="page-stack">
-        <div className="overview-heading">
-          <div>
-            <span className="section-kicker">
-              Verified platform records
-            </span>
-            <h2>Scheme-specific requirements</h2>
-          </div>
-          <span className="count-badge">{applicable.length}</span>
-        </div>
-
-        {applicable.length ? (
-          <div className="requirements-list">
-            {applicable.map((scheme) => {
-              const documents = schemeRequirements(scheme);
-              const certifications =
-                certificationRequirements(scheme);
-              const rules = schemeEligibilityRules(scheme);
-
-              return (
-                <article
-                  className="requirement-card"
-                  key={scheme.id}
-                >
-                  <div className="requirement-card-heading">
-                    <div>
-                      <span className="section-kicker">
-                        {scheme.authority_name || "Authority"}
-                      </span>
-                      <h2>{scheme.canonical_name}</h2>
-                    </div>
-                    <button
-                      onClick={() =>
-                        onOpenScheme(
-                          scheme,
-                          "requirements",
-                        )
-                      }
-                      type="button"
-                    >
-                      Open scheme →
-                    </button>
-                  </div>
-
-                  <div className="requirement-columns">
-                    <section>
-                      <h3>Required documents</h3>
-                      {documents.length ? (
-                        <ul>
-                          {documents
-                            .slice(0, 6)
-                            .map((item) => (
-                              <li key={item}>{item}</li>
-                            ))}
-                        </ul>
-                      ) : (
-                        <p>
-                          No document list has been captured.
-                        </p>
-                      )}
-                    </section>
-
-                    <section>
-                      <h3>
-                        Certification / registration evidence
-                      </h3>
-                      {certifications.length ? (
-                        <ul>
-                          {certifications
-                            .slice(0, 6)
-                            .map((item) => (
-                              <li key={item}>{item}</li>
-                            ))}
-                        </ul>
-                      ) : (
-                        <p>
-                          No explicit certification requirement
-                          is present in the current verified
-                          fields.
-                        </p>
-                      )}
-                    </section>
-
-                    <section>
-                      <h3>Eligibility rules</h3>
-                      {rules.length ? (
-                        <ul>
-                          {rules
-                            .slice(0, 6)
-                            .map((rule, index) => (
-                              <li
-                                key={
-                                  rule.id ||
-                                  `${rule.label}-${index}`
-                                }
-                              >
-                                <span
-                                  className={
-                                    rule.mandatory
-                                      ? "mandatory-dot"
-                                      : "optional-dot"
-                                  }
-                                />
-                                {rule.label}
-                              </li>
-                            ))}
-                        </ul>
-                      ) : (
-                        <p>
-                          No structured eligibility rules have
-                          been captured.
-                        </p>
-                      )}
-                    </section>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <EmptyPanel title="No verified requirement records found">
-            Requirements appear when a current scheme version
-            contains documents, eligibility rules, or application
-            steps.
-          </EmptyPanel>
-        )}
-      </section>
-
-      <section className="page-stack">
-        <div className="overview-heading">
-          <div>
-            <span className="section-kicker">
-              External discovery records
-            </span>
-            <h2>Certification and registration references</h2>
-          </div>
-          <span className="count-badge">{external.length}</span>
-        </div>
-
-        <InlineNotice>
-          External records are discovery-only, require verification,
-          and are not used for recommendations or readiness scoring.
-        </InlineNotice>
-
-        {external.length ? (
-          <div className="requirements-list">
-            {external.map((record) => {
-              const tags =
-                externalCertificationTags(record);
-
-              return (
-                <article
-                  className="requirement-card scheme-card-external"
-                  key={`external-requirement-${record.id}`}
-                >
-                  <div className="requirement-card-heading">
-                    <div>
-                      <div className="scheme-card-topline">
-                        <span className="verification-badge verification-review_required">
-                          {record.verification_label ||
-                            "Needs review"}
-                        </span>
-                        <span className="application-badge">
-                          External dataset
-                        </span>
-                      </div>
-
-                      <span className="section-kicker">
-                        {record.issuing_authority ||
-                          "Issuing authority not published"}
-                      </span>
-                      <h2>{record.certificate_name}</h2>
-                    </div>
-
-                    {record.official_apply_url && (
-                      <a
-                        className="button button-ghost"
-                        href={record.official_apply_url}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        Official source →
-                      </a>
-                    )}
-                  </div>
-
-                  {record.description && (
-                    <p>{record.description}</p>
-                  )}
-
-                  <div className="scheme-tags">
-                    {tags.length ? (
-                      tags.map((tag) => (
-                        <span key={tag}>{tag}</span>
-                      ))
-                    ) : (
-                      <span>Classification pending</span>
-                    )}
-                  </div>
-
-                  <div className="requirement-columns">
-                    <section>
-                      <h3>Who may need it</h3>
-                      <p>
-                        {record.eligibility ||
-                          "Eligibility details require confirmation."}
-                      </p>
-                    </section>
-
-                    <section>
-                      <h3>Validity and renewal</h3>
-                      <p>
-                        {[
-                          record.validity,
-                          record.renewal_period,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") ||
-                          "Validity details are not published."}
-                      </p>
-                    </section>
-
-                    <section>
-                      <h3>Potential benefit</h3>
-                      <p>
-                        {record.benefits ||
-                          "Benefits require confirmation from the issuing authority."}
-                      </p>
-                    </section>
-                  </div>
-
-                  {record.official_document_text && (
-                    <p className="external-scheme-disclaimer">
-                      Published reference:{" "}
-                      {record.official_document_text}
-                    </p>
-                  )}
-
-                  <p className="external-scheme-disclaimer">
-                    {record.disclaimer ||
-                      "Confirm this requirement and its application process with the issuing authority."}
-                  </p>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <EmptyPanel title="No external certification record matches this view">
-            Clear the search to review all display-eligible
-            external certification records.
-          </EmptyPanel>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function FundingPage({
-  externalCapitalSupport,
-  onOpenScheme,
-  query,
-  schemes,
-}) {
-  const [filter, setFilter] = useState("all");
-
-  const funding = filterSchemes(schemes, query)
-    .filter(isFundingScheme)
-    .filter((scheme) => {
-      if (filter === "loans") {
-        return isLoanScheme(scheme);
-      }
-      if (filter === "non-loans") {
-        return !isLoanScheme(scheme);
-      }
-      return true;
-    });
-
-  const external = filterExternalCapitalSupport(
-    externalCapitalSupport,
-    query,
-  ).filter((record) => {
-    if (filter === "loans") {
-      return isExternalCapitalLoan(record);
-    }
-    if (filter === "non-loans") {
-      return !isExternalCapitalLoan(record);
-    }
-    return true;
-  });
-
-  return (
-    <div className="page-stack">
-      <PageHeader
-        eyebrow="CAPITAL SUPPORT"
-        title="Funding and loans"
-        description="Compare verified platform schemes separately from external capital-support records awaiting review."
-      />
-
-      <div
-        className="filter-tabs"
-        role="group"
-        aria-label="Funding filters"
-      >
-        {[
-          ["all", "All funding"],
-          ["loans", "Loans & credit"],
-          ["non-loans", "Grants and other support"],
-        ].map(([id, label]) => (
-          <button
-            aria-pressed={filter === id}
-            className={
-              filter === id ? "filter-tab-active" : ""
-            }
-            key={id}
-            onClick={() => setFilter(id)}
-            type="button"
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <p className="result-count">
-        {funding.length + external.length} records shown
-        {" · "}
-        {funding.length} verified/platform
-        {" · "}
-        {external.length} external
-      </p>
-
-      <section className="page-stack">
-        <div className="overview-heading">
-          <div>
-            <span className="section-kicker">
-              Verified platform records
-            </span>
-            <h2>Funding schemes</h2>
-          </div>
-          <span className="count-badge">{funding.length}</span>
-        </div>
-
-        {funding.length ? (
-          <div className="funding-grid">
-            {funding.map((scheme) => (
-              <article
-                className="funding-card"
-                key={scheme.id}
-              >
-                <div className="funding-card-heading">
-                  <span>{fundingTypeLabel(scheme)}</span>
-                  <small>{schemeDeadlineStatus(scheme).label}</small>
-                </div>
-
-                <h2>{scheme.canonical_name}</h2>
-                <p>
-                  {scheme.authority_name ||
-                    "Authority not published"}
-                </p>
-
-                <dl>
-                  <div>
-                    <dt>Published amount</dt>
-                    <dd>{formatAmountRange(scheme)}</dd>
-                  </div>
-                  <div>
-                    <dt>Interest</dt>
-                    <dd>
-                      {isLoanScheme(scheme)
-                        ? formatInterestRange(scheme)
-                        : "Not applicable / not published"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Equity required</dt>
-                    <dd>
-                      {currentSchemeVersion(scheme)
-                        ?.equity_required === true
-                        ? "Yes"
-                        : currentSchemeVersion(scheme)
-                              ?.equity_required === false
-                          ? "No"
-                          : "Not published"}
-                    </dd>
-                  </div>
-                </dl>
-
-                <button
-                  className="button button-secondary button-wide"
-                  onClick={() =>
-                    onOpenScheme(scheme, "funding")
-                  }
-                  type="button"
-                >
-                  Review eligibility and apply
-                </button>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <EmptyPanel title="No verified funding record matches this view">
-            Funding is identified from structured scheme
-            support, amount, interest, and funding fields.
-          </EmptyPanel>
-        )}
-      </section>
-
-      <section className="page-stack">
-        <div className="overview-heading">
-          <div>
-            <span className="section-kicker">
-              External discovery records
-            </span>
-            <h2>Additional capital-support references</h2>
-          </div>
-          <span className="count-badge">{external.length}</span>
-        </div>
-
-        <InlineNotice>
-          External records require verification and are not
-          included in startup recommendations or ranking.
-        </InlineNotice>
-
-        {external.length ? (
-          <div className="funding-grid">
-            {external.map((record) => {
-              const tags = externalCapitalTags(record);
-              const isLoan =
-                isExternalCapitalLoan(record);
-
-              return (
-                <article
-                  className="funding-card scheme-card-external"
-                  key={`external-capital-${record.id}`}
-                >
-                  <div className="scheme-card-topline">
-                    <span className="verification-badge verification-review_required">
-                      {record.verification_label ||
-                        "Needs review"}
-                    </span>
-                    <span className="application-badge">
-                      External dataset
-                    </span>
-                  </div>
-
-                  <div className="funding-card-heading">
-                    <span>
-                      {record.support_type ||
-                        record.funding_category ||
-                        (isLoan
-                          ? "Loan / credit"
-                          : "Capital support")}
-                    </span>
-                    <small>
-                      {record.claimed_scheme_status ||
-                        "Status requires verification"}
-                    </small>
-                  </div>
-
-                  <h2>{record.support_name}</h2>
-                  <p>{externalCapitalAuthority(record)}</p>
-
-                  <div className="scheme-tags">
-                    {tags.length ? (
-                      tags.map((tag) => (
-                        <span key={tag}>{tag}</span>
-                      ))
-                    ) : (
-                      <span>Classification pending</span>
-                    )}
-                  </div>
-
-                  <dl>
-                    <div>
-                      <dt>Published amount</dt>
-                      <dd>
-                        {externalCapitalAmount(record)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Interest</dt>
-                      <dd>
-                        {record.interest_rate_text ||
-                          (isLoan
-                            ? "Not published"
-                            : "Not applicable / not published")}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Collateral</dt>
-                      <dd>
-                        {record.collateral_required_text ||
-                          "Not published"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Repayment</dt>
-                      <dd>
-                        {record.repayment_required_text ||
-                          "Not published"}
-                      </dd>
-                    </div>
-                  </dl>
-
-                  {record.funding_purpose && (
-                    <p>
-                      <strong>Purpose:</strong>{" "}
-                      {record.funding_purpose}
-                    </p>
-                  )}
-
-                  {record.eligible_entity && (
-                    <p>
-                      <strong>Eligible entity:</strong>{" "}
-                      {record.eligible_entity}
-                    </p>
-                  )}
-
-                  <p className="external-scheme-disclaimer">
-                    {record.disclaimer ||
-                      "Verify all funding terms with the responsible authority before applying."}
-                  </p>
-
-                  <strong>
-                    Official application link unavailable
-                  </strong>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <EmptyPanel title="No external capital-support record matches this view">
-            Clear the search or choose another funding
-            category.
-          </EmptyPanel>
-        )}
-      </section>
-    </div>
-  );
-}
 
 function StartupPage({ dashboardData, onAssess, profile }) {
   const assessment = dashboardData?.readiness?.assessment;
@@ -3468,659 +2832,7 @@ function formatReviewerValue(value) {
 }
 
 
-function triggerBrowserDownload({
-  blob,
-  filename,
-}) {
-  const objectUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
 
-  link.href = objectUrl;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-
-  URL.revokeObjectURL(objectUrl);
-}
-
-
-function ReviewerDecisionForm({
-  defaultValidFrom,
-  onDecisionCreated,
-  submission,
-}) {
-  const [outcome, setOutcome] = useState("approved");
-  const [
-    rawVerifiedValue,
-    setRawVerifiedValue,
-  ] = useState(
-    formatReviewerValue(
-      submission.claim_value
-      ?? submission.expected_value,
-    ),
-  );
-  const [reviewNotes, setReviewNotes] = useState("");
-  const [validFrom, setValidFrom] = useState(
-    defaultValidFrom || "",
-  );
-  const [expiresOn, setExpiresOn] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState("");
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setFormError("");
-
-    try {
-      const payload = buildReviewerDecisionPayload({
-        submission,
-        outcome,
-        rawVerifiedValue,
-        reviewNotes,
-        validFrom,
-        expiresOn,
-      });
-
-      setSubmitting(true);
-
-      const decision =
-        await createEligibilityVerificationReviewerDecision(
-          payload,
-        );
-
-      await onDecisionCreated({
-        decision,
-        submission,
-      });
-    } catch (requestError) {
-      setFormError(
-        requestError?.response
-          ? humanizeApiError(requestError)
-          : requestError.message,
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <form
-      className="reviewer-decision-form"
-      onSubmit={handleSubmit}
-    >
-      <div className="reviewer-decision-heading">
-        <div>
-          <span className="section-kicker">
-            IMMUTABLE REVIEW DECISION
-          </span>
-          <h3>Record a decision</h3>
-        </div>
-        <span className="reviewer-decision-warning">
-          A new decision record will be created.
-        </span>
-      </div>
-
-      {formError && (
-        <InlineNotice tone="danger">
-          {formError}
-        </InlineNotice>
-      )}
-
-      <div className="reviewer-form-grid">
-        <label className="field">
-          <span>Outcome</span>
-          <select
-            aria-label="Review outcome"
-            disabled={submitting}
-            onChange={(event) =>
-              setOutcome(event.target.value)
-            }
-            value={outcome}
-          >
-            <option value="approved">Approve</option>
-            <option value="rejected">Reject</option>
-          </select>
-        </label>
-
-        {outcome === "approved" && (
-          <label className="field">
-            <span>Verified value</span>
-            <input
-              aria-label="Verified value"
-              disabled={submitting}
-              onChange={(event) =>
-                setRawVerifiedValue(event.target.value)
-              }
-              required
-              value={rawVerifiedValue}
-            />
-          </label>
-        )}
-
-        <label className="field">
-          <span>Valid from</span>
-          <input
-            aria-label="Valid from"
-            disabled={submitting}
-            onChange={(event) =>
-              setValidFrom(event.target.value)
-            }
-            required
-            type="date"
-            value={validFrom}
-          />
-        </label>
-
-        <label className="field">
-          <span>Expires on</span>
-          <input
-            aria-label="Expires on"
-            disabled={submitting}
-            min={validFrom || undefined}
-            onChange={(event) =>
-              setExpiresOn(event.target.value)
-            }
-            type="date"
-            value={expiresOn}
-          />
-        </label>
-      </div>
-
-      <label className="field">
-        <span>Reviewer notes</span>
-        <textarea
-          aria-label="Reviewer notes"
-          disabled={submitting}
-          onChange={(event) =>
-            setReviewNotes(event.target.value)
-          }
-          placeholder="Describe what was checked and why this outcome is appropriate."
-          rows="4"
-          value={reviewNotes}
-        />
-      </label>
-
-      <button
-        className={[
-          "button",
-          outcome === "approved"
-            ? "button-primary"
-            : "button-secondary",
-        ].join(" ")}
-        disabled={submitting}
-        type="submit"
-      >
-        {submitting
-          ? "Recording decision…"
-          : outcome === "approved"
-            ? "Approve submission"
-            : "Reject submission"}
-      </button>
-    </form>
-  );
-}
-
-
-function ReviewerVerificationWorkspace({
-  currentUser,
-  onRequestError,
-}) {
-  const [queue, setQueue] = useState(
-    normalizeReviewerVerificationQueue(),
-  );
-  const [statusFilter, setStatusFilter] = useState(
-    "pending",
-  );
-  const [loading, setLoading] = useState(true);
-  const [
-    downloadingEvidenceId,
-    setDownloadingEvidenceId,
-  ] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const visibleSubmissions = useMemo(
-    () =>
-      queue.submissions.filter(
-        (submission) =>
-          statusFilter === "all"
-          || submission.status === statusFilter,
-      ),
-    [queue.submissions, statusFilter],
-  );
-
-  const statusCounts = useMemo(
-    () =>
-      queue.submissions.reduce(
-        (counts, submission) => ({
-          ...counts,
-          [submission.status]:
-            (counts[submission.status] || 0) + 1,
-        }),
-        {},
-      ),
-    [queue.submissions],
-  );
-
-  async function loadQueue({
-    showLoading = true,
-  } = {}) {
-    if (showLoading) {
-      setLoading(true);
-    }
-
-    setError("");
-
-    try {
-      const payload =
-        await listEligibilityVerificationReviewerSubmissions();
-
-      setQueue(
-        normalizeReviewerVerificationQueue(payload),
-      );
-    } catch (requestError) {
-      if (requestError?.response?.status === 401) {
-        onRequestError(requestError);
-        return;
-      }
-
-      setError(humanizeApiError(requestError));
-    } finally {
-      if (showLoading) {
-        setLoading(false);
-      }
-    }
-  }
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadInitialQueue() {
-      setLoading(true);
-      setError("");
-
-      try {
-        const payload =
-          await listEligibilityVerificationReviewerSubmissions();
-
-        if (!active) return;
-
-        setQueue(
-          normalizeReviewerVerificationQueue(payload),
-        );
-      } catch (requestError) {
-        if (!active) return;
-
-        if (requestError?.response?.status === 401) {
-          onRequestError(requestError);
-          return;
-        }
-
-        setError(humanizeApiError(requestError));
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadInitialQueue();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  async function handleEvidenceDownload(evidence) {
-    setDownloadingEvidenceId(evidence.id);
-    setError("");
-    setSuccess("");
-
-    try {
-      const download =
-        await downloadEligibilityVerificationReviewerEvidence({
-          evidenceId: evidence.id,
-          fallbackFilename:
-            evidence.filename
-            || "verification-evidence",
-        });
-
-      triggerBrowserDownload(download);
-      setSuccess(
-        `${download.filename} was downloaded securely.`,
-      );
-    } catch (requestError) {
-      if (requestError?.response?.status === 401) {
-        onRequestError(requestError);
-        return;
-      }
-
-      setError(humanizeApiError(requestError));
-    } finally {
-      setDownloadingEvidenceId("");
-    }
-  }
-
-  async function handleDecisionCreated({
-    decision,
-    submission,
-  }) {
-    setError("");
-    setSuccess(
-      `${reviewerVerificationStatusLabel(
-        decision.outcome,
-      )} decision recorded for ${submission.startup_name}.`,
-    );
-
-    await loadQueue({
-      showLoading: false,
-    });
-  }
-
-  return (
-    <div className="page-stack">
-      <PageHeader
-        actions={(
-          <button
-            className="button button-secondary"
-            disabled={loading}
-            onClick={() => loadQueue()}
-            type="button"
-          >
-            {loading ? "Refreshing…" : "Refresh queue"}
-          </button>
-        )}
-        description="Review founder-submitted manual eligibility claims, inspect protected evidence and create immutable approve or reject decisions."
-        eyebrow="AUTHORIZED REVIEW OPERATIONS"
-        title="Reviewer verification queue"
-      />
-
-      <section className="reviewer-access-banner">
-        <div>
-          <span className="section-kicker">
-            SERVER-AUTHORIZED ACCESS
-          </span>
-          <h2>
-            {currentUser?.roleLabel
-              || "Eligibility reviewer"}
-          </h2>
-          <p>
-            Eligibility-review capability was granted
-            by the authenticated identity endpoint.
-            Queue records, evidence and decisions remain
-            protected by backend authorization.
-          </p>
-        </div>
-        <span className="reviewer-access-pill">
-          Authorized
-        </span>
-      </section>
-
-      {error && (
-        <InlineNotice tone="danger">
-          {error}
-        </InlineNotice>
-      )}
-
-      {success && (
-        <InlineNotice tone="success">
-          {success}
-        </InlineNotice>
-      )}
-
-      <section className="reviewer-queue-controls">
-        <div className="reviewer-summary-grid">
-          {[
-            ["pending", "Pending"],
-            ["approved", "Approved"],
-            ["rejected", "Rejected"],
-            ["expired", "Expired"],
-          ].map(([status, label]) => (
-            <div
-              className="reviewer-summary-card"
-              key={status}
-            >
-              <strong>
-                {statusCounts[status] || 0}
-              </strong>
-              <span>{label}</span>
-            </div>
-          ))}
-        </div>
-
-        <label className="field reviewer-status-filter">
-          <span>Show submissions</span>
-          <select
-            aria-label="Filter verification submissions"
-            onChange={(event) =>
-              setStatusFilter(event.target.value)
-            }
-            value={statusFilter}
-          >
-            <option value="all">All statuses</option>
-            <option value="pending">
-              Pending review
-            </option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="expired">Expired</option>
-          </select>
-        </label>
-      </section>
-
-      {loading ? (
-        <div
-          className="dashboard-loader"
-          role="status"
-        >
-          <span
-            aria-hidden="true"
-            className="spinner"
-          />
-          Loading reviewer verification queue…
-        </div>
-      ) : !visibleSubmissions.length ? (
-        <section className="dashboard-card">
-          <span className="section-kicker">
-            QUEUE CLEAR
-          </span>
-          <h2>No matching submissions</h2>
-          <p className="muted">
-            No verification submissions currently match
-            the selected status.
-          </p>
-        </section>
-      ) : (
-        <div className="reviewer-submission-list">
-          {visibleSubmissions.map((submission) => {
-            const tone =
-              reviewerVerificationStatusTone(
-                submission.status,
-              );
-
-            return (
-              <article
-                className="reviewer-submission-card"
-                key={submission.id}
-              >
-                <header className="reviewer-submission-header">
-                  <div>
-                    <span className="section-kicker">
-                      {submission.scheme_name}
-                    </span>
-                    <h2>{submission.startup_name}</h2>
-                    <p>
-                      {submission.field_path}
-                      {" · "}
-                      {submission.operator}
-                    </p>
-                  </div>
-
-                  <span
-                    className={[
-                      "reviewer-status-pill",
-                      `reviewer-status-${tone}`,
-                    ].join(" ")}
-                  >
-                    {reviewerVerificationStatusLabel(
-                      submission.status,
-                    )}
-                  </span>
-                </header>
-
-                <div className="reviewer-claim-grid">
-                  <div>
-                    <span>Founder claim</span>
-                    <strong>
-                      {formatReviewerValue(
-                        submission.claim_value,
-                      )}
-                    </strong>
-                    {submission.claim_text && (
-                      <p>{submission.claim_text}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <span>Expected rule value</span>
-                    <strong>
-                      {formatReviewerValue(
-                        submission.expected_value,
-                      )}
-                    </strong>
-                    <p>
-                      {submission.evidence_text
-                        || "No evidence guidance supplied."}
-                    </p>
-                  </div>
-                </div>
-
-                <section className="reviewer-evidence-section">
-                  <div className="reviewer-section-heading">
-                    <div>
-                      <span className="section-kicker">
-                        PROTECTED EVIDENCE
-                      </span>
-                      <h3>
-                        {submission.evidence_count || 0}
-                        {" "}
-                        file
-                        {submission.evidence_count === 1
-                          ? ""
-                          : "s"}
-                      </h3>
-                    </div>
-                  </div>
-
-                  {!submission.evidence?.length ? (
-                    <p className="muted">
-                      No evidence files were uploaded.
-                    </p>
-                  ) : (
-                    <div className="reviewer-evidence-list">
-                      {submission.evidence.map(
-                        (evidence) => (
-                          <div
-                            className="reviewer-evidence-row"
-                            key={evidence.id}
-                          >
-                            <div>
-                              <strong>
-                                {evidence.filename}
-                              </strong>
-                              <span>
-                                {evidence.mime_type
-                                  || "Unknown file type"}
-                                {" · "}
-                                {evidence.size_bytes || 0}
-                                {" bytes"}
-                              </span>
-                            </div>
-
-                            <button
-                              className="button button-ghost"
-                              disabled={
-                                downloadingEvidenceId
-                                === evidence.id
-                              }
-                              onClick={() =>
-                                handleEvidenceDownload(
-                                  evidence,
-                                )
-                              }
-                              type="button"
-                            >
-                              {downloadingEvidenceId
-                              === evidence.id
-                                ? "Downloading…"
-                                : `Download ${evidence.filename}`}
-                            </button>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  )}
-                </section>
-
-                {submission.decision && (
-                  <section className="reviewer-existing-decision">
-                    <span className="section-kicker">
-                      CURRENT EFFECTIVE DECISION
-                    </span>
-                    <h3>
-                      {reviewerVerificationStatusLabel(
-                        submission.status,
-                      )}
-                    </h3>
-                    <p>
-                      {submission.decision.review_notes
-                        || "No reviewer notes supplied."}
-                    </p>
-                    <dl>
-                      <div>
-                        <dt>Verified value</dt>
-                        <dd>
-                          {formatReviewerValue(
-                            submission.decision
-                              .verified_value,
-                          )}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Valid from</dt>
-                        <dd>
-                          {submission.decision.valid_from}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Expires on</dt>
-                        <dd>
-                          {submission.decision.expires_on
-                            || "No expiry"}
-                        </dd>
-                      </div>
-                    </dl>
-                  </section>
-                )}
-
-                {submission.status === "pending" && (
-                  <ReviewerDecisionForm
-                    defaultValidFrom={queue.asOfDate}
-                    onDecisionCreated={
-                      handleDecisionCreated
-                    }
-                    submission={submission}
-                  />
-                )}
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 
 function EmptyProfileState({ onStart }) {
@@ -4597,6 +3309,24 @@ function Workspace({ onSignOut }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function handleUpdateProfile(updatePayload) {
+    if (!selectedProfileId) return;
+    try {
+      const updated = await updateStartupProfile(
+        selectedProfileId,
+        updatePayload,
+      );
+      setProfiles((current) =>
+        current.map((p) => (p.id === selectedProfileId ? updated : p)),
+      );
+      setSuccess("Startup profile updated successfully.");
+      return updated;
+    } catch (requestError) {
+      handleRequestError(requestError);
+      throw requestError;
+    }
+  }
+
   function handleLogout() {
     clearSession();
     onSignOut();
@@ -4618,23 +3348,32 @@ function Workspace({ onSignOut }) {
       <AssessmentWizard
         onCancel={() => handleNavigate(profiles.length ? "startup" : "overview")}
         onSubmitted={handleAssessmentSubmitted}
+        profile={selectedProfile}
         startupProfileId={selectedProfileId || null}
       />
     );
   } else if (activeView === "startup") {
     page = (
-      <StartupPage
-        dashboardData={dashboardData}
+      <MyStartupPage
         onAssess={() => handleNavigate("assessment")}
+        onUpdateProfile={handleUpdateProfile}
+        profile={selectedProfile}
+      />
+    );
+  } else if (activeView === "document-intake") {
+    page = (
+      <DocumentIntakeWorkspace
+        onApplyConfirmedFacts={handleUpdateProfile}
         profile={selectedProfile}
       />
     );
   } else if (activeView === "schemes") {
     page = (
-      <SchemeExplorer
+      <SchemeExplorerPage
         externalSchemes={externalSchemes}
         onOpenScheme={handleOpenScheme}
         query={query}
+        recommendations={dashboardData?.recommendations?.recommendations}
         schemes={schemes}
       />
     );
@@ -4661,12 +3400,35 @@ function Workspace({ onSignOut }) {
       />
     );
   } else if (activeView === "roadmap") {
-    page = <RoadmapPage actionPlan={dashboardData?.action_plan} />;
+    page = (
+      <ActionRoadmapPage
+        onNavigate={handleNavigate}
+        startupProfileId={selectedProfileId}
+      />
+    );
   } else if (activeView === "starting-plan") {
     page = (
       <StartingPlanPage
         onNavigate={handleNavigate}
         startupProfileId={selectedProfileId}
+      />
+    );
+  } else if (activeView === "builder") {
+    page = (
+      <StartupBuilderPage
+        onNavigate={handleNavigate}
+      />
+    );
+  } else if (activeView === "capital-planner") {
+    page = (
+      <CapitalPlannerPage
+        onNavigate={handleNavigate}
+      />
+    );
+  } else if (activeView === "milestones") {
+    page = (
+      <ExecutionMilestonesPage
+        onNavigate={handleNavigate}
       />
     );
   } else if (activeView === "funding-plan") {
@@ -4856,17 +3618,11 @@ function Workspace({ onSignOut }) {
         </main>
 
         {currentUser?.role === "founder" && (
-          <>
-            <FounderConcierge
-              onNavigate={handleNavigate}
-              startupProfileId={selectedProfile?.id}
-            />
-            <ChatbotDrawer
-              activeView={activeView}
-              onNavigate={handleNavigate}
-              startupProfile={selectedProfile}
-            />
-          </>
+          <ChatbotDrawer
+            activeView={activeView}
+            onNavigate={handleNavigate}
+            startupProfile={selectedProfile}
+          />
         )}
         </div>
       </MotionConfig>
@@ -4896,7 +3652,11 @@ export default function App() {
   }, []);
 
   if (!authenticated) {
-    return <LoginPanel onAuthenticated={() => setAuthenticated(true)} />;
+    return (
+      <PublicEntry
+        onAuthenticated={() => setAuthenticated(true)}
+      />
+    );
   }
 
   return <Workspace onSignOut={() => setAuthenticated(false)} />;
