@@ -161,6 +161,14 @@ function LandingPage({
             aria-label="Founder workspace preview"
             className="public-workspace-preview"
           >
+            <div className="public-hero-image-wrap">
+              <img
+                src="/startup_os_hero.jpg"
+                alt="Startup Intelligence Platform — AI Startup OS Dashboard"
+                className="public-hero-image"
+              />
+            </div>
+
             <div className="public-preview-topbar">
               <div>
                 <small>Founder workspace</small>
