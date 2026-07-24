@@ -25,6 +25,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.startups.models import StartupBuilderSection, StartupProfile
+from apps.startups.utils import get_current_startup_profile
 
 from .builder_serializers import (
     PHASE_54_SECTION_TYPES,
@@ -42,11 +43,8 @@ logger = logging.getLogger(__name__)
 
 
 def _get_current_profile(user) -> StartupProfile | None:
-    return (
-        StartupProfile.objects.filter(owner=user)
-        .order_by("-created_at")
-        .first()
-    )
+    return get_current_startup_profile(user)
+
 
 
 def _allowed_section_types() -> list[str]:
