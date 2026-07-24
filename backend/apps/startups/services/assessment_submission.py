@@ -13,6 +13,7 @@ from apps.recommendations.services import generate_recommendations
 from ..assessment_schema import (
     DIRECT_PROFILE_FIELDS,
     PROFILE_DATA_FIELDS,
+    json_ready,
 )
 from ..models import (
     StartupAssessmentDraft,
@@ -92,7 +93,7 @@ def submit_startup_assessment_draft(
     profile_data = dict(startup_profile.profile_data or {})
     for field_name in PROFILE_DATA_FIELDS:
         if field_name in validated_data:
-            profile_data[field_name] = validated_data[field_name]
+            profile_data[field_name] = json_ready(validated_data[field_name])
     startup_profile.profile_data = profile_data
     startup_profile.save()
 
