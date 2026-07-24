@@ -454,6 +454,7 @@ function Navigation({
   activeView,
   canReviewEligibility,
   onNavigate,
+  onLogout,
 }) {
   const groups = [
     {
@@ -494,6 +495,13 @@ function Navigation({
     });
   }
 
+  groups.push({
+    label: "Account",
+    items: [
+      ["logout", "⎋", "Sign out"],
+    ],
+  });
+
   return (
     <nav
       aria-label="Application workspace"
@@ -517,7 +525,13 @@ function Navigation({
                   : "",
               ].join(" ")}
               key={id}
-              onClick={() => onNavigate(id)}
+              onClick={() => {
+                if (id === "logout" && onLogout) {
+                  onLogout();
+                } else {
+                  onNavigate(id);
+                }
+              }}
               transition={{
                 duration: 0.24,
                 ease: MOTION_EASE,
@@ -556,6 +570,7 @@ function ProductSidebar({
   canReviewEligibility,
   metrics,
   onNavigate,
+  onLogout,
   profile,
 }) {
   const completenessPercent = profile
@@ -602,6 +617,7 @@ function ProductSidebar({
         activeView={activeView}
         canReviewEligibility={canReviewEligibility}
         onNavigate={onNavigate}
+        onLogout={onLogout}
       />
 
       {/* Stats footer */}
@@ -626,15 +642,7 @@ function ProductSidebar({
 }
 
 
-function ProductTopbar({
-  loadingProfiles,
-  onLogout,
-  onProfileChange,
-  profiles,
-  query,
-  selectedProfileId,
-  setQuery,
-}) {
+function ProductTopbar({ query, setQuery }) {
   return (
     <header className="product-topbar">
       <label className="dashboard-search">
@@ -647,28 +655,6 @@ function ProductTopbar({
           value={query}
         />
       </label>
-
-      <div className="topbar-actions">
-        <label className="profile-switcher">
-          <span className="sr-only">Startup profile</span>
-          <select
-            aria-label="Startup profile"
-            disabled={loadingProfiles || !profiles.length}
-            onChange={(event) => onProfileChange(event.target.value)}
-            value={selectedProfileId}
-          >
-            {!profiles.length && <option value="">No startup profiles</option>}
-            {profiles.map((profile) => (
-              <option key={profile.id} value={profile.id}>
-                {profile.startup_name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="button button-ghost" onClick={onLogout} type="button">
-          Sign out
-        </button>
-      </div>
     </header>
   );
 }
@@ -2846,14 +2832,6 @@ function EmptyProfileState({ onStart }) {
         >
           Start startup assessment
         </button>
-        <a
-          className="button button-ghost"
-          href={adminUrl}
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          Open data admin
-        </a>
       </div>
     </section>
   );
@@ -2877,6 +2855,7 @@ function Workspace({ onSignOut }) {
   const [currentBriefing, setCurrentBriefing] = useState(null);
   const [history, setHistory] = useState([]);
   const [activeView, setActiveView] = useState("overview");
+  const [showJourneyDialog, setShowJourneyDialog] = useState(false);
   const [selectedScheme, setSelectedScheme] = useState(null);
   const [schemeBackView, setSchemeBackView] = useState("schemes");
   const [query, setQuery] = useState("");
@@ -2970,6 +2949,8 @@ function Workspace({ onSignOut }) {
           && !result.profiles.length
         ) {
           setActiveView("reviewer-verifications");
+        } else if (!result.profiles.length && identity?.role !== "reviewer") {
+          setShowJourneyDialog(true);
         }
 
         setError(
@@ -3494,6 +3475,67 @@ function Workspace({ onSignOut }) {
     <LazyMotion features={domAnimation} strict>
       <MotionConfig reducedMotion="user">
         <div className="product-shell">
+        <AnimatePresence>
+          {showJourneyDialog && (
+            <m.div
+              className="modal-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                position: "fixed",
+                top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: "rgba(15, 23, 42, 0.75)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 9999,
+                padding: "1rem"
+              }}
+            >
+              <m.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                style={{
+                  backgroundColor: "#fff",
+                  borderRadius: "12px",
+                  padding: "2rem",
+                  maxWidth: "480px",
+                  width: "100%",
+                  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+                }}
+              >
+                <h2 style={{ margin: "0 0 1rem 0", color: "#0f172a" }}>Where are you in your journey?</h2>
+                <p style={{ margin: "0 0 1.5rem 0", color: "#475569", lineHeight: 1.5 }}>
+                  To give you the best experience, please let us know where you are right now:
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <button
+                    className="button button-primary"
+                    onClick={() => {
+                      setShowJourneyDialog(false);
+                      setActiveView("assessment");
+                    }}
+                    style={{ width: "100%", justifyContent: "center", padding: "0.75rem" }}
+                  >
+                    I have an existing startup
+                  </button>
+                  <button
+                    className="button button-secondary"
+                    onClick={() => {
+                      setShowJourneyDialog(false);
+                      setActiveView("builder");
+                    }}
+                    style={{ width: "100%", justifyContent: "center", padding: "0.75rem" }}
+                  >
+                    I have an idea / want to build one
+                  </button>
+                </div>
+              </m.div>
+            </m.div>
+          )}
+        </AnimatePresence>
         <ProductSidebar
           activeView={activeView}
           canReviewEligibility={
@@ -3501,10 +3543,11 @@ function Workspace({ onSignOut }) {
           }
           metrics={metrics}
           onNavigate={handleNavigate}
+          onLogout={handleLogout}
           profile={selectedProfile}
         />
         <main className="product-main">
-          <ProductTopbar loadingProfiles={loadingProfiles} onLogout={handleLogout} onProfileChange={setSelectedProfileId} profiles={profiles} query={query} selectedProfileId={selectedProfileId} setQuery={setQuery} />
+          <ProductTopbar query={query} setQuery={setQuery} />
           <div className="product-content">
           {onboardingProgress?.status === "dismissed" &&
             activeView !== "reviewer-verifications" && (
@@ -3587,14 +3630,7 @@ function Workspace({ onSignOut }) {
               key={activeView}
               transition={{ duration: 0.32, ease: MOTION_EASE }}
             >
-              {!loadingProfiles &&
-              !profiles.length &&
-              activeView !== "assessment" &&
-              activeView !== "reviewer-verifications" ? (
-                <EmptyProfileState
-                  onStart={() => handleNavigate("assessment")}
-                />
-              ) : loadingWorkspace &&
+              {loadingWorkspace &&
                 !dashboardData &&
                 activeView !== "assessment" &&
                 activeView !== "reviewer-verifications" ? (

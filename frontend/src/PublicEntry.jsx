@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import {
   login,
   registerFounder,
+  getPublicSchemeCount,
 } from "./api";
 import { humanizeApiError } from "./advisor";
 
@@ -104,6 +105,12 @@ function LandingPage({
   onRegister,
   onSignIn,
 }) {
+  const [schemeCount, setSchemeCount] = useState(0);
+
+  React.useEffect(() => {
+    getPublicSchemeCount().then(setSchemeCount).catch(() => {});
+  }, []);
+
   return (
     <div className="public-site">
       <PublicHeader
@@ -115,7 +122,9 @@ function LandingPage({
         <section className="public-hero">
           <div className="public-hero-copy">
             <span className="public-pill">
-              Verified intelligence for Indian founders
+              {schemeCount > 0 
+                ? `Discover over ${schemeCount} verified government schemes` 
+                : "Verified intelligence for Indian founders"}
             </span>
 
             <h1>

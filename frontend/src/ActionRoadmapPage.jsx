@@ -27,7 +27,11 @@ export default function ActionRoadmapPage({ onNavigate, startupProfileId }) {
   const [activeWave, setActiveWave] = useState(1);
 
   const loadData = useCallback(async () => {
-    if (!startupProfileId) return;
+    if (!startupProfileId) {
+      setLoading(false);
+      setError("No startup profile found. Please complete your startup assessment first to generate a readiness roadmap.");
+      return;
+    }
     setLoading(true);
     setError("");
 

@@ -55,6 +55,7 @@ export default function WebsiteTour({
     <Joyride
       callback={handleJoyrideCallback}
       continuous
+      hideBackButton
       hideCloseButton
       run={run}
       scrollToFirstStep

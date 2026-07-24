@@ -106,7 +106,7 @@ describe("external knowledge API client", () => {
 
     expect(mocks.client.get).toHaveBeenNthCalledWith(
       2,
-      nextUrl,
+      "/knowledge/external-capital-support/?page=2",
       {
         params: undefined,
       },
@@ -178,7 +178,7 @@ describe("external knowledge API client", () => {
 
       expect(mocks.client.get).toHaveBeenNthCalledWith(
         2,
-        nextUrl,
+        "/knowledge/external-certification-requirements/?page=2",
         {
           params: undefined,
         },

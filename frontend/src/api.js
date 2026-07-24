@@ -300,7 +300,7 @@ export async function listExternalSchemes() {
   while (nextUrl && pageCount < 100) {
     const response = await client.get(nextUrl, { params });
     schemes.push(...normalizeCollection(response.data));
-    nextUrl = response.data?.next || null;
+    nextUrl = response.data?.next ? response.data.next.replace(/^.*\/\/[^\/]+\/api\/v1/, "") : null;
     params = undefined;
     pageCount += 1;
   }
@@ -320,7 +320,7 @@ export async function listExternalCapitalSupport() {
   while (nextUrl && pageCount < 100) {
     const response = await client.get(nextUrl, { params });
     records.push(...normalizeCollection(response.data));
-    nextUrl = response.data?.next || null;
+    nextUrl = response.data?.next ? response.data.next.replace(/^.*\/\/[^\/]+\/api\/v1/, "") : null;
     params = undefined;
     pageCount += 1;
   }
@@ -341,7 +341,7 @@ export async function listExternalCertificationRequirements() {
   while (nextUrl && pageCount < 100) {
     const response = await client.get(nextUrl, { params });
     records.push(...normalizeCollection(response.data));
-    nextUrl = response.data?.next || null;
+    nextUrl = response.data?.next ? response.data.next.replace(/^.*\/\/[^\/]+\/api\/v1/, "") : null;
     params = undefined;
     pageCount += 1;
   }
@@ -362,7 +362,7 @@ export async function listSchemes() {
   while (nextUrl && pageCount < 100) {
     const response = await client.get(nextUrl, { params });
     schemes.push(...normalizeCollection(response.data));
-    nextUrl = response.data?.next || null;
+    nextUrl = response.data?.next ? response.data.next.replace(/^.*\/\/[^\/]+\/api\/v1/, "") : null;
     params = undefined;
     pageCount += 1;
   }
@@ -656,6 +656,13 @@ export async function downloadEligibilityVerificationReviewerEvidence({
       || response.data?.type
       || "application/octet-stream",
   };
+}
+
+export async function getPublicSchemeCount() {
+  const response = await client.get("/schemes/", {
+    params: { limit: 1 },
+  });
+  return response.data?.count || 0;
 }
 
 export { client as authenticatedApiClient };
