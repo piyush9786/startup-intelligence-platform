@@ -156,7 +156,8 @@ def test_invalid_output_is_not_persisted():
     owner, profile, snapshot = create_source()
     payload = valid_payload(profile)
     # Give an invalid source ID to trigger validation failure
-    payload["top_priorities"][0]["source_references"][0]["source_id"] = "00000000-0000-0000-0000-000000000001"
+    ref = payload["top_priorities"][0]["source_references"][0]
+    ref["source_id"] = "00000000-0000-0000-0000-000000000001"
 
     with pytest.raises(BriefingOutputValidationError):
         generate_startup_advisor_briefing(

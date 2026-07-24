@@ -284,7 +284,8 @@ def _canonicalize_model_field_path(
     if candidate.startswith(source_prefix):
         candidate = "/" + candidate[len(source_prefix) :]
 
-    # Handle plural array prefixes from the top-level payload structure that the LLM might incorrectly use
+    # Handle plural array prefixes from the top-level payload structure 
+    # that the LLM might incorrectly use
     if source_type == "recommendation":
         candidate = re.sub(r"^/recommendations?/\d+/", "/", candidate)
     elif source_type == "evidence_chunk":
@@ -461,7 +462,9 @@ def validate_startup_advisor_briefing(
             ):
                 candidate_paths.append(repaired_boundary_path)
 
-            if reference["source_type"] == "profile" and not canonical_path.startswith("/profile_data/"):
+            if reference["source_type"] == "profile" and not canonical_path.startswith(
+                "/profile_data/"
+            ):
                 profile_data_path = f"/profile_data{canonical_path}"
                 if profile_data_path not in candidate_paths:
                     candidate_paths.append(profile_data_path)
@@ -480,7 +483,7 @@ def validate_startup_advisor_briefing(
             else:
                 reference["_invalid"] = True
 
-    for group_name, references in _iter_reference_groups(payload):
+    for _group_name, references in _iter_reference_groups(payload):
         references[:] = [ref for ref in references if not ref.pop("_invalid", False)]
 
     has_evidence_citation = any(
