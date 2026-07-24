@@ -1,25 +1,34 @@
 :root {
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
-  color: #152018;
-  background: #f2f0e8;
+  color: #121d15;
+  background: #f7f6f0;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --ink: #152018;
-  --muted: #647067;
-  --paper: #fffdf7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --ink: #121d15;
+  --muted: #5a665d;
+  --paper: #faf9f4;
   --paper-strong: #ffffff;
-  --line: #d9ddd3;
-  --line-strong: #b9c2b7;
-  --forest: #1c5137;
-  --forest-dark: #123925;
-  --mint: #d9efe1;
-  --lime: #d9ef74;
-  --amber: #f1c968;
-  --danger: #9d342c;
-  --danger-soft: #f8e4df;
-  --shadow: 0 24px 70px rgba(28, 43, 32, 0.12);
+  --line: #d8ded4;
+  --line-strong: #b2bcae;
+  --forest: #164e32;
+  --forest-dark: #0b2d1c;
+  --mint: #d4f0df;
+  --lime: #ccf054;
+  --amber: #f59e0b;
+  --amber-soft: #fef3c7;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --emerald: #059669;
+  --emerald-soft: #d1fae5;
+  --shadow-sm: 0 4px 12px rgba(22, 78, 50, 0.04);
+  --shadow-md: 0 12px 32px rgba(22, 78, 50, 0.08);
+  --shadow: 0 24px 60px rgba(22, 78, 50, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(216, 222, 212, 0.7);
 }
 
 * {
@@ -31,13 +40,16 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 5% 0%, rgba(217, 239, 116, 0.34), transparent 30rem),
-    linear-gradient(180deg, #f9f7ef 0, #efede4 100%);
+    radial-gradient(circle at 10% 0%, rgba(204, 240, 84, 0.28), transparent 32rem),
+    radial-gradient(circle at 90% 20%, rgba(212, 240, 223, 0.45), transparent 40rem),
+    linear-gradient(180deg, #faf8f2 0%, #f0eee4 100%);
+  background-attachment: fixed;
 }
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -59,14 +71,18 @@ a {
 h1,
 h2,
 h3,
+h4,
 p {
   margin-top: 0;
 }
 
 h1,
 h2,
-h3 {
-  letter-spacing: -0.035em;
+h3,
+h4 {
+  font-family: "Outfit", "Plus Jakarta Sans", sans-serif;
+  letter-spacing: -0.03em;
+  color: var(--ink);
 }
 
 .eyebrow,
@@ -6032,6 +6048,26 @@ body {
   gap: 1rem;
   padding: clamp(1.1rem, 2.5vw, 1.7rem);
   position: relative;
+}
+
+.public-hero-image-wrap {
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(11, 45, 28, 0.15);
+  border: 1px solid var(--line);
+  margin-bottom: 0.5rem;
+}
+
+.public-hero-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  transition: transform 300ms ease;
+}
+
+.public-hero-image:hover {
+  transform: scale(1.02);
 }
 
 .public-workspace-preview::before {
