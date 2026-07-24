@@ -2,7 +2,7 @@
 
 A verified startup-support intelligence platform for readiness assessment,
 scheme eligibility, recommendations, evidence verification, grounded guidance,
-and future dependency-aware funding planning.
+and deterministic dependency-aware funding planning.
 
 The platform is currently an advanced MVP and functional internal alpha.
 
@@ -30,6 +30,9 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 - deterministic startup-readiness assessment;
 - persisted readiness action plans;
 - persisted, versioned consolidated starting plans with source provenance;
+- persisted dependency-aware funding plans with verified prerequisites,
+  deterministic execution waves, exact-source idempotency, and immutable
+  history;
 - verified canonical scheme catalog and versioning;
 - verified prerequisite concepts and reviewed scheme dependency relationships;
 - deterministic cycle validation and rebuildable Neo4j graph projection;
@@ -72,6 +75,7 @@ architecture, safety, and implementation context.
 - [Site-wide founder chatbot](docs/architecture/SITE_WIDE_CHATBOT_V1.md)
 - [First-open onboarding tour](docs/frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md)
 - [Consolidated starting plan](docs/startups/STARTING_PLAN_V1.md)
+- [Dependency-aware funding plan](docs/startups/FUNDING_PLAN_V1.md)
 - [Verified scheme prerequisite graph](docs/architecture/SCHEME_PREREQUISITE_GRAPH_V1.md)
 - [Project roadmap](docs/ROADMAP.md)
 - [Architecture](docs/architecture/README.md)
@@ -124,15 +128,15 @@ git diff --check
 
 ## Next product phase
 
-The next milestone is the deterministic dependency-aware funding-plan engine.
+The next milestone is verification-aware founder progress feedback.
 
-It will consume only reviewed Phase 48 graph relationships and will support
-multiple predecessors, verified application windows, sourced processing-time
-ranges, founder urgency, funding relevance, and parallel plan steps.
+Phase 50 will connect execution of the persisted funding plan back to readiness
+and recommendations through explicit states such as `not_started`,
+`in_progress`, `founder_reported_complete`, `evidence_submitted`, and
+`verified`.
 
-Ordering will remain algorithmic and testable. Language models may explain the
-generated plan but will not select its ordering.
-
+Founder-reported completion will remain separate from reviewer-approved or
+otherwise authoritative verification facts.
 <!-- phase-46-founder-concierge:start -->
 ## Phase 46: Bounded founder concierge
 
@@ -175,3 +179,27 @@ provenance and direct roadmap and scheme-explorer actions.
 
 See
 [Consolidated deterministic starting plan](docs/startups/STARTING_PLAN_V1.md).
+
+## Phase 49: Deterministic dependency-aware funding plan
+
+Phase 49 adds the persisted `startup-funding-plan-v1` contract.
+
+It converts the Phase 47 starting plan and reviewed Phase 48 prerequisite graph
+into deterministic ordered steps and parallel execution waves. Hard
+dependencies block successors; supporting relationships remain non-blocking
+provenance.
+
+Only verified graph relationships, verified scheme versions, verified
+application windows, and strictly sourced processing-time metadata influence
+the plan. PostgreSQL remains authoritative, while Neo4j remains a derived
+projection.
+
+Founder APIs support idempotent generation, current retrieval, immutable
+history, and detail. The founder dashboard includes a dedicated Funding plan
+workspace with dependency, deadline, timing, execution-wave, and provenance
+information.
+
+Language models may narrate a persisted plan but do not select its ordering.
+
+See
+[Deterministic dependency-aware funding plan](docs/startups/FUNDING_PLAN_V1.md).

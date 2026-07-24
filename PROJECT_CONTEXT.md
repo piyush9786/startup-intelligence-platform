@@ -35,6 +35,7 @@ Current repository baseline:
 - bounded concierge contract: `founder-concierge-v1`;
 - consolidated starting-plan contract: `startup-starting-plan-v1`;
 - verified dependency-graph contract: `scheme-prerequisite-graph-v1`;
+- dependency-aware funding-plan contract: `startup-funding-plan-v1`;
 - ordered founder dashboard with accessible Motion transitions;
 - empty-profile and returning-founder onboarding variants;
 - resumable, dismissible, and non-repeating onboarding progress;
@@ -45,8 +46,8 @@ Current repository baseline:
   capability;
 - authorization context and canonical output hashes on every tool call;
 - initial `get_startup_profile` tool at version `v1`;
-- 489 backend tests passing;
-- 130 frontend tests passing;
+- 518 backend tests passing;
+- 141 frontend tests passing;
 - frontend production build passing;
 - Ruff, Django checks, and migration checks passing.
 
@@ -60,6 +61,7 @@ The main founder workflow is operational:
     → verified scheme eligibility assessment
     → deterministic recommendation ranking
     → consolidated deterministic starting plan
+    → deterministic dependency-aware funding plan
     → manual verification for unresolved gates
     → reviewer decision
     → recommendation regeneration
@@ -131,6 +133,7 @@ The system is a modular monolith with asynchronous workers.
 - startup assessment wizard;
 - scheme explorer and scheme detail views;
 - readiness and action-roadmap views;
+- consolidated starting-plan and dependency-aware funding-plan workspaces;
 - recommendation results;
 - founder verification-submission workflow;
 - reviewer verification workspace;
@@ -178,7 +181,8 @@ The current installed domain apps are:
 - `knowledge` — extracted candidates, review, and publication workflows;
 - `schemes` — canonical schemes, versions, benefits, requirements, rules, verified prerequisites, reviewed unlock relationships, and the derived graph projection;
 - `startups` — profiles, assessment drafts, persisted onboarding progress,
-  readiness, action plans, consolidated starting plans, and advisor briefings;
+  readiness, action plans, consolidated starting plans, dependency-aware
+  funding plans, and advisor briefings;
 - `recommendations` — eligibility assessments, recommendations, generation
   runs, verification submissions, evidence, and decisions;
 - `assistant` — bounded agent sessions, append-only messages, immutable
@@ -360,15 +364,42 @@ ordering remains Phase 49 scope.
 See
 [Verified scheme prerequisite graph](docs/architecture/SCHEME_PREREQUISITE_GRAPH_V1.md).
 
+## 9.4 Deterministic dependency-aware funding plan
+
+Phase 49 adds the versioned `startup-funding-plan-v1` contract.
+
+The pure planner consumes normalized steps and dependency edges, validates
+cycles and source values, and produces deterministic Kahn execution waves.
+Hard dependencies block successors. Supporting dependencies are preserved but
+remain non-blocking.
+
+The source adapter includes only reviewed Phase 48 relationships, verified
+scheme versions, persisted Phase 47 starting-plan items, verified application
+windows, and strictly sourced processing-time metadata. PostgreSQL remains
+authoritative; Neo4j remains derived.
+
+`StartupFundingPlan` persists the canonical source snapshot, SHA-256 source
+hash, immutable plan snapshot, exact planning date, counts, next-step
+identifiers, history, and one current version per startup.
+
+Founder-owned generate, current, history, and detail APIs reject browser-authored
+topology. A dedicated Funding plan workspace displays execution waves,
+dependencies, application status, deadlines, timing, and immutable provenance.
+
+The LLM does not choose or alter funding-plan ordering.
+
+See
+[Deterministic dependency-aware funding plan](docs/startups/FUNDING_PLAN_V1.md).
+
 ## 10. Planned conversational and planning layer
 
 The first-open onboarding, shared orchestration foundation, site chatbot,
-bounded concierge, and consolidated starting plan are implemented.
+bounded concierge, consolidated starting plan, verified prerequisite graph, and
+dependency-aware funding plan are implemented.
 
 The remaining agreed implementation order is:
 
-1. dependency-aware funding-plan engine and timeline;
-2. founder progress tracking with verification-aware feedback.
+1. founder progress tracking with verification-aware feedback.
 
 Future conversational interfaces must execute only versioned, registered tools.
 
