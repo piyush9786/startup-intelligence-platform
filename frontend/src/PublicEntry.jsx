@@ -85,6 +85,7 @@ function PublicHeader({
       </nav>
 
       <div className="public-header-actions">
+        <LanguageSwitcher />
         <button
           className="public-text-button"
           onClick={onSignIn}
