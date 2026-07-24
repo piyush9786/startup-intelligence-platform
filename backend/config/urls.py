@@ -89,6 +89,7 @@ from apps.startups.milestone_views import (
 from apps.startups.onboarding_views import (
     StartupOnboardingCurrentView,
 )
+from apps.startups.startup_intelligence_views import StartupIntelligenceView
 from apps.startups.views import (
     StartupFundingPlanCurrentView,
     StartupFundingPlanDetailView,
@@ -472,6 +473,11 @@ urlpatterns = [
         "api/v1/startup-milestones/<uuid:milestone_id>/log-update/",
         StartupMilestoneLogUpdateView.as_view(),
         name="startup-milestone-log-update",
+    ),
+    path(
+        "api/v1/startups/<uuid:profile_id>/intelligence/",
+        StartupIntelligenceView.as_view(),
+        name="startup-intelligence",
     ),
     path("api/v1/", include(router.urls)),
 ]

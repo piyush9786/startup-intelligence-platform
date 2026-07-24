@@ -466,3 +466,16 @@ See
 
 See
 [Universal AI Copilot workspace](startups/UNIVERSAL_AI_COPILOT_V1.md).
+
+## Phase 58 — Founder Intelligence Dashboard
+
+**Status: Completed**
+
+- Built aggregate endpoint `GET /api/v1/startups/<profile_id>/intelligence/` returning a deterministic live snapshot across all platform workspaces (readiness, capital runway, milestones, builder completion, scheme matches, recent activity feed, and weakest-workspace focus recommendation).
+- Created `FounderIntelligencePage.jsx` workspace featuring metric cards, ring progress indicators, bar charts, chronological activity feed, overall health status badge, and next-step navigation CTA.
+- Created `intelligenceApi.js` frontend client.
+- Added backend API tests (`test_startup_intelligence_api.py`, 7 tests) and frontend tests (`FounderIntelligencePage.test.jsx`, `intelligenceApi.test.js`, 5 tests).
+- Validated 543 backend tests, 203 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Founder Intelligence Dashboard workspace](startups/FOUNDER_INTELLIGENCE_DASHBOARD_V1.md).

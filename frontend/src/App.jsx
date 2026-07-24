@@ -41,6 +41,7 @@ import CapitalPlannerPage from "./CapitalPlannerPage";
 import ChatbotDrawer from "./ChatbotDrawer";
 import DocumentIntakeWorkspace from "./DocumentIntakeWorkspace";
 import ExecutionMilestonesPage from "./ExecutionMilestonesPage";
+import FounderIntelligencePage from "./FounderIntelligencePage";
 import FundingPage from "./FundingPage";
 import FundingPlanPage from "./FundingPlanPage";
 import MyStartupPage from "./MyStartupPage";
@@ -459,6 +460,7 @@ function Navigation({
     {
       label: "Your workspace",
       items: [
+        ["intelligence", "✦", "Intelligence"],
         ["overview", "⌂", "Dashboard"],
         ["startup", "◉", "My startup"],
         ["builder", "🛠", "Startup Builder"],
@@ -3411,6 +3413,13 @@ function Workspace({ onSignOut }) {
       <StartingPlanPage
         onNavigate={handleNavigate}
         startupProfileId={selectedProfileId}
+      />
+    );
+  } else if (activeView === "intelligence") {
+    page = (
+      <FounderIntelligencePage
+        onNavigate={handleNavigate}
+        startupProfile={selectedProfile}
       />
     );
   } else if (activeView === "builder") {
