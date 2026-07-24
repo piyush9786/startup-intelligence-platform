@@ -61,6 +61,10 @@ Current repository baseline:
 - execution & milestones engine workspace across 5 domain categories with dependency graph enforcement, completion evidence submission, and chronological progress update logs;
 - universal AI copilot with workspace-aware context injection, per-workspace quick prompts, copilot_context session field, and workspace-specific help for milestones, capital-planner, builder, schemes, startup, and assessment workspaces;
 - founder intelligence command-center dashboard aggregating live metrics from all workspaces (readiness, capital runway, milestones, builder progress, scheme matches, recent activity feed) with weakest-workspace focus navigation;
+- interactive `react-joyride` website tour replacing the static onboarding flow;
+- Ask Assistant integrated with local `qwen3:4b-instruct` LLM via Ollama for privacy-focused grounded Q&A;
+- robust Founder Advisor briefing schema validation to gracefully handle and drop hallucinated JSON pointers;
+- modern premium UI/UX incorporating glassmorphism, vibrant palettes, and dynamic motion across the platform;
 - 543 backend tests passing;
 - 203 frontend tests passing;
 - frontend production build passing;
