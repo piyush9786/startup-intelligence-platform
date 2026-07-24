@@ -99,6 +99,34 @@ def _classify_intent(message: str) -> str:
         "tell you about my startup",
         "complete my profile",
     )
+    milestone_terms = (
+        "milestone",
+        "execution",
+        "roadmap task",
+        "dependency",
+        "milestone block",
+        "track progress",
+        "complete milestone",
+    )
+    capital_terms = (
+        "runway",
+        "burn rate",
+        "net burn",
+        "capital plan",
+        "runway months",
+        "conservative scenario",
+        "growth scenario",
+        "extend runway",
+    )
+    builder_terms = (
+        "problem statement",
+        "customer persona",
+        "validation experiment",
+        "business model",
+        "pricing strategy",
+        "business canvas",
+        "interview plan",
+    )
 
     if any(term in normalized for term in profile_terms):
         return "startup_profile"
@@ -123,6 +151,15 @@ def _classify_intent(message: str) -> str:
 
     if any(term in normalized for term in assessment_terms):
         return "assessment"
+
+    if any(term in normalized for term in milestone_terms):
+        return "milestones"
+
+    if any(term in normalized for term in capital_terms):
+        return "capital_planner"
+
+    if any(term in normalized for term in builder_terms):
+        return "builder"
 
     if normalized in {
         "hi",
@@ -150,12 +187,66 @@ def _page_name(
     return normalized or None
 
 
+# Workspace-aware help messages for the Universal AI Copilot.
+_WORKSPACE_HELP: dict[str, str] = {
+    "milestones": (
+        "You are viewing the Execution & Milestones workspace. "
+        "I can help you understand how to set up milestone dependencies, "
+        "log progress updates, attach completion evidence, or prioritize "
+        "milestones tied to your funding and compliance deadlines."
+    ),
+    "capital-planner": (
+        "You are viewing the AI Capital Planner workspace. "
+        "I can explain runway health thresholds, help you interpret "
+        "the Conservative vs Growth scenarios, or suggest burn reduction "
+        "strategies based on your current allocation breakdown."
+    ),
+    "builder": (
+        "You are viewing the AI Startup Builder workspace. "
+        "I can help you refine your problem statement, develop your "
+        "customer persona, or structure a validation experiment "
+        "grounded in your industry context."
+    ),
+    "schemes": (
+        "You are viewing the Scheme Explorer. "
+        "I can explain why a particular scheme appears in your matches, "
+        "what documents to prepare, or how scheme eligibility is determined."
+    ),
+    "startup": (
+        "You are viewing your Startup Profile. "
+        "I can explain what each section is used for, how completeness "
+        "affects your readiness score, or help you navigate to a specific tool."
+    ),
+    "assessment": (
+        "You are on the Startup Assessment. "
+        "I can describe what each assessment field is used for in the "
+        "deterministic readiness and eligibility engines."
+    ),
+}
+
+
 def _platform_help_reply(
     *,
     page_context: dict[str, Any],
+    copilot_context: dict[str, Any] | None = None,
 ) -> ChatbotReply:
-    page = _page_name(page_context)
+    # Prefer copilot_context workspace injected from the session.
+    workspace = None
+    if copilot_context and isinstance(copilot_context.get("workspace"), str):
+        workspace = copilot_context["workspace"]
 
+    if workspace and workspace in _WORKSPACE_HELP:
+        return ChatbotReply(
+            content=_WORKSPACE_HELP[workspace],
+            intent="platform_help",
+            navigation=ChatbotNavigation(
+                action="navigate",
+                view=workspace,
+                label=f"Stay on {workspace.replace('-', ' ').title()}",
+            ),
+        )
+
+    page = _page_name(page_context)
     location = f" You are currently viewing {page}." if page else ""
 
     return ChatbotReply(
@@ -349,6 +440,48 @@ def _navigation_reply(
                 label="Start startup assessment",
             ),
         ),
+        "milestones": ChatbotReply(
+            content=(
+                "Open Execution & Milestones to define your startup "
+                "roadmap, enforce dependency prerequisites, attach "
+                "completion evidence, and log chronological progress "
+                "updates for each milestone category."
+            ),
+            intent="milestones",
+            navigation=ChatbotNavigation(
+                action="navigate",
+                view="milestones",
+                label="Open Execution & Milestones",
+            ),
+        ),
+        "capital_planner": ChatbotReply(
+            content=(
+                "Open Capital Planner to calculate your net monthly "
+                "burn rate, runway months, and compare Conservative, "
+                "Balanced, and Growth scenarios with AI CFO tradeoff "
+                "explanations and capital allocation breakdowns."
+            ),
+            intent="capital_planner",
+            navigation=ChatbotNavigation(
+                action="navigate",
+                view="capital-planner",
+                label="Open Capital Planner",
+            ),
+        ),
+        "builder": ChatbotReply(
+            content=(
+                "Open Startup Builder to work through your problem "
+                "definition, customer persona, interview planning, "
+                "validation experiments, business model canvas, "
+                "and pricing strategy with AI draft assistance."
+            ),
+            intent="builder",
+            navigation=ChatbotNavigation(
+                action="navigate",
+                view="builder",
+                label="Open Startup Builder",
+            ),
+        ),
     }
 
     return replies[intent]
@@ -362,6 +495,7 @@ def build_chatbot_reply(
     page_context: dict[str, Any],
 ) -> ChatbotReply:
     intent = _classify_intent(triggering_message.content)
+    copilot_context = getattr(session, "copilot_context", None) or {}
 
     if intent == "startup_profile":
         return _startup_profile_reply(
@@ -378,11 +512,15 @@ def build_chatbot_reply(
         "funding",
         "advisor",
         "assessment",
+        "milestones",
+        "capital_planner",
+        "builder",
     }:
         return _navigation_reply(intent=intent)
 
     return _platform_help_reply(
         page_context=page_context,
+        copilot_context=copilot_context,
     )
 
 

@@ -452,3 +452,17 @@ See
 
 See
 [Execution & Milestones Engine workspace](startups/EXECUTION_MILESTONES_V1.md).
+
+## Phase 57 — Universal AI Copilot
+
+**Status: Completed**
+
+- Added `copilot_context` JSONField to `AgentSession` model for persisting active workspace context (migration `0002_copilot_context.py`).
+- Built `CopilotContextView` (`POST /api/v1/assistant/chatbot/current/copilot-context/`) with a 17-slug whitelist for validated workspace context injection.
+- Enhanced `chatbot.py` with workspace-specific help messages, 3 new intent classifiers (`milestones`, `capital_planner`, `builder`), and 3 new navigation replies.
+- Built `copilotApi.js` frontend client and updated `ChatbotDrawer.jsx` with `WORKSPACE_QUICK_PROMPTS` map and automatic context injection on drawer open / view change.
+- Added backend API tests (`test_copilot_context_api.py`) and frontend API tests (`copilotApi.test.js`).
+- Validated 536 backend tests, 198 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Universal AI Copilot workspace](startups/UNIVERSAL_AI_COPILOT_V1.md).
