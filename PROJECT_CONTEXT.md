@@ -590,3 +590,9 @@ Initial Phase 49 scope:
 
 The language model may explain the resulting plan but must not select or modify
 its ordering.
+
+## 17. Scheme Data Migration
+
+- Migrated verified ExternalSchemeRecords to canonical Schemes.
+- Fixed DRF pagination cross-origin absolute URL bug in frontend/src/api.js affecting Axios baseURL.
+- Enhanced UI contrast for auth and landing pages.
