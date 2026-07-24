@@ -131,3 +131,34 @@ def test_document_autofill_requires_authentication(db):
     )
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_pitch_deck_returns_suggestions(db):
+    user = make_user("document-autofill-pitchdeck")
+    document = SimpleUploadedFile(
+        "pitch_deck.txt",
+        (
+            b"ACME PITCH DECK & EXECUTIVE SUMMARY\n"
+            b"Name of Enterprise: ACME AGRI TECH PRIVATE LIMITED\n"
+            b"Sector: AgriTech, BioTech\n"
+            b"Technologies: AI, IoT Sensors\n"
+            b"Funding Required: 50 Lakh\n"
+            b"Team Size: 12\n"
+        ),
+        content_type="text/plain",
+    )
+
+    response = authenticated_client(user).post(
+        reverse("startup-profile-autofill-from-document"),
+        {"file": document, "document_type": "pitch_deck"},
+        format="multipart",
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["document_type"]["value"] == "pitch_deck"
+
+    suggestions = suggestions_by_field(response)
+    assert suggestions["sectors"]["value"] == ["AgriTech", "BioTech"]
+    assert suggestions["technologies"]["value"] == ["AI", "IoT Sensors"]
+    assert suggestions["funding_required"]["value"] == "50 Lakh"
+    assert suggestions["team_size"]["value"] == 12

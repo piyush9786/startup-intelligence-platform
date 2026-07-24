@@ -923,3 +923,232 @@ class StartupAdvisorBriefingJob(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.startup_profile} advisor briefing job {self.status}"
+
+
+# ---------------------------------------------------------------------------
+# AI Startup Builder — Phase 54
+# ---------------------------------------------------------------------------
+
+BUILDER_PLAN_VERSION = "startup-builder-v1"
+
+
+class StartupBuilderSection(TimeStampedModel):
+    """
+    A single founder-authored section of the AI Startup Builder plan.
+
+    Each section captures structured content for one area of the startup plan
+    (problem, customer, validation experiments, business model, pricing, etc.).
+    Sections are persisted independently so founders can save partial progress.
+    AI-drafted content is stored separately from founder-confirmed content.
+    """
+
+    class SectionType(models.TextChoices):
+        PROBLEM = "problem", "Problem Definition"
+        CUSTOMER = "customer", "Target Customer"
+        INTERVIEWS = "interviews", "Customer Interview Planning"
+        VALIDATION = "validation", "Validation Experiments"
+        BUSINESS_MODEL = "business_model", "Business Model"
+        PRICING = "pricing", "Pricing Strategy"
+        MVP = "mvp", "MVP Planning"
+        SALES = "sales", "Sales & Distribution"
+        HIRING = "hiring", "Hiring & Management"
+        LEGAL = "legal", "Legal & Compliance Planning"
+        FUNDING_STRATEGY = "funding_strategy", "Funding Strategy"
+        MILESTONES = "milestones", "Execution Milestones"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        AI_DRAFTED = "ai_drafted", "AI Drafted"
+        CONFIRMED = "confirmed", "Confirmed"
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="startup_builder_sections",
+    )
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="builder_sections",
+    )
+    section_type = models.CharField(
+        max_length=32,
+        choices=SectionType.choices,
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.DRAFT,
+    )
+    # Founder-authored or founder-confirmed content
+    content = models.JSONField(default=dict, blank=True)
+    # AI-generated draft before founder review
+    ai_draft = models.JSONField(default=dict, blank=True)
+    # Schema version for forward compatibility
+    plan_version = models.CharField(
+        max_length=64,
+        default=BUILDER_PLAN_VERSION,
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["section_type"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["startup_profile", "section_type"],
+                name="builder_one_section_per_type",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["startup_profile", "section_type"],
+                name="builder_section_profile_type",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.startup_profile} builder "
+            f"{self.section_type} ({self.status})"
+        )
+
+
+# ---------------------------------------------------------------------------
+# AI Capital Planner — Phase 55
+# ---------------------------------------------------------------------------
+
+CAPITAL_PLAN_VERSION = "startup-capital-plan-v1"
+
+
+class StartupCapitalPlan(TimeStampedModel):
+    """
+    Persisted financial plan and runway scenario snapshot for a startup.
+
+    Captures deterministic burn rate, runway calculations, scenario projections
+    (conservative, balanced, growth), category allocations, sensitivity analysis,
+    and grounded AI tradeoff explanations.
+    """
+
+    class RunwayStatus(models.TextChoices):
+        CRITICAL = "critical", "Critical (< 6 months)"
+        CAUTION = "caution", "Caution (6–18 months)"
+        HEALTHY = "healthy", "Healthy (> 18 months)"
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="startup_capital_plans",
+    )
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="capital_plans",
+    )
+    available_capital = models.DecimalField(max_digits=18, decimal_places=2)
+    monthly_revenue = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    fixed_costs = models.DecimalField(max_digits=18, decimal_places=2)
+    variable_costs = models.DecimalField(max_digits=18, decimal_places=2)
+    net_burn = models.DecimalField(max_digits=18, decimal_places=2)
+    runway_months = models.DecimalField(max_digits=8, decimal_places=1)
+    runway_status = models.CharField(
+        max_length=16,
+        choices=RunwayStatus.choices,
+    )
+    scenarios = models.JSONField(default=dict)
+    allocations = models.JSONField(default=dict)
+    sensitivity = models.JSONField(default=dict)
+    ai_explanation = models.JSONField(default=dict, blank=True)
+    plan_version = models.CharField(
+        max_length=64,
+        default=CAPITAL_PLAN_VERSION,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["startup_profile", "-created_at"],
+                name="capital_plan_profile_created",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.startup_profile} capital plan ({self.runway_months}m runway)"
+
+
+# ---------------------------------------------------------------------------
+# Execution & Milestones Engine — Phase 56
+# ---------------------------------------------------------------------------
+
+MILESTONE_ENGINE_VERSION = "startup-milestone-v1"
+
+
+class StartupMilestone(TimeStampedModel):
+    """
+    Execution milestone for a startup profile with dependency enforcement,
+    linked schemes/sections, completion evidence, and founder updates.
+    """
+
+    class Category(models.TextChoices):
+        PRODUCT = "product", "Product & MVP"
+        FUNDING = "funding", "Funding & Grants"
+        COMPLIANCE = "compliance", "Compliance & Legal"
+        SALES = "sales", "Sales & Distribution"
+        HIRING = "hiring", "Hiring & Team"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        IN_PROGRESS = "in_progress", "In Progress"
+        COMPLETED = "completed", "Completed"
+        BLOCKED = "blocked", "Blocked"
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="startup_milestones",
+    )
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="milestones",
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    category = models.CharField(
+        max_length=32,
+        choices=Category.choices,
+        default=Category.PRODUCT,
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    target_date = models.DateField(null=True, blank=True)
+    dependencies = models.ManyToManyField(
+        "self",
+        symmetrical=False,
+        blank=True,
+        related_name="dependents",
+    )
+    linked_scheme_id = models.UUIDField(null=True, blank=True)
+    linked_builder_section = models.CharField(max_length=64, blank=True)
+    completion_evidence = models.JSONField(default=dict, blank=True)
+    updates_log = models.JSONField(default=list, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    plan_version = models.CharField(
+        max_length=64,
+        default=MILESTONE_ENGINE_VERSION,
+    )
+
+    class Meta:
+        ordering = ["target_date", "-created_at"]
+        indexes = [
+            models.Index(
+                fields=["startup_profile", "status"],
+                name="milestone_profile_status",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.startup_profile} milestone: {self.title} ({self.status})"

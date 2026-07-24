@@ -1,13 +1,16 @@
+import axios from "axios";
 import { describe, expect, test, vi } from "vitest";
 
 import {
   SESSION_EXPIRED_EVENT,
   adminUrl,
   apiDocsUrl,
+  apiRoot,
   buildPlatformUrl,
   clearSession,
   expireSession,
   getSession,
+  registerFounder,
   saveSession,
 } from "./api.js";
 
@@ -68,5 +71,44 @@ describe("environment-safe platform links", () => {
     expect(new URL(adminUrl).pathname).toBe("/admin/");
     expect(new URL(apiDocsUrl).pathname).toBe("/api/docs/");
     expect(buildPlatformUrl("/admin/")).toBe(adminUrl);
+  });
+});
+
+describe("founder registration API", () => {
+  test("posts founder registration to the public endpoint", async () => {
+    const payload = {
+      username: "new-founder",
+      email: "new-founder@example.com",
+      first_name: "New",
+      last_name: "Founder",
+      password: "Safe-founder-password-2026!",
+      password_confirm: "Safe-founder-password-2026!",
+    };
+
+    const post = vi.spyOn(axios, "post").mockResolvedValueOnce({
+      data: {
+        id: "founder-id",
+        username: payload.username,
+        email: payload.email,
+        role: "founder",
+      },
+    });
+
+    try {
+      await expect(
+        registerFounder(payload),
+      ).resolves.toMatchObject({
+        username: payload.username,
+        role: "founder",
+      });
+
+      expect(post).toHaveBeenCalledWith(
+        `${apiRoot}/auth/register/`,
+        payload,
+        { timeout: 30000 },
+      );
+    } finally {
+      post.mockRestore();
+    }
   });
 });

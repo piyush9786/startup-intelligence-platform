@@ -13,7 +13,9 @@ import {
   INITIAL_ASSESSMENT_FORM,
   assessmentDraftData,
   assessmentFormFromDraft,
+  assessmentFormFromProfile,
   assessmentFormWithAutofillSuggestions,
+  assessmentProgress,
   assessmentStepErrors,
   autofillSuggestionFieldsForEmptyForm,
   firstInvalidAssessmentStep,
@@ -698,6 +700,7 @@ export default function AssessmentWizard({
   onCancel,
   onSubmitted,
   startupProfileId = null,
+  profile = null,
 }) {
   const [draft, setDraft] = useState(null);
   const [form, setForm] = useState(INITIAL_ASSESSMENT_FORM);
@@ -705,6 +708,7 @@ export default function AssessmentWizard({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showLockModal, setShowLockModal] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [autofillFile, setAutofillFile] = useState(null);
@@ -716,6 +720,8 @@ export default function AssessmentWizard({
     () => ASSESSMENT_STEPS.find((item) => item.id === step),
     [step],
   );
+
+  const progress = useMemo(() => assessmentProgress(form), [form]);
 
   useEffect(() => {
     let active = true;
@@ -767,7 +773,12 @@ export default function AssessmentWizard({
     setError("");
   }
 
-
+  function handlePrefillFromProfile() {
+    if (!profile) return;
+    setForm((current) => assessmentFormFromProfile(profile, current));
+    setNotice("Prefilled form with facts from your startup profile.");
+    setError("");
+  }
 
   function handleAutofillFileChange(file) {
     setAutofillFile(file);
@@ -831,7 +842,6 @@ export default function AssessmentWizard({
     setError("");
   }
 
-
   async function persist(nextStep = step) {
     if (!draft) return null;
     setSaving(true);
@@ -874,7 +884,7 @@ export default function AssessmentWizard({
     }
   }
 
-  async function handleSubmit() {
+  function handleOpenSubmitModal() {
     const invalidStep = firstInvalidAssessmentStep(form);
     if (invalidStep) {
       setStep(invalidStep);
@@ -883,7 +893,10 @@ export default function AssessmentWizard({
       );
       return;
     }
+    setShowLockModal(true);
+  }
 
+  async function handleFinalSubmit() {
     setSubmitting(true);
     setError("");
     setNotice("");
@@ -891,9 +904,11 @@ export default function AssessmentWizard({
       const saved = await persist(8);
       if (!saved) return;
       const submission = await submitStartupAssessmentDraft(saved.id);
+      setShowLockModal(false);
       onSubmitted(submission);
     } catch (requestError) {
       setError(describeApiFailure(requestError));
+      setShowLockModal(false);
     } finally {
       setSubmitting(false);
     }
@@ -912,7 +927,7 @@ export default function AssessmentWizard({
     <div className="assessment-wizard">
       <header className="assessment-wizard-header">
         <div>
-          <span className="eyebrow">STARTUP ASSESSMENT</span>
+          <span className="eyebrow">DYNAMIC STARTUP ASSESSMENT</span>
           <h1>
             {startupProfileId
               ? "Update the evidence behind your dashboard"
@@ -923,29 +938,43 @@ export default function AssessmentWizard({
             readiness, identify requirements, build a roadmap and match schemes.
           </p>
         </div>
-        <div className="assessment-completion" aria-label="Assessment completion">
-          <strong>{draft?.completion_percent || 0}%</strong>
-          <span>profile completion</span>
+        <div className="assessment-completion-box">
+          <div className="assessment-completion" aria-label="Assessment completion">
+            <strong>{progress.percentage}%</strong>
+            <span>wizard completion</span>
+          </div>
+          {profile && (
+            <button
+              className="button button-secondary button-small"
+              onClick={handlePrefillFromProfile}
+              type="button"
+            >
+              ✦ Prefill from My Startup Profile
+            </button>
+          )}
         </div>
       </header>
 
       <div className="assessment-layout">
         <aside className="assessment-stepper" aria-label="Assessment steps">
-          {ASSESSMENT_STEPS.map((item) => (
-            <button
-              aria-current={step === item.id ? "step" : undefined}
-              className={step === item.id ? "assessment-step-active" : ""}
-              key={item.id}
-              onClick={() => setStep(item.id)}
-              type="button"
-            >
-              <span>{item.id}</span>
-              <div>
-                <strong>{item.label}</strong>
-                <small>{item.hint}</small>
-              </div>
-            </button>
-          ))}
+          {ASSESSMENT_STEPS.map((item) => {
+            const isStepValid = progress.stepStatus[item.id];
+            return (
+              <button
+                aria-current={step === item.id ? "step" : undefined}
+                className={`${step === item.id ? "assessment-step-active" : ""} ${isStepValid ? "assessment-step-completed" : ""}`}
+                key={item.id}
+                onClick={() => setStep(item.id)}
+                type="button"
+              >
+                <span>{isStepValid ? "✓" : item.id}</span>
+                <div>
+                  <strong>{item.label}</strong>
+                  <small>{item.hint}</small>
+                </div>
+              </button>
+            );
+          })}
         </aside>
 
         <section className="assessment-panel">
@@ -962,8 +991,6 @@ export default function AssessmentWizard({
             </span>
           </div>
 
-
-
           <DocumentAutofillPanel
             file={autofillFile}
             loading={autofilling}
@@ -974,7 +1001,6 @@ export default function AssessmentWizard({
             result={autofillResult}
             selectedFields={selectedAutofillFields}
           />
-
 
           {error && (
             <div className="notice notice-danger" role="alert">
@@ -1030,18 +1056,74 @@ export default function AssessmentWizard({
                 <button
                   className="button button-primary"
                   disabled={saving || submitting}
-                  onClick={handleSubmit}
+                  onClick={handleOpenSubmitModal}
                   type="button"
                 >
-                  {submitting
-                    ? "Building your dashboard…"
-                    : "Submit and build my dashboard"}
+                  Submit and build my dashboard
                 </button>
               )}
             </div>
           </footer>
         </section>
       </div>
+
+      {showLockModal && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="lock-modal-title">
+          <div className="modal-card">
+            <header className="modal-header">
+              <h2 id="lock-modal-title">Lock & Submit Readiness Assessment</h2>
+              <button
+                className="button-icon"
+                onClick={() => setShowLockModal(false)}
+                type="button"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </header>
+            <div className="modal-body">
+              <div className="notice notice-warning">
+                Submitting will lock this assessment snapshot (status: <code>SUBMITTED</code>). Once locked, your official Readiness Scores, Action Roadmap, and Scheme Recommendations will be generated.
+              </div>
+              <dl className="value-comparison-grid">
+                <div>
+                  <small>Startup Name</small>
+                  <strong>{form.startup_name || "Not provided"}</strong>
+                </div>
+                <div>
+                  <small>Stage</small>
+                  <strong>{form.stage || "Not provided"}</strong>
+                </div>
+                <div>
+                  <small>Location</small>
+                  <strong>{[form.district, form.state].filter(Boolean).join(", ") || "Not provided"}</strong>
+                </div>
+                <div>
+                  <small>Funding Required</small>
+                  <strong>{form.funding_required ? `₹${form.funding_required}` : "0"}</strong>
+                </div>
+              </dl>
+            </div>
+            <footer className="modal-footer">
+              <button
+                className="button button-ghost"
+                onClick={() => setShowLockModal(false)}
+                type="button"
+              >
+                Back to review
+              </button>
+              <button
+                className="button button-primary"
+                disabled={submitting}
+                onClick={handleFinalSubmit}
+                type="button"
+              >
+                {submitting ? "Building dashboard..." : "Lock & Confirm Submission"}
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

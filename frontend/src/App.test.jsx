@@ -1,6 +1,7 @@
 import React from "react";
 import {
   act,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -31,6 +32,7 @@ const api = vi.hoisted(() => ({
   getStartupAdvisorBriefing: vi.fn(),
   getStartupAdvisorBriefingJob: vi.fn(),
   getStartupAdvisorCurrent: vi.fn(),
+  getStartupProfileReadiness: vi.fn(),
   listExternalCapitalSupport: vi.fn(),
   listExternalCertificationRequirements: vi.fn(),
   listExternalSchemes: vi.fn(),
@@ -41,6 +43,7 @@ const api = vi.hoisted(() => ({
   listStartingPlans: vi.fn(),
   listStartupProfiles: vi.fn(),
   login: vi.fn(),
+  registerFounder: vi.fn(),
   generateStartingPlan: vi.fn(),
   submitStartupAssessmentDraft: vi.fn(),
   sendCurrentChatbotMessage: vi.fn(),
@@ -507,6 +510,8 @@ function configureAuthenticatedWorkspace({
   api.listExternalCapitalSupport.mockResolvedValue([]);
   api.listExternalCertificationRequirements.mockResolvedValue([]);
   api.getStartupAdvisorCurrent.mockResolvedValue(dashboard);
+  api.getStartupProfileReadiness.mockResolvedValue(dashboard.readiness);
+  api.getCurrentStartingPlan.mockResolvedValue(dashboard.action_plan);
   api.getCurrentBriefing.mockResolvedValue({
     startup_profile_id: profile.id,
     has_briefing: Boolean(briefing),
@@ -635,6 +640,12 @@ beforeEach(() => {
     should_show: false,
   });
   api.login.mockResolvedValue({ access: "access-token", refresh: "refresh-token" });
+  api.registerFounder.mockResolvedValue({
+    id: "registered-founder",
+    username: "new-founder",
+    email: "new-founder@example.com",
+    role: "founder",
+  });
   api.getStartupAdvisorBriefing.mockResolvedValue(makeBriefing());
   api.getStartupAdvisorBriefingJob.mockResolvedValue(
     makeJob({
@@ -673,6 +684,9 @@ describe("founder authentication", () => {
     const user = userEvent.setup();
     render(<App />);
 
+    await user.click(
+      screen.getByRole("button", { name: "Sign in" }),
+    );
     await user.type(screen.getByLabelText("Username"), "founder");
     await user.type(screen.getByLabelText("Password"), "safe-password");
     await user.click(screen.getByRole("button", { name: "Open founder dashboard" }));
@@ -685,6 +699,118 @@ describe("founder authentication", () => {
     ).toBeInTheDocument();
   });
 
+
+  test("registers a founder and opens the workspace", async () => {
+    api.getSession.mockReturnValue(null);
+    const user = userEvent.setup();
+    render(<App />);
+
+    expect(
+      screen.getByRole("heading", {
+        name: /Build your startup with clarity/,
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Start building",
+      }),
+    );
+
+    await user.type(
+      screen.getByLabelText("First name"),
+      "New",
+    );
+    await user.type(
+      screen.getByLabelText("Last name"),
+      "Founder",
+    );
+    await user.type(
+      screen.getByLabelText("Username"),
+      "new-founder",
+    );
+    await user.type(
+      screen.getByLabelText("Email address"),
+      "new-founder@example.com",
+    );
+    await user.type(
+      screen.getByLabelText("Password"),
+      "Safe-founder-password-2026!",
+    );
+    await user.type(
+      screen.getByLabelText("Confirm password"),
+      "Safe-founder-password-2026!",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Create founder account",
+      }),
+    );
+
+    expect(api.registerFounder).toHaveBeenCalledWith({
+      username: "new-founder",
+      email: "new-founder@example.com",
+      first_name: "New",
+      last_name: "Founder",
+      password: "Safe-founder-password-2026!",
+      password_confirm: "Safe-founder-password-2026!",
+    });
+
+    expect(api.login).toHaveBeenCalledWith({
+      username: "new-founder",
+      password: "Safe-founder-password-2026!",
+    });
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /Keep Acme Climate moving with one clear next step/,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  test("renders password recovery flow with instructions", async () => {
+    api.getSession.mockReturnValue(null);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Sign in" }),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Forgot password?" }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Reset password" }),
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByLabelText("Username or email address"),
+      "founder@example.com",
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Request password reset" }),
+    );
+
+    expect(
+      screen.getByRole("status"),
+    ).toHaveTextContent("Recovery request received");
+    expect(
+      screen.getByRole("status"),
+    ).toHaveTextContent("founder@example.com");
+
+    await user.click(
+      screen.getByRole("button", { name: "Return to sign in" }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Sign in" }),
+    ).toBeInTheDocument();
+  });
+
   test("shows an accessible authentication error", async () => {
     api.getSession.mockReturnValue(null);
     api.login.mockRejectedValue({
@@ -693,6 +819,9 @@ describe("founder authentication", () => {
     const user = userEvent.setup();
     render(<App />);
 
+    await user.click(
+      screen.getByRole("button", { name: "Sign in" }),
+    );
     await user.type(screen.getByLabelText("Username"), "founder");
     await user.type(screen.getByLabelText("Password"), "wrong-password");
     await user.click(screen.getByRole("button", { name: "Open founder dashboard" }));
@@ -1148,58 +1277,48 @@ describe("functional user dashboard", () => {
       decision: null,
     };
 
-    api.getEligibilityVerificationGates
-      .mockResolvedValueOnce({
-        startup_profile_id: profile.id,
-        scheme_id: loanScheme.id,
-        scheme_version_id: "loan-version-one",
-        as_of_date: "2026-07-23",
-        gate_count: 1,
-        unresolved_count: 1,
-        gates: [manualGate],
-      })
-      .mockResolvedValueOnce({
-        startup_profile_id: profile.id,
-        scheme_id: loanScheme.id,
-        scheme_version_id: "loan-version-one",
-        as_of_date: "2026-07-23",
-        gate_count: 1,
-        unresolved_count: 1,
-        gates: [
-          {
-            ...manualGate,
-            status: "pending",
-            submission: {
-              id: "verification-submission-one",
-              claim_value: true,
-              claim_text: "Endorsement obtained.",
-              evidence_count: 0,
-              created_at: "2026-07-23T07:00:00Z",
-            },
-          },
-        ],
-      })
-      .mockResolvedValueOnce({
-        startup_profile_id: profile.id,
-        scheme_id: loanScheme.id,
-        scheme_version_id: "loan-version-one",
-        as_of_date: "2026-07-23",
-        gate_count: 1,
-        unresolved_count: 1,
-        gates: [
-          {
-            ...manualGate,
-            status: "pending",
-            submission: {
-              id: "verification-submission-one",
-              claim_value: true,
-              claim_text: "Endorsement obtained.",
-              evidence_count: 1,
-              created_at: "2026-07-23T07:00:00Z",
-            },
-          },
-        ],
-      });
+    let gateSubmission = null;
+
+    api.getEligibilityVerificationGates.mockImplementation(async () => ({
+      startup_profile_id: profile.id,
+      scheme_id: loanScheme.id,
+      scheme_version_id: "loan-version-one",
+      as_of_date: "2026-07-23",
+      gate_count: 1,
+      unresolved_count: 1,
+      gates: [
+        gateSubmission
+          ? {
+              ...manualGate,
+              status: "pending",
+              submission: gateSubmission,
+            }
+          : manualGate,
+      ],
+    }));
+
+    api.createEligibilityVerificationSubmission.mockImplementation(
+      async (payload) => {
+        gateSubmission = {
+          id: "verification-submission-one",
+          claim_value: payload.claimValue,
+          claim_text: payload.claimText,
+          evidence_count: 0,
+          created_at: "2026-07-23T07:00:00Z",
+        };
+        return gateSubmission;
+      },
+    );
+
+    api.uploadEligibilityVerificationEvidence.mockImplementation(async () => {
+      if (gateSubmission) {
+        gateSubmission = { ...gateSubmission, evidence_count: 1 };
+      }
+      return {
+        id: "review-evidence-one",
+        filename: "endorsement.pdf",
+      };
+    });
 
     const user = userEvent.setup();
     render(<App />);
@@ -1269,18 +1388,24 @@ describe("functional user dashboard", () => {
       },
     );
 
-    await user.upload(
-      screen.getByLabelText(
-        "Evidence file for Incubator endorsement is required.",
-      ),
-      evidenceFile,
+    const fileInput = screen.getByLabelText(
+      "Evidence file for Incubator endorsement is required.",
     );
+    Object.defineProperty(fileInput, "files", {
+      value: [evidenceFile],
+      configurable: true,
+    });
+    await act(async () => {
+      fireEvent.change(fileInput);
+    });
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Upload evidence",
-      }),
-    );
+    const uploadBtn = await screen.findByRole("button", {
+      name: "Upload evidence",
+    });
+
+    await act(async () => {
+      fireEvent.click(uploadBtn);
+    });
 
     await waitFor(() => {
       expect(
@@ -1423,11 +1548,11 @@ describe("functional user dashboard", () => {
 
     await user.click(await screen.findByRole("button", { name: "My startup" }));
     expect(screen.getByRole("heading", { name: "Acme Climate" })).toBeInTheDocument();
-    expect(screen.getByText("Strong foundation with two evidence gaps.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Company overview" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Action roadmap" }));
-    expect(screen.getByRole("heading", { name: "Your application roadmap" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Review the highest-ranked scheme" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Readiness Score Breakdown & Action Roadmap" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Domain readiness breakdown" })).toBeInTheDocument();
   });
 
   test("opens the persisted founder advisor", async () => {
@@ -1888,7 +2013,11 @@ describe("functional user dashboard", () => {
       window.dispatchEvent(new Event(api.SESSION_EXPIRED_EVENT));
     });
 
-    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", {
+        name: /Build your startup with clarity/,
+      }),
+    ).toBeInTheDocument();
   });
 });
 

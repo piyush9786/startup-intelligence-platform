@@ -147,9 +147,24 @@ export async function login({ username, password }) {
   return session;
 }
 
+
+export async function registerFounder(payload) {
+  const response = await axios.post(
+    `${apiRoot}/auth/register/`,
+    payload,
+    { timeout: 30000 },
+  );
+  return response.data;
+}
+
 export async function listStartupProfiles() {
   const response = await client.get("/startup-profiles/");
   return normalizeCollection(response.data);
+}
+
+export async function updateStartupProfile(id, payload) {
+  const response = await client.patch(`/startup-profiles/${id}/`, payload);
+  return response.data;
 }
 
 
@@ -239,6 +254,11 @@ export async function getStartupAdvisorCurrent(startupProfileId) {
     params: { startup_profile_id: startupProfileId },
   });
   return response.data;
+}
+
+export async function getStartupProfileReadiness(startupProfileId) {
+  const current = await getStartupAdvisorCurrent(startupProfileId);
+  return current.readiness || current;
 }
 
 
