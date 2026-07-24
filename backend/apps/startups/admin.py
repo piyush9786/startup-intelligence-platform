@@ -6,12 +6,60 @@ from .models import (
     StartupAdvisorBriefingJob,
     StartupAdvisorSnapshot,
     StartupAssessmentDraft,
+    StartupBuilderSection,
+    StartupCapitalPlan,
     StartupFundingPlan,
+    StartupMilestone,
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
     StartupStartingPlan,
 )
+
+
+@admin.register(StartupMilestone)
+class StartupMilestoneAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "startup_profile",
+        "category",
+        "status",
+        "target_date",
+        "completed_at",
+    )
+    list_filter = ("category", "status")
+    search_fields = ("title", "startup_profile__startup_name", "owner__email")
+
+
+
+@admin.register(StartupCapitalPlan)
+class StartupCapitalPlanAdmin(admin.ModelAdmin):
+    list_display = (
+        "startup_profile",
+        "available_capital",
+        "net_burn",
+        "runway_months",
+        "runway_status",
+        "created_at",
+    )
+    list_filter = ("runway_status",)
+    search_fields = ("startup_profile__startup_name", "owner__email")
+
+
+
+@admin.register(StartupBuilderSection)
+class StartupBuilderSectionAdmin(admin.ModelAdmin):
+    list_display = (
+        "startup_profile",
+        "section_type",
+        "status",
+        "plan_version",
+        "confirmed_at",
+        "updated_at",
+    )
+    list_filter = ("section_type", "status")
+    search_fields = ("startup_profile__startup_name", "owner__email")
+    ordering = ("startup_profile", "section_type")
 
 
 @admin.register(StartupProfile)

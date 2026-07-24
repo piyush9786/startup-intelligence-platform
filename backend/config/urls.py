@@ -10,7 +10,11 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
-from apps.accounts.views import CurrentUserView
+from apps.accounts.views import (
+    CurrentUserView,
+    FounderRegistrationView,
+)
+from apps.assistant.copilot_context_views import CopilotContextView
 from apps.assistant.views import (
     ChatbotCurrentView,
     ChatbotMessageCreateView,
@@ -67,9 +71,25 @@ from apps.startups.assessment_views import (
     StartupAssessmentDraftSubmitView,
     StartupAssessmentDraftViewSet,
 )
+from apps.startups.builder_views import (
+    StartupBuilderSectionDetailView,
+    StartupBuilderSectionDraftView,
+    StartupBuilderSectionListView,
+)
+from apps.startups.capital_planner_views import (
+    StartupCapitalPlanCurrentView,
+    StartupCapitalPlanGenerateView,
+)
+from apps.startups.milestone_views import (
+    StartupMilestoneCompleteView,
+    StartupMilestoneDetailView,
+    StartupMilestoneListCreateView,
+    StartupMilestoneLogUpdateView,
+)
 from apps.startups.onboarding_views import (
     StartupOnboardingCurrentView,
 )
+from apps.startups.startup_intelligence_views import StartupIntelligenceView
 from apps.startups.views import (
     StartupFundingPlanCurrentView,
     StartupFundingPlanDetailView,
@@ -162,6 +182,16 @@ urlpatterns = [
         "api/v1/assistant/chatbot/current/messages/",
         ChatbotMessageCreateView.as_view(),
         name="assistant-chatbot-message-create",
+    ),
+    path(
+        "api/v1/assistant/chatbot/current/copilot-context/",
+        CopilotContextView.as_view(),
+        name="assistant-chatbot-copilot-context",
+    ),
+    path(
+        "api/v1/auth/register/",
+        FounderRegistrationView.as_view(),
+        name="founder-register",
     ),
     path(
         "api/v1/auth/me/",
@@ -398,6 +428,56 @@ urlpatterns = [
     path(
         "api/v1/knowledge/",
         include("apps.knowledge.urls"),
+    ),
+    path(
+        "api/v1/startup-builder/sections/",
+        StartupBuilderSectionListView.as_view(),
+        name="startup-builder-section-list",
+    ),
+    path(
+        "api/v1/startup-builder/sections/<str:section_type>/",
+        StartupBuilderSectionDetailView.as_view(),
+        name="startup-builder-section-detail",
+    ),
+    path(
+        "api/v1/startup-builder/sections/<str:section_type>/draft/",
+        StartupBuilderSectionDraftView.as_view(),
+        name="startup-builder-section-draft",
+    ),
+    path(
+        "api/v1/startup-capital-plans/current/",
+        StartupCapitalPlanCurrentView.as_view(),
+        name="startup-capital-plan-current",
+    ),
+    path(
+        "api/v1/startup-capital-plans/generate/",
+        StartupCapitalPlanGenerateView.as_view(),
+        name="startup-capital-plan-generate",
+    ),
+    path(
+        "api/v1/startup-milestones/",
+        StartupMilestoneListCreateView.as_view(),
+        name="startup-milestone-list-create",
+    ),
+    path(
+        "api/v1/startup-milestones/<uuid:milestone_id>/",
+        StartupMilestoneDetailView.as_view(),
+        name="startup-milestone-detail",
+    ),
+    path(
+        "api/v1/startup-milestones/<uuid:milestone_id>/complete/",
+        StartupMilestoneCompleteView.as_view(),
+        name="startup-milestone-complete",
+    ),
+    path(
+        "api/v1/startup-milestones/<uuid:milestone_id>/log-update/",
+        StartupMilestoneLogUpdateView.as_view(),
+        name="startup-milestone-log-update",
+    ),
+    path(
+        "api/v1/startups/<uuid:profile_id>/intelligence/",
+        StartupIntelligenceView.as_view(),
+        name="startup-intelligence",
     ),
     path("api/v1/", include(router.urls)),
 ]

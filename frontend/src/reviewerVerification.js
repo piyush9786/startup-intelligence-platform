@@ -3,6 +3,19 @@ import {
 } from "./verification";
 
 
+export function formatReviewerValue(value) {
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return JSON.stringify(value);
+  }
+
+  return String(value ?? "");
+}
+
+
 export const REVIEWER_VERIFICATION_STATUSES =
   Object.freeze({
     PENDING: "pending",

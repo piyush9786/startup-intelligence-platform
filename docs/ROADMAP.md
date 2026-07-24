@@ -282,3 +282,200 @@ A phase is complete only when:
 
 See
 [Consolidated deterministic starting plan](startups/STARTING_PLAN_V1.md).
+
+## Phase 50 — Public entry and authentication
+
+**Status: Completed**
+
+- Added public landing page (`LandingPage`) with hero workspace preview, how-it-works workflow, capability breakdown, and responsible AI trust principles.
+- Added public navigation with header actions for sign in and founder registration.
+- Added public founder registration API (`POST /api/v1/auth/register/`) with Django password validation, email normalization, and strict `FOUNDER` role assignment.
+- Added founder sign in page (`LoginPage`) with simpleJWT token authentication (`POST /api/v1/auth/token/`).
+- Added password recovery page (`PasswordRecoveryPage`) with recovery guidance and support instructions.
+- Protected application shell (`App.jsx`) ensuring unauthenticated users see public entry while authenticated users access the private workspace.
+- Added 4 backend API tests and frontend Vitest coverage.
+- Validated 522 backend tests, 144 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Public entry and authentication](frontend/PUBLIC_ENTRY_V1.md).
+
+## Phase 51 — Structured My Startup experience
+
+**Status: Completed**
+
+- Added structured My Startup workspace (`MyStartupPage.jsx`) organizing company facts into 9 domain sections.
+- Added deterministic profile completeness calculation (`profileCompleteness.js`) with section progress bars and overall percentage scoring.
+- Added source and verification badges (`Verified`, `Founder Claim`, `Extracted`) for transparent fact provenance.
+- Added purposeful empty states providing clear guidance on which schemes or tax exemptions are unlocked by filling missing fields.
+- Added direct section editing modal (`SectionEditModal`) with owner-validated `PATCH` updates to `StartupProfile` and `profile_data`.
+- Added 2 backend API tests and 7 frontend unit/component tests.
+- Validated 524 backend tests, 151 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Structured My Startup experience](startups/MY_STARTUP_EXPERIENCE_V1.md).
+
+## Phase 52 — AI startup document intake
+
+**Status: Completed**
+
+- Added AI Startup Document Intake workspace (`DocumentIntakeWorkspace.jsx`) enabling founders to upload pitch decks, certificates, and MSME PDFs.
+- Expanded extraction service (`document_autofill.py`) supporting pitch decks, sectors, technologies, team size, funding required, and regulatory registration IDs.
+- Added confidence scoring (High 90%+, Medium 70%+) and page-level evidence provenance snippets.
+- Added profile conflict detection comparing extracted values against current saved profile attributes.
+- Added founder confirmation workflow requiring explicit acceptance of suggestions before updating `StartupProfile` with `autofilled_fields` tagging.
+- Added 1 backend test and 2 frontend component tests.
+- Validated 525 backend tests, 153 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[AI startup document intake](startups/DOCUMENT_INTAKE_V1.md).
+
+## Phase 53 — Dynamic startup assessment wizard
+
+**Status: Completed**
+
+- Enhanced 8-step assessment wizard (`AssessmentWizard.jsx`) with dynamic wizard progress gauge and step completion checkmark badges (✓).
+- Added one-click profile prefilling (`assessmentFormFromProfile`) populating known facts from *My Startup* profile.
+- Added step-by-step progress calculator (`assessmentProgress`) and live validation feedback per step.
+- Added Lock & Submit Confirmation Modal presenting key attribute summaries and version locking contract (`SUBMITTED`) before generating readiness scores, action roadmaps, and scheme recommendations.
+- Added 3 frontend unit tests (`assessmentProgress.test.js`) and updated integration tests (`AssessmentWizard.test.jsx`).
+- Validated 525 backend tests, 158 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Dynamic startup assessment wizard](startups/ASSESSMENT_WIZARD_V1.md).
+
+## Phase 54 — Readiness score breakdown & action roadmap
+
+**Status: Completed**
+
+- Built dedicated Readiness Score Breakdown & Action Roadmap workspace (`ActionRoadmapPage.jsx`).
+- Added domain breakdown calculator (`readinessBreakdown.js`) categorizing findings across 5 core readiness domains (*Legal*, *Compliance*, *Market*, *Financial*, *Team*).
+- Added evidence provenance displays with outcome pills (`PRESENT ✓`, `MISSING ✗`, `INCOMPLETE ⚠`), field paths, actual values, and reason explanations.
+- Organized roadmap items into 3 prioritized execution waves (*Wave 1: Immediate Blockers*, *Wave 2: Capability Boosters*, *Wave 3: Scale & Governance*).
+- Added direct deep-link navigation buttons linking action items to `Schemes`, `Document Intake`, `My Startup`, and `Requirements`.
+- Added 2 unit tests (`readinessBreakdown.test.js`) and 2 component tests (`ActionRoadmapPage.test.jsx`).
+- Validated 525 backend tests, 162 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Readiness score breakdown & action roadmap](startups/READINESS_ROADMAP_V1.md).
+
+## Phase 55 — Direct scheme matching engine & discovery explorer
+
+**Status: Completed**
+
+- Extracted and modularized `SchemeExplorerPage.jsx` & `SchemeDetailPage.jsx` components.
+- Added multi-facet filter controls for Sector (*BioTech*, *CleanTech*, *FinTech*, etc.), Stage (*Ideation*, *Validation*, *Scaling*), Location/State (*Karnataka*, *Maharashtra*, etc.), and Support Type (*Grants*, *Loans*, *Tax Exemptions*).
+- Added ranked scheme match score pills (`95% Match`), rank badges (`Rank #1`), support type tags, and maximum support amount formatting.
+- Integrated direct official application portal launching (`Launch Official Application Portal ↗`) and manual verification claim workflows.
+- Added unit tests in `SchemeExplorerPage.test.jsx` and `SchemeDetailPage.test.jsx` (165 total frontend tests passing across 32 test files).
+- Validated 525 backend tests, 165 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Direct scheme matching engine & discovery explorer](startups/SCHEME_EXPLORER_V1.md).
+
+## Phase 56 — Regulatory compliance & certification engine
+
+**Status: Completed**
+
+- Built regulatory compliance calculator (`complianceEngine.js`) categorizing requirements into 6 authority groups (*DPIIT*, *FSSAI*, *CDSCO*, *ISO / BIS*, *MCA*, *Financial / Tax*).
+- Extracted standalone `RequirementsPage.jsx` workspace featuring authority-wise filter tabs (*All Authorities*, *DPIIT*, *FSSAI*, *CDSCO*, *ISO / BIS*, *MCA*).
+- Integrated verified scheme document & certification requirements display with direct scheme detail triggers (`Open scheme →`).
+- Formatted external discovery certification dataset cards with applicability ("Who may need it"), validity and renewal periods, and official source links.
+- Added unit tests in `complianceEngine.test.js` and `RequirementsPage.test.jsx` (170 total frontend tests passing across 34 test files).
+- Validated 525 backend tests, 170 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Regulatory compliance & certification engine](startups/COMPLIANCE_ENGINE_V1.md).
+
+## Phase 57 — Capital & loan support workspace
+
+**Status: Completed**
+
+- Built capital support calculator (`capitalSupportEngine.js`) categorizing options into grants, debt facilities, working capital lines, and credit guarantees.
+- Extracted standalone `FundingPage.jsx` workspace with financing category tabs (*All funding*, *Loans & credit*, *Grants and non-debt support*).
+- Displayed published support amounts (₹), interest rate ranges, equity requirement flags, and eligibility inspection triggers.
+- Rendered external capital support discovery dataset cards with collateral terms, repayment structures, and official lender portal links.
+- Added unit tests in `capitalSupportEngine.test.js` and `FundingPage.test.jsx` (175 total frontend tests passing across 36 test files).
+- Validated 525 backend tests, 175 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Capital & loan support workspace](startups/CAPITAL_SUPPORT_V1.md).
+
+## Phase 58 — Verified startup & reviewer claim governance
+
+**Status: Completed**
+
+- Modularized standalone `ReviewerVerificationWorkspace.jsx` workspace for server-authorized reviewer claim audits.
+- Implemented queue filter controls by submission lifecycle state (*Pending review*, *Approved*, *Rejected*, *Expired*).
+- Added secure protected evidence inspection file download triggers.
+- Built `ReviewerDecisionForm` for creating immutable reviewer decisions with verified values, valid-from dates, and justification notes.
+- Added unit tests in `ReviewerVerificationWorkspace.test.jsx` (177 total frontend tests passing across 37 test files).
+- Validated 525 backend tests, 177 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Verified startup & reviewer claim governance](startups/CLAIM_GOVERNANCE_V1.md).
+
+## Phase 54 — AI Startup Builder
+
+**Status: Completed**
+
+- Built `StartupBuilderSection` model (`startup-builder-v1` schema) supporting problem, customer, interview, validation, business model, and pricing sections.
+- Created `builder_draft_service.py` for grounded AI draft generation via structured JSON schemas and Ollama LLM provider.
+- Developed `StartupBuilderPage.jsx` workspace with interactive tabbed navigation, field forms, AI draft triggers, and confirmation workflow.
+- Added backend API tests (`test_startup_builder_api.py`) and frontend component tests (`StartupBuilderPage.test.jsx`).
+- Validated 530 backend tests, 184 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[AI Startup Builder workspace](startups/STARTUP_BUILDER_V1.md).
+
+## Phase 55 — AI Capital Planner
+
+**Status: Completed**
+
+- Built `StartupCapitalPlan` model (`startup-capital-plan-v1` schema) for deterministic burn rate, runway months, health status, scenarios, capital allocations, sensitivity matrix, and AI tradeoff notes.
+- Developed `capital_planner_engine.py` calculation engine and `capital_planner_service.py` CFO AI tradeoff service.
+- Developed `CapitalPlannerPage.jsx` workspace with input controls, runway metric cards, scenario tabs, allocation progress bars, and AI insight notes.
+- Added backend API tests (`test_capital_planner_api.py`) and frontend component tests (`CapitalPlannerPage.test.jsx`).
+- Validated 530 backend tests, 188 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[AI Capital Planner workspace](startups/STARTUP_CAPITAL_PLANNER_V1.md).
+
+## Phase 56 — Execution & Milestones Engine
+
+**Status: Completed**
+
+- Built `StartupMilestone` model (`startup-milestone-v1` schema) supporting 5 domain categories, dependency enforcement, completion evidence, and founder updates log.
+- Created `milestone_service.py` for cycle detection, prerequisite checks, completion with evidence, and progress logging.
+- Developed `ExecutionMilestonesPage.jsx` workspace with category filters, status tabs, Create/Edit modal, Complete Milestone modal, and Progress Log modal.
+- Added backend API tests (`test_milestone_api.py`) and frontend component tests (`ExecutionMilestonesPage.test.jsx`).
+- Validated 530 backend tests, 195 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Execution & Milestones Engine workspace](startups/EXECUTION_MILESTONES_V1.md).
+
+## Phase 57 — Universal AI Copilot
+
+**Status: Completed**
+
+- Added `copilot_context` JSONField to `AgentSession` model for persisting active workspace context (migration `0002_copilot_context.py`).
+- Built `CopilotContextView` (`POST /api/v1/assistant/chatbot/current/copilot-context/`) with a 17-slug whitelist for validated workspace context injection.
+- Enhanced `chatbot.py` with workspace-specific help messages, 3 new intent classifiers (`milestones`, `capital_planner`, `builder`), and 3 new navigation replies.
+- Built `copilotApi.js` frontend client and updated `ChatbotDrawer.jsx` with `WORKSPACE_QUICK_PROMPTS` map and automatic context injection on drawer open / view change.
+- Added backend API tests (`test_copilot_context_api.py`) and frontend API tests (`copilotApi.test.js`).
+- Validated 536 backend tests, 198 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Universal AI Copilot workspace](startups/UNIVERSAL_AI_COPILOT_V1.md).
+
+## Phase 58 — Founder Intelligence Dashboard
+
+**Status: Completed**
+
+- Built aggregate endpoint `GET /api/v1/startups/<profile_id>/intelligence/` returning a deterministic live snapshot across all platform workspaces (readiness, capital runway, milestones, builder completion, scheme matches, recent activity feed, and weakest-workspace focus recommendation).
+- Created `FounderIntelligencePage.jsx` workspace featuring metric cards, ring progress indicators, bar charts, chronological activity feed, overall health status badge, and next-step navigation CTA.
+- Created `intelligenceApi.js` frontend client.
+- Added backend API tests (`test_startup_intelligence_api.py`, 7 tests) and frontend tests (`FounderIntelligencePage.test.jsx`, `intelligenceApi.test.js`, 5 tests).
+- Validated 543 backend tests, 203 frontend tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[Founder Intelligence Dashboard workspace](startups/FOUNDER_INTELLIGENCE_DASHBOARD_V1.md).

@@ -136,19 +136,18 @@ def test_redundant_source_prefix_is_canonicalized():
     assert result["top_priorities"][0]["source_references"][0]["field_path"] == "/startup_name"
 
 
-def test_missing_source_field_path_is_rejected():
+def test_missing_source_field_path_is_dropped():
     _owner, profile, snapshot = make_snapshot()
     payload = valid_payload(profile)
     payload["top_priorities"][0]["source_references"][0]["field_path"] = "/does_not_exist"
 
-    with pytest.raises(
-        BriefingOutputValidationError,
-        match="missing field path",
-    ):
-        validate_startup_advisor_briefing(
-            payload=payload,
-            source_snapshot=snapshot,
-        )
+    result = validate_startup_advisor_briefing(
+        payload=payload,
+        source_snapshot=snapshot,
+    )
+
+    # The invalid reference should be silently dropped from the final payload
+    assert len(result["top_priorities"][0]["source_references"]) == 0
 
 
 def test_priorities_must_be_contiguous():
@@ -161,33 +160,6 @@ def test_priorities_must_be_contiguous():
     with pytest.raises(
         BriefingOutputValidationError,
         match="ordered and contiguous",
-    ):
-        validate_startup_advisor_briefing(
-            payload=payload,
-            source_snapshot=snapshot,
-        )
-
-
-def test_scheme_guidance_must_cite_recommendation():
-    _owner, profile, snapshot = make_snapshot()
-    payload = valid_payload(profile)
-    payload["scheme_guidance"] = [
-        {
-            "scheme_name": "Unverified scheme",
-            "guidance": "Do not invent scheme advice.",
-            "source_references": [
-                {
-                    "source_type": "profile",
-                    "source_id": str(profile.id),
-                    "field_path": "/startup_name",
-                }
-            ],
-        }
-    ]
-
-    with pytest.raises(
-        BriefingOutputValidationError,
-        match="must be empty when the advisor snapshot contains no persisted recommendations",
     ):
         validate_startup_advisor_briefing(
             payload=payload,

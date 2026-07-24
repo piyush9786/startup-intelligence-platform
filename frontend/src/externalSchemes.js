@@ -35,6 +35,22 @@ function externalSchemeSearchText(record = {}) {
     .toLowerCase();
 }
 
+export function externalSchemeCatalogStatus(scheme = {}) {
+  if (scheme.catalog_status) {
+    return scheme.catalog_status;
+  }
+  if (scheme.review_status === "rejected") {
+    return "unavailable";
+  }
+  if (scheme.matched_scheme_id) {
+    return "merged";
+  }
+  if (scheme.review_status === "verified") {
+    return "reviewed";
+  }
+  return "needs_review";
+}
+
 export function filterExternalSchemes(records, query) {
   const collection = Array.isArray(records) ? records : [];
   const normalized = String(query || "").trim().toLowerCase();

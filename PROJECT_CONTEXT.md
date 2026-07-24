@@ -46,8 +46,27 @@ Current repository baseline:
   capability;
 - authorization context and canonical output hashes on every tool call;
 - initial `get_startup_profile` tool at version `v1`;
-- 518 backend tests passing;
-- 141 frontend tests passing;
+- public entry landing page, registration, login, and password recovery;
+- protected application shell for unauthenticated vs authenticated access;
+- structured My Startup experience across 9 domain sections with profile completeness and verification badges;
+- AI startup document intake workspace with pitch deck extraction, confidence scoring, page-level provenance, conflict review, and founder confirmation;
+- dynamic 8-step startup assessment wizard with profile prefilling, progress tracking, live step validation, and lock & submit confirmation modal;
+- readiness score breakdown & action roadmap workspace with domain score cards, evidence provenance, 3-wave execution roadmap, and direct tool deep links;
+- direct scheme matching engine & discovery explorer workspace with multi-facet filters (sector, stage, state, support type), ranked match scoring, and official portal launcher links;
+- regulatory compliance & certification engine workspace with authority-wise grouping (DPIIT, FSSAI, CDSCO, ISO/BIS, MCA), requirement cards, and external dataset provenance;
+- capital & loan support workspace with financing category filters (grants, debt, working capital), interest & collateral terms, and direct lender links;
+- verified startup & reviewer claim governance workspace with status filters (pending, approved, rejected), evidence inspection, and immutable decision audit logs;
+- AI startup builder workspace with problem definition, customer persona, interview planning, validation experiments, business model canvas, and pricing strategy;
+- AI capital planner workspace with deterministic burn rate, runway months, scenario modeling (conservative, balanced, growth), category capital allocations, sensitivity analysis, and CFO AI tradeoff notes;
+- execution & milestones engine workspace across 5 domain categories with dependency graph enforcement, completion evidence submission, and chronological progress update logs;
+- universal AI copilot with workspace-aware context injection, per-workspace quick prompts, copilot_context session field, and workspace-specific help for milestones, capital-planner, builder, schemes, startup, and assessment workspaces;
+- founder intelligence command-center dashboard aggregating live metrics from all workspaces (readiness, capital runway, milestones, builder progress, scheme matches, recent activity feed) with weakest-workspace focus navigation;
+- interactive `react-joyride` website tour replacing the static onboarding flow;
+- Ask Assistant integrated with local `qwen3:4b-instruct` LLM via Ollama for privacy-focused grounded Q&A;
+- robust Founder Advisor briefing schema validation to gracefully handle and drop hallucinated JSON pointers;
+- modern premium UI/UX incorporating glassmorphism, vibrant palettes, and dynamic motion across the platform;
+- 543 backend tests passing;
+- 203 frontend tests passing;
 - frontend production build passing;
 - Ruff, Django checks, and migration checks passing.
 

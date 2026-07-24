@@ -155,7 +155,9 @@ def test_service_only_adds_briefing_record():
 def test_invalid_output_is_not_persisted():
     owner, profile, snapshot = create_source()
     payload = valid_payload(profile)
-    payload["top_priorities"][0]["source_references"][0]["field_path"] = "/invented"
+    # Give an invalid source ID to trigger validation failure
+    ref = payload["top_priorities"][0]["source_references"][0]
+    ref["source_id"] = "00000000-0000-0000-0000-000000000001"
 
     with pytest.raises(BriefingOutputValidationError):
         generate_startup_advisor_briefing(

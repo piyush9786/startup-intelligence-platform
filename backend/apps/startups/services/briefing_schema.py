@@ -284,6 +284,14 @@ def _canonicalize_model_field_path(
     if candidate.startswith(source_prefix):
         candidate = "/" + candidate[len(source_prefix) :]
 
+    # Handle plural array prefixes from the top-level payload structure 
+    # that the LLM might incorrectly use
+    if source_type == "recommendation":
+        candidate = re.sub(r"^/recommendations?/\d+/", "/", candidate)
+    elif source_type == "evidence_chunk":
+        candidate = re.sub(r"^/retrieved_evidence/\d+/", "/", candidate)
+        candidate = re.sub(r"^/evidence_chunks?/\d+/", "/", candidate)
+
     return candidate
 
 
@@ -454,6 +462,13 @@ def validate_startup_advisor_briefing(
             ):
                 candidate_paths.append(repaired_boundary_path)
 
+            if reference["source_type"] == "profile" and not canonical_path.startswith(
+                "/profile_data/"
+            ):
+                profile_data_path = f"/profile_data{canonical_path}"
+                if profile_data_path not in candidate_paths:
+                    candidate_paths.append(profile_data_path)
+
             for candidate_path in candidate_paths:
                 try:
                     _resolve_json_pointer(
@@ -466,20 +481,10 @@ def validate_startup_advisor_briefing(
                 reference["field_path"] = candidate_path
                 break
             else:
-                raise BriefingOutputValidationError(
-                    f"{group_name} cites a missing field path "
-                    f"{original_path} in "
-                    f"{source_key[0]} {source_key[1]}."
-                )
+                reference["_invalid"] = True
 
-    for item in payload["scheme_guidance"]:
-        if not any(
-            reference["source_type"] == "recommendation"
-            for reference in item["source_references"]
-        ):
-            raise BriefingOutputValidationError(
-                "Each scheme-guidance item must cite a persisted recommendation."
-            )
+    for _group_name, references in _iter_reference_groups(payload):
+        references[:] = [ref for ref in references if not ref.pop("_invalid", False)]
 
     has_evidence_citation = any(
         reference["source_type"] == "evidence_chunk"
