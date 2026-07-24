@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from apps.core.models import TimeStampedModel
@@ -189,3 +190,393 @@ class AuthorityAlias(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.alias} → {self.authority.name}"
+
+
+class GraphReviewStatus(models.TextChoices):
+    REVIEW_REQUIRED = (
+        "review_required",
+        "Review required",
+    )
+    VERIFIED = "verified", "Verified"
+    REJECTED = "rejected", "Rejected"
+    RETIRED = "retired", "Retired"
+
+
+class GraphRecordOrigin(models.TextChoices):
+    MANUAL = "manual", "Manual"
+    EXTRACTED = "extracted", "Extracted"
+    IMPORTED = "imported", "Imported"
+
+
+class PrerequisiteConcept(TimeStampedModel):
+    class Category(models.TextChoices):
+        REGISTRATION = "registration", "Registration"
+        CERTIFICATION = "certification", "Certification"
+        COMPLIANCE = "compliance", "Compliance"
+        FINANCIAL = "financial", "Financial readiness"
+        OPERATIONAL = "operational", "Operational readiness"
+        SCHEME_ACCESS = "scheme_access", "Scheme access"
+        OTHER = "other", "Other"
+
+    class LifecycleStatus(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        VERIFIED = "verified", "Verified"
+        RETIRED = "retired", "Retired"
+
+    key = models.SlugField(
+        max_length=150,
+        unique=True,
+    )
+    name = models.CharField(max_length=300)
+    description = models.TextField()
+    category = models.CharField(
+        max_length=40,
+        choices=Category.choices,
+        default=Category.OTHER,
+    )
+    lifecycle_status = models.CharField(
+        max_length=30,
+        choices=LifecycleStatus.choices,
+        default=LifecycleStatus.DRAFT,
+    )
+    source_document = models.ForeignKey(
+        SourceDocument,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="prerequisite_concepts",
+    )
+    evidence_text = models.TextField(blank=True)
+    evidence_page = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    verified_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verified_prerequisite_concepts",
+    )
+    verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = [
+            "category",
+            "name",
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "lifecycle_status",
+                    "category",
+                ],
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+
+        if self.lifecycle_status != self.LifecycleStatus.VERIFIED:
+            return
+
+        errors = {}
+
+        if self.source_document_id is None:
+            errors["source_document"] = "A verified prerequisite requires an official source."
+
+        if not self.evidence_text.strip():
+            errors["evidence_text"] = "A verified prerequisite requires source evidence."
+
+        if self.verified_by_id is None:
+            errors["verified_by"] = "A verified prerequisite requires a reviewer."
+
+        if self.verified_at is None:
+            errors["verified_at"] = "A verified prerequisite requires a review timestamp."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class ReviewedGraphRelationship(TimeStampedModel):
+    origin = models.CharField(
+        max_length=20,
+        choices=GraphRecordOrigin.choices,
+        default=GraphRecordOrigin.MANUAL,
+    )
+    review_status = models.CharField(
+        max_length=30,
+        choices=GraphReviewStatus.choices,
+        default=GraphReviewStatus.REVIEW_REQUIRED,
+    )
+    source_document = models.ForeignKey(
+        SourceDocument,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    evidence_text = models.TextField()
+    evidence_page = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    review_notes = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    class Meta:
+        abstract = True
+
+    def clean(self) -> None:
+        super().clean()
+
+        errors = {}
+
+        if not self.evidence_text.strip():
+            errors["evidence_text"] = "A graph relationship requires source evidence."
+
+        if self.review_status == GraphReviewStatus.VERIFIED:
+            if self.reviewed_by_id is None:
+                errors["reviewed_by"] = "A verified relationship requires a reviewer."
+
+            if self.reviewed_at is None:
+                errors["reviewed_at"] = "A verified relationship requires a review timestamp."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class SchemePrerequisite(ReviewedGraphRelationship):
+    class RequirementType(models.TextChoices):
+        HARD = "hard", "Hard prerequisite"
+        SUPPORTING = "supporting", "Supporting prerequisite"
+
+    scheme_version = models.ForeignKey(
+        SchemeVersion,
+        on_delete=models.CASCADE,
+        related_name="prerequisite_relationships",
+    )
+    prerequisite = models.ForeignKey(
+        PrerequisiteConcept,
+        on_delete=models.PROTECT,
+        related_name="scheme_relationships",
+    )
+    requirement_type = models.CharField(
+        max_length=20,
+        choices=RequirementType.choices,
+        default=RequirementType.HARD,
+    )
+
+    class Meta:
+        ordering = [
+            "scheme_version",
+            "requirement_type",
+            "prerequisite",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "scheme_version",
+                    "prerequisite",
+                ],
+                name="unique_scheme_version_prerequisite",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "review_status",
+                    "scheme_version",
+                ],
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+
+        if self.review_status != GraphReviewStatus.VERIFIED:
+            return
+
+        errors = {}
+
+        if self.scheme_version.verification_status != SchemeVersion.VerificationStatus.VERIFIED:
+            errors["scheme_version"] = (
+                "A verified prerequisite relationship requires a verified scheme version."
+            )
+
+        if self.prerequisite.lifecycle_status != PrerequisiteConcept.LifecycleStatus.VERIFIED:
+            errors["prerequisite"] = (
+                "A verified relationship requires a verified prerequisite concept."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self) -> str:
+        return f"{self.scheme_version} requires {self.prerequisite}"
+
+
+class SchemeUnlock(ReviewedGraphRelationship):
+    predecessor_version = models.ForeignKey(
+        SchemeVersion,
+        on_delete=models.CASCADE,
+        related_name="unlock_relationships_out",
+    )
+    unlocked_version = models.ForeignKey(
+        SchemeVersion,
+        on_delete=models.CASCADE,
+        related_name="unlock_relationships_in",
+    )
+
+    class Meta:
+        ordering = [
+            "predecessor_version",
+            "unlocked_version",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "predecessor_version",
+                    "unlocked_version",
+                ],
+                name="unique_scheme_version_unlock",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "review_status",
+                    "predecessor_version",
+                ],
+            ),
+            models.Index(
+                fields=[
+                    "review_status",
+                    "unlocked_version",
+                ],
+            ),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+
+        errors = {}
+
+        if (
+            self.predecessor_version_id is not None
+            and self.unlocked_version_id is not None
+            and self.predecessor_version.scheme_id == self.unlocked_version.scheme_id
+        ):
+            errors["unlocked_version"] = "A scheme cannot unlock itself."
+
+        if self.review_status == GraphReviewStatus.VERIFIED:
+            for field_name in (
+                "predecessor_version",
+                "unlocked_version",
+            ):
+                version = getattr(self, field_name)
+
+                if version.verification_status != SchemeVersion.VerificationStatus.VERIFIED:
+                    errors[field_name] = "A verified unlock requires verified scheme versions."
+
+        if errors:
+            raise ValidationError(errors)
+
+        if (
+            self.review_status == GraphReviewStatus.VERIFIED
+            and self.predecessor_version_id is not None
+            and self.unlocked_version_id is not None
+        ):
+            from apps.schemes.services.prerequisite_graph import (
+                validate_no_unlock_cycles,
+            )
+
+            validate_no_unlock_cycles(
+                extra_edge=(
+                    self.predecessor_version.scheme_id,
+                    self.unlocked_version.scheme_id,
+                ),
+                exclude_relationship_id=self.pk,
+            )
+
+    def __str__(self) -> str:
+        return f"{self.predecessor_version} unlocks {self.unlocked_version}"
+
+
+class SchemeGraphProjectionRun(TimeStampedModel):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        SUCCEEDED = "succeeded", "Succeeded"
+        FAILED = "failed", "Failed"
+
+    graph_version = models.CharField(
+        max_length=100,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    source_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        db_index=True,
+    )
+    scheme_node_count = models.PositiveIntegerField(default=0)
+    prerequisite_node_count = models.PositiveIntegerField(
+        default=0,
+    )
+    prerequisite_edge_count = models.PositiveIntegerField(
+        default=0,
+    )
+    unlock_edge_count = models.PositiveIntegerField(default=0)
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    finished_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    error_message = models.TextField(blank=True)
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.graph_version} - {self.status} - {self.created_at:%Y-%m-%d %H:%M}"
