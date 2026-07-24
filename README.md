@@ -77,6 +77,7 @@ architecture, safety, and implementation context.
 - [Documentation index](docs/README.md)
 - [Shared agent orchestration](docs/architecture/SHARED_AGENT_ORCHESTRATION_V1.md)
 - [Site-wide founder chatbot](docs/architecture/SITE_WIDE_CHATBOT_V1.md)
+- [Multi-Language Support (i18n)](docs/frontend/I18N_V1.md)
 - [First-open onboarding tour](docs/frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md)
 - [Consolidated starting plan](docs/startups/STARTING_PLAN_V1.md)
 - [Dependency-aware funding plan](docs/startups/FUNDING_PLAN_V1.md)

@@ -6,6 +6,8 @@ import {
   getPublicSchemeCount,
 } from "./api";
 import { humanizeApiError } from "./advisor";
+import { useT } from "./i18n/index.jsx";
+import LanguageSwitcher from "./LanguageSwitcher.jsx";
 
 const capabilities = [
   {
@@ -49,6 +51,7 @@ function PublicHeader({
   onRegister,
   onSignIn,
 }) {
+  const { t } = useT();
   return (
     <header className="public-header">
       <button
@@ -61,8 +64,8 @@ function PublicHeader({
       >
         <BrandMark />
         <span>
-          <strong>Startup Intelligence</strong>
-          <small>AI founder operating system</small>
+          <strong>{t("brand.name")}</strong>
+          <small>{t("brand.tagline.public")}</small>
         </span>
       </button>
 
@@ -71,30 +74,31 @@ function PublicHeader({
         className="public-navigation"
       >
         <a href="#how-it-works">
-          How it works
+          {t("landing.how_it_works")}
         </a>
         <a href="#capabilities">
-          Capabilities
+          {t("landing.capabilities")}
         </a>
         <a href="#trust">
-          Trust
+          {t("landing.trust")}
         </a>
       </nav>
 
       <div className="public-header-actions">
+        <LanguageSwitcher />
         <button
           className="public-text-button"
           onClick={onSignIn}
           type="button"
         >
-          Sign in
+          {t("action.sign_in")}
         </button>
         <button
           className="button button-primary"
           onClick={onRegister}
           type="button"
         >
-          Create account
+          {t("action.register")}
         </button>
       </div>
     </header>
@@ -105,11 +109,36 @@ function LandingPage({
   onRegister,
   onSignIn,
 }) {
+  const { t } = useT();
   const [schemeCount, setSchemeCount] = useState(0);
 
   React.useEffect(() => {
     getPublicSchemeCount().then(setSchemeCount).catch(() => {});
   }, []);
+
+  const capabilities = [
+    {
+      title: t("landing.cap1.title"),
+      description: t("landing.cap1.desc"),
+      icon: "01",
+    },
+    {
+      title: t("landing.cap2.title"),
+      description: t("landing.cap2.desc"),
+      icon: "02",
+    },
+    {
+      title: t("landing.cap3.title"),
+      description: t("landing.cap3.desc"),
+      icon: "03",
+    },
+  ];
+
+  const journey = [
+    t("landing.step1"),
+    t("landing.step2"),
+    t("landing.step3"),
+  ];
 
   return (
     <div className="public-site">
@@ -121,21 +150,14 @@ function LandingPage({
       <main>
         <section className="public-hero">
           <div className="public-hero-copy">
-            <span className="public-pill">
-              {schemeCount > 0 
-                ? `Discover over ${schemeCount} verified government schemes` 
-                : "Verified intelligence for Indian founders"}
-            </span>
+
 
             <h1>
-              Build your startup with clarity,
-              evidence, and practical AI guidance.
+              {t("landing.hero.title")}
             </h1>
 
             <p>
-              Discover relevant schemes, understand what your startup needs,
-              build a structured execution plan, and make better funding
-              decisions from one founder workspace.
+              {t("landing.hero.subtitle")}
             </p>
 
             <div className="public-hero-actions">
@@ -144,7 +166,7 @@ function LandingPage({
                 onClick={onRegister}
                 type="button"
               >
-                Start building
+                {t("landing.hero.cta_primary")}
               </button>
 
               <button
@@ -152,7 +174,7 @@ function LandingPage({
                 onClick={onSignIn}
                 type="button"
               >
-                Open existing workspace
+                {t("landing.hero.cta_secondary")}
               </button>
             </div>
 
@@ -804,8 +826,10 @@ export default function PublicEntry({
 }) {
   const [view, setView] = useState("landing");
 
+  let pageContent;
+
   if (view === "login") {
-    return (
+    pageContent = (
       <LoginPage
         onAuthenticated={onAuthenticated}
         onBack={() => setView("landing")}
@@ -813,31 +837,34 @@ export default function PublicEntry({
         onRegister={() => setView("register")}
       />
     );
-  }
-
-  if (view === "register") {
-    return (
+  } else if (view === "register") {
+    pageContent = (
       <RegistrationPage
         onAuthenticated={onAuthenticated}
         onBack={() => setView("landing")}
         onSignIn={() => setView("login")}
       />
     );
-  }
-
-  if (view === "forgot-password") {
-    return (
+  } else if (view === "forgot-password") {
+    pageContent = (
       <PasswordRecoveryPage
         onBack={() => setView("landing")}
+        onSignIn={() => setView("login")}
+      />
+    );
+  } else {
+    pageContent = (
+      <LandingPage
+        onRegister={() => setView("register")}
         onSignIn={() => setView("login")}
       />
     );
   }
 
   return (
-    <LandingPage
-      onRegister={() => setView("register")}
-      onSignIn={() => setView("login")}
-    />
+    <div className="public-page-root">
+      {pageContent}
+      <LanguageSwitcher />
+    </div>
   );
 }
