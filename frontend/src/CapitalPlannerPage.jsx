@@ -2,10 +2,10 @@ import React, { useEffect, useState } from "react";
 import { generateCapitalPlan, getCurrentCapitalPlan } from "./capitalPlannerApi";
 
 export default function CapitalPlannerPage({ onNavigate }) {
-  const [capitalInput, setCapitalInput] = useState("2400000");
-  const [revenueInput, setRevenueInput] = useState("300000");
-  const [fixedCostsInput, setFixedCostsInput] = useState("400000");
-  const [variableCostsInput, setVariableCostsInput] = useState("100000");
+  const [capitalInput, setCapitalInput] = useState("");
+  const [revenueInput, setRevenueInput] = useState("");
+  const [fixedCostsInput, setFixedCostsInput] = useState("");
+  const [variableCostsInput, setVariableCostsInput] = useState("");
 
   const [activeScenario, setActiveScenario] = useState("balanced");
   const [plan, setPlan] = useState(null);
@@ -162,11 +162,13 @@ export default function CapitalPlannerPage({ onNavigate }) {
                 PROJECTED CAPITAL RUNWAY
               </span>
               <div style={{ display: "flex", alignItems: "baseline", marginTop: "0.4rem" }}>
-                <span className="capital-runway-big">{plan.runway_months}</span>
-                <span className="capital-runway-unit">months</span>
+                <span className="capital-runway-big">
+                  {plan.runway_months >= 99 ? "Infinite" : plan.runway_months}
+                </span>
+                {plan.runway_months < 99 && <span className="capital-runway-unit">months</span>}
               </div>
               <p style={{ margin: "0.5rem 0 0", color: "rgba(255,255,255,0.8)", fontSize: "0.9rem" }}>
-                Net burn rate: <strong>₹{Number(plan.net_burn).toLocaleString("en-IN")} / month</strong>
+                {plan.net_burn > 0 ? "Net burn rate" : "Net profit"}: <strong>₹{Number(Math.abs(plan.net_burn)).toLocaleString("en-IN")} / month</strong>
               </p>
             </div>
 
@@ -211,7 +213,9 @@ export default function CapitalPlannerPage({ onNavigate }) {
                   </div>
                   <div>
                     <span style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", display: "block" }}>Projected Runway</span>
-                    <strong style={{ fontSize: "1.1rem", color: "var(--ink)" }}>{currentScenario.runway_months} Months</strong>
+                    <strong style={{ fontSize: "1.1rem", color: "var(--ink)" }}>
+                      {currentScenario.runway_months >= 99 ? "Infinite" : `${currentScenario.runway_months} Months`}
+                    </strong>
                   </div>
                   <div>
                     <span style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", display: "block" }}>Cost Shift</span>
