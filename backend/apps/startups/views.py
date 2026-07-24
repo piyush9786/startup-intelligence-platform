@@ -10,6 +10,7 @@ from rest_framework.viewsets import ModelViewSet
 from apps.recommendations.models import RecommendationGenerationRun
 
 from .models import (
+    StartupFundingPlan,
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
@@ -17,6 +18,8 @@ from .models import (
 )
 from .serializers import (
     StartupDocumentAutofillRequestSerializer,
+    StartupFundingPlanGenerationRequestSerializer,
+    StartupFundingPlanSerializer,
     StartupProfileSerializer,
     StartupReadinessActionPlanGenerationRequestSerializer,
     StartupReadinessActionPlanSerializer,
@@ -27,9 +30,11 @@ from .serializers import (
     StartupStartingPlanSerializer,
 )
 from .services import (
+    FundingPlanSourceError,
     StartingPlanSourceError,
     StartupDocumentAutofillError,
     build_startup_profile_autofill,
+    create_startup_funding_plan,
     create_startup_readiness_action_plan,
     create_startup_readiness_assessment,
     create_startup_starting_plan,
@@ -54,6 +59,17 @@ def _visible_readiness_action_plans(user):
     queryset = StartupReadinessActionPlan.objects.all()
     if not user.is_staff:
         queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
+
+
+def _visible_funding_plans(user):
+    queryset = StartupFundingPlan.objects.all()
+
+    if not user.is_staff:
+        queryset = queryset.filter(
+            startup_profile__owner=user,
+        )
+
     return queryset
 
 
@@ -86,8 +102,6 @@ class StartupProfileViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
-
-
 
 
 class StartupProfileDocumentAutofillView(APIView):
@@ -408,11 +422,7 @@ class StartupStartingPlanGenerateView(APIView):
         payload["created"] = result.created
         return Response(
             payload,
-            status=(
-                status.HTTP_201_CREATED
-                if result.created
-                else status.HTTP_200_OK
-            ),
+            status=(status.HTTP_201_CREATED if result.created else status.HTTP_200_OK),
         )
 
 
@@ -448,9 +458,7 @@ class StartupStartingPlanCurrentView(APIView):
                 "startup_profile_id": str(startup_profile.pk),
                 "has_starting_plan": plan is not None,
                 "starting_plan": (
-                    StartupStartingPlanSerializer(plan).data
-                    if plan is not None
-                    else None
+                    StartupStartingPlanSerializer(plan).data if plan is not None else None
                 ),
             },
             status=status.HTTP_200_OK,
@@ -511,5 +519,174 @@ class StartupStartingPlanDetailView(APIView):
         )
         return Response(
             StartupStartingPlanSerializer(plan).data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupFundingPlanGenerateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        request_serializer = StartupFundingPlanGenerationRequestSerializer(
+            data=request.data,
+        )
+        request_serializer.is_valid(
+            raise_exception=True,
+        )
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        source_starting_plan = (
+            _visible_starting_plans(request.user)
+            .filter(
+                startup_profile=startup_profile,
+                is_current=True,
+            )
+            .select_related(
+                "startup_profile",
+                "source_assessment",
+                "source_action_plan",
+                "recommendation_generation_run",
+                "requested_by",
+            )
+            .first()
+        )
+
+        if source_starting_plan is None:
+            raise ValidationError(
+                {
+                    "startup_profile_id": (
+                        "A current persisted starting plan "
+                        "is required before generating a "
+                        "funding plan."
+                    )
+                }
+            )
+
+        try:
+            result = create_startup_funding_plan(
+                source_starting_plan=(source_starting_plan),
+                requested_by=request.user,
+                as_of_date=(request_serializer.validated_data["as_of_date"]),
+            )
+        except FundingPlanSourceError as exc:
+            raise ValidationError({"startup_profile_id": str(exc)}) from exc
+
+        payload = dict(StartupFundingPlanSerializer(result.plan).data)
+        payload["created"] = result.created
+
+        return Response(
+            payload,
+            status=(status.HTTP_201_CREATED if result.created else status.HTTP_200_OK),
+        )
+
+
+class StartupFundingPlanCurrentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = StartupReadinessRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(
+            raise_exception=True,
+        )
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        plan = (
+            _visible_funding_plans(request.user)
+            .filter(
+                startup_profile=startup_profile,
+                is_current=True,
+            )
+            .select_related(
+                "startup_profile",
+                "source_starting_plan",
+                "requested_by",
+            )
+            .first()
+        )
+
+        return Response(
+            {
+                "startup_profile_id": str(startup_profile.pk),
+                "has_funding_plan": (plan is not None),
+                "funding_plan": (
+                    StartupFundingPlanSerializer(plan).data if plan is not None else None
+                ),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupFundingPlanListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        request_serializer = StartupReadinessRetrievalRequestSerializer(
+            data=request.query_params,
+        )
+        request_serializer.is_valid(
+            raise_exception=True,
+        )
+
+        startup_profile = get_object_or_404(
+            _visible_profiles(request.user),
+            pk=request_serializer.validated_data["startup_profile_id"],
+        )
+        plans = (
+            _visible_funding_plans(request.user)
+            .filter(
+                startup_profile=startup_profile,
+            )
+            .select_related(
+                "startup_profile",
+                "source_starting_plan",
+                "requested_by",
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
+        data = StartupFundingPlanSerializer(
+            plans,
+            many=True,
+        ).data
+
+        return Response(
+            {
+                "startup_profile_id": str(startup_profile.pk),
+                "count": len(data),
+                "funding_plans": data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StartupFundingPlanDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(
+        self,
+        request,
+        funding_plan_id,
+    ):
+        plan = get_object_or_404(
+            _visible_funding_plans(request.user).select_related(
+                "startup_profile",
+                "source_starting_plan",
+                "requested_by",
+            ),
+            pk=funding_plan_id,
+        )
+
+        return Response(
+            StartupFundingPlanSerializer(plan).data,
             status=status.HTTP_200_OK,
         )

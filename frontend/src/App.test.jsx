@@ -55,6 +55,15 @@ vi.mock("./FounderConcierge", () => ({
   default: () => null,
 }));
 
+vi.mock("./FundingPlanPage", () => ({
+  default: ({ startupProfileId }) => (
+    <section>
+      <h1>Funding plan integration page</h1>
+      <span>Startup profile {startupProfileId}</span>
+    </section>
+  ),
+}));
+
 import App from "./App.jsx";
 
 const profile = {
@@ -2105,5 +2114,59 @@ describe("persisted founder onboarding tour", () => {
     expect(
       screen.queryByRole("dialog"),
     ).not.toBeInTheDocument();
+  });
+});
+
+
+describe("funding plan application integration", () => {
+  test("opens the funding plan from founder navigation", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    const navigation = await screen.findByRole("navigation", {
+      name: "Application workspace",
+    });
+
+    await user.click(
+      within(navigation).getByRole("button", {
+        name: "Funding plan",
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Funding plan integration page",
+      }),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(`Startup profile ${profile.id}`),
+    ).toBeInTheDocument();
+  });
+
+  test("opens the funding plan from dashboard tools", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    const founderToolsHeading = await screen.findByRole("heading", {
+      name: "Founder tools",
+    });
+    const founderTools = founderToolsHeading.closest("section");
+
+    expect(founderTools).not.toBeNull();
+
+    await user.click(
+      within(founderTools).getByRole("button", {
+        name: /Funding plan/i,
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Funding plan integration page",
+      }),
+    ).toBeInTheDocument();
   });
 });

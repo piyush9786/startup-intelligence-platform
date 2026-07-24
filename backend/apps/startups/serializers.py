@@ -7,6 +7,7 @@ from .models import (
     StartupAdvisorBriefingJob,
     StartupAdvisorSnapshot,
     StartupAssessmentDraft,
+    StartupFundingPlan,
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
@@ -24,9 +25,7 @@ from .services.document_autofill import (
 
 def _validate_incorporation_date(value):
     if value is not None and value > timezone.localdate():
-        raise serializers.ValidationError(
-            "The incorporation date cannot be in the future."
-        )
+        raise serializers.ValidationError("The incorporation date cannot be in the future.")
     return value
 
 
@@ -45,8 +44,6 @@ class StartupProfileSerializer(serializers.ModelSerializer):
         )
 
 
-
-
 class StartupDocumentAutofillRequestSerializer(serializers.Serializer):
     file = serializers.FileField()
     document_type = serializers.ChoiceField(
@@ -57,9 +54,7 @@ class StartupDocumentAutofillRequestSerializer(serializers.Serializer):
 
     def validate_file(self, value):
         if value.size > MAX_AUTOFILL_DOCUMENT_BYTES:
-            raise serializers.ValidationError(
-                "The uploaded document must be 10 MB or smaller."
-            )
+            raise serializers.ValidationError("The uploaded document must be 10 MB or smaller.")
         return value
 
     def validate(self, attrs):
@@ -70,12 +65,7 @@ class StartupDocumentAutofillRequestSerializer(serializers.Serializer):
         )
         if not mime_type:
             raise serializers.ValidationError(
-                {
-                    "file": (
-                        "Only text-based PDF and plain-text documents "
-                        "are supported."
-                    )
-                }
+                {"file": ("Only text-based PDF and plain-text documents are supported.")}
             )
         attrs["mime_type"] = mime_type
         return attrs
@@ -549,10 +539,7 @@ class StartupStartingPlanGenerationRequestSerializer(serializers.Serializer):
         if raw_fields:
             raise serializers.ValidationError(
                 {
-                    name: (
-                        "Raw starting-plan data is not accepted. "
-                        "Use startup_profile_id."
-                    )
+                    name: ("Raw starting-plan data is not accepted. Use startup_profile_id.")
                     for name in raw_fields
                 }
             )
@@ -591,6 +578,95 @@ class StartupStartingPlanSerializer(serializers.ModelSerializer):
             "total_item_count",
             "next_item",
             "items",
+            "plan_version",
+            "is_current",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
+class StartupFundingPlanGenerationRequestSerializer(serializers.Serializer):
+    startup_profile_id = serializers.UUIDField()
+    as_of_date = serializers.DateField(
+        required=False,
+        default=timezone.localdate,
+    )
+    starting_plan = serializers.JSONField(
+        required=False,
+        write_only=True,
+    )
+    graph = serializers.JSONField(
+        required=False,
+        write_only=True,
+    )
+    steps = serializers.JSONField(
+        required=False,
+        write_only=True,
+    )
+    dependencies = serializers.JSONField(
+        required=False,
+        write_only=True,
+    )
+    ordering = serializers.JSONField(
+        required=False,
+        write_only=True,
+    )
+
+    def validate(self, attrs):
+        raw_fields = [
+            name
+            for name in (
+                "starting_plan",
+                "graph",
+                "steps",
+                "dependencies",
+                "ordering",
+            )
+            if name in attrs
+        ]
+
+        if raw_fields:
+            raise serializers.ValidationError(
+                {
+                    name: (
+                        "Raw funding-plan data is not accepted. "
+                        "Use startup_profile_id and optional "
+                        "as_of_date."
+                    )
+                    for name in raw_fields
+                }
+            )
+
+        return attrs
+
+
+class StartupFundingPlanSerializer(serializers.ModelSerializer):
+    startup_profile_id = serializers.UUIDField(
+        read_only=True,
+    )
+    source_starting_plan_id = serializers.UUIDField(
+        read_only=True,
+    )
+    requested_by_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = StartupFundingPlan
+        fields = (
+            "id",
+            "startup_profile_id",
+            "source_starting_plan_id",
+            "requested_by_id",
+            "as_of_date",
+            "source_hash",
+            "source_snapshot",
+            "plan_snapshot",
+            "step_count",
+            "dependency_count",
+            "execution_wave_count",
+            "next_step_ids",
             "plan_version",
             "is_current",
             "created_at",

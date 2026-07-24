@@ -30,6 +30,7 @@ The following major capabilities are operational:
 - bounded founder concierge state machine;
 - persisted consolidated deterministic starting plan.
 - verified scheme-prerequisite graph with a rebuildable Neo4j projection.
+- persisted deterministic dependency-aware funding plan with execution waves.
 - ordered, responsive founder dashboard with accessible Motion transitions.
 
 ## Completed frontend polish: founder dashboard motion and hierarchy
@@ -163,26 +164,37 @@ no Phase 47 starting-plan reordering.
 See
 Verified scheme prerequisite graph.
 
-Remaining implementation order
-1. Funding plan engine — Phase 49
+## Completed Phase 49: deterministic dependency-aware funding plan
 
-Purpose: produce an ordered, dependency-aware funding and readiness plan.
+Purpose: produce an ordered, dependency-aware funding and readiness plan without
+giving an LLM authority over ordering.
 
-Ordering must be algorithmic and consider:
+Implemented scope:
 
-hard prerequisite dependencies;
-verified application windows;
-sourced processing-time ranges;
-founder urgency;
-funding relevance;
-steps that may run in parallel.
+- pure versioned `startup-funding-plan-v1` engine;
+- validated hard and supporting dependency edges;
+- multiple predecessors per step;
+- cycle rejection and deterministic Kahn execution waves;
+- verified application-window ordering;
+- strictly sourced processing-time ranges;
+- founder urgency and funding relevance ordering;
+- explicit parallel-work grouping;
+- Phase 47 starting-plan source adapter;
+- verified Phase 48 prerequisite and unlock closure;
+- exclusion of unreviewed graph candidates;
+- immutable exact-source persistence with SHA-256 hashing;
+- one current plan per startup and complete historical retention;
+- founder-owned generate, current, history, and detail APIs;
+- rejection of browser-authored topology and ordering;
+- dedicated founder Funding plan workspace;
+- full backend and frontend validation.
 
-Use a dependency table that supports multiple predecessors per step instead of a
-single nullable depends_on field.
+See
+[Deterministic dependency-aware funding plan](startups/FUNDING_PLAN_V1.md).
 
-The LLM may narrate the generated plan but must not choose its ordering.
+## Remaining implementation order
 
-2. Progress feedback — Phase 50
+1. Progress feedback — Phase 50
 
 Purpose: connect plan execution back to readiness and recommendations.
 

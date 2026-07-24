@@ -39,6 +39,7 @@ import {
 import AssessmentWizard from "./AssessmentWizard";
 import ChatbotDrawer from "./ChatbotDrawer";
 import FounderConcierge from "./FounderConcierge";
+import FundingPlanPage from "./FundingPlanPage";
 import OnboardingTour from "./OnboardingTour";
 import StartingPlanPage from "./StartingPlanPage";
 import {
@@ -540,6 +541,7 @@ function Navigation({
         ["startup", "◉", "My startup"],
         ["assessment", "＋", "Startup assessment"],
         ["starting-plan", "◎", "Starting plan"],
+        ["funding-plan", "≋", "Funding plan"],
         ["roadmap", "↗", "Action roadmap"],
       ],
     },
@@ -1505,6 +1507,16 @@ function DashboardHome({
               <span>◎</span>
               <strong>Starting plan</strong>
               <small>Your ordered readiness and scheme actions</small>
+            </m.button>
+            <m.button
+              onClick={() => onNavigate("funding-plan")}
+              type="button"
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span>≋</span>
+              <strong>Funding plan</strong>
+              <small>Verified dependencies, sequencing and parallel work</small>
             </m.button>
             <m.button
               onClick={() => onNavigate("requirements")}
@@ -4653,6 +4665,13 @@ function Workspace({ onSignOut }) {
   } else if (activeView === "starting-plan") {
     page = (
       <StartingPlanPage
+        onNavigate={handleNavigate}
+        startupProfileId={selectedProfileId}
+      />
+    );
+  } else if (activeView === "funding-plan") {
+    page = (
+      <FundingPlanPage
         onNavigate={handleNavigate}
         startupProfileId={selectedProfileId}
       />

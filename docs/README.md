@@ -28,6 +28,7 @@ workflow, and immediate next milestone.
 
 - [Readiness engine](startups/READINESS_ENGINE_V1.md)
 - [Consolidated deterministic starting plan](startups/STARTING_PLAN_V1.md)
+- [Deterministic dependency-aware funding plan](startups/FUNDING_PLAN_V1.md)
 - [Grounded open-source LLM advisor briefings](startups/GROUNDED_OPEN_SOURCE_LLM_ADVISOR_BRIEFINGS_V1.md)
 - [Advisor briefing retrieval API](startups/STARTUP_ADVISOR_BRIEFING_RETRIEVAL_API_V1.md)
 

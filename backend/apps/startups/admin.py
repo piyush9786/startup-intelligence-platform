@@ -6,6 +6,7 @@ from .models import (
     StartupAdvisorBriefingJob,
     StartupAdvisorSnapshot,
     StartupAssessmentDraft,
+    StartupFundingPlan,
     StartupProfile,
     StartupReadinessActionPlan,
     StartupReadinessAssessment,
@@ -245,6 +246,59 @@ class StartupStartingPlanAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(StartupFundingPlan)
+class StartupFundingPlanAdmin(admin.ModelAdmin):
+    list_display = (
+        "startup_profile",
+        "as_of_date",
+        "plan_version",
+        "step_count",
+        "dependency_count",
+        "execution_wave_count",
+        "is_current",
+        "requested_by",
+        "created_at",
+    )
+    list_filter = (
+        "plan_version",
+        "as_of_date",
+        "is_current",
+    )
+    search_fields = (
+        "startup_profile__startup_name",
+        "startup_profile__legal_name",
+        "requested_by__email",
+        "source_hash",
+    )
+    readonly_fields = (
+        "requested_by",
+        "startup_profile",
+        "source_starting_plan",
+        "as_of_date",
+        "source_hash",
+        "source_snapshot",
+        "plan_snapshot",
+        "step_count",
+        "dependency_count",
+        "execution_wave_count",
+        "next_step_ids",
+        "plan_version",
+        "is_current",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(
+        self,
+        request,
+        obj=None,
+    ):
         return False
 
 
