@@ -9,6 +9,7 @@ workflow, and immediate next milestone.
 ## Product direction
 
 - [Roadmap](ROADMAP.md)
+- [Product Vision v2](PRODUCT_VISION_V2.md)
 - [Infrastructure roadmap](../infrastructure/README.md)
 
 ## Architecture
