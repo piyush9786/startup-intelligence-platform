@@ -304,3 +304,25 @@ STARTUP_ADVISOR_LLM_KEEP_ALIVE = os.environ.get(
     "STARTUP_ADVISOR_LLM_KEEP_ALIVE",
     "5m",
 )
+
+# ── Ask Assistant chatbot LLM settings ─────────────────────────────────────
+# Controls the live Qwen3:4b inference for the chatbot drawer.
+# Set CHATBOT_LLM_ENABLED=false to revert to the rule-based fallback only.
+CHATBOT_LLM_ENABLED = os.environ.get(
+    "CHATBOT_LLM_ENABLED",
+    "true",
+).lower() in ("1", "true", "yes")
+
+CHATBOT_LLM_TIMEOUT_SECONDS = float(
+    os.environ.get(
+        "CHATBOT_LLM_TIMEOUT_SECONDS",
+        "60",
+    )
+)
+
+CHATBOT_LLM_MAX_OUTPUT_TOKENS = int(
+    os.environ.get(
+        "CHATBOT_LLM_MAX_OUTPUT_TOKENS",
+        "1024",
+    )
+)

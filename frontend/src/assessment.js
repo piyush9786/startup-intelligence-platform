@@ -284,3 +284,51 @@ export function firstInvalidAssessmentStep(form) {
   }
   return null;
 }
+
+export function assessmentFormFromProfile(profile = {}, currentForm = INITIAL_ASSESSMENT_FORM) {
+  if (!profile) return { ...currentForm };
+
+  const mergedData = {
+    ...profile,
+    ...(profile.profile_data || {}),
+  };
+
+  const next = { ...currentForm };
+
+  Object.keys(next).forEach((field) => {
+    const val = mergedData[field];
+    if (val !== undefined && val !== null && val !== "") {
+      if (LIST_FIELDS.has(field)) {
+        next[field] = listToText(val);
+      } else if (BOOLEAN_FIELDS.has(field)) {
+        next[field] = booleanToText(val);
+      } else {
+        next[field] = String(val);
+      }
+    }
+  });
+
+  return next;
+}
+
+export function assessmentProgress(form = {}) {
+  const stepStatus = {};
+  let validCount = 0;
+
+  ASSESSMENT_STEPS.forEach((step) => {
+    const errors = assessmentStepErrors(step.id, form);
+    const isValid = errors.length === 0;
+    stepStatus[step.id] = isValid;
+    if (isValid) validCount += 1;
+  });
+
+  const percentage = Math.round((validCount / ASSESSMENT_STEPS.length) * 100);
+
+  return {
+    percentage,
+    validCount,
+    totalSteps: ASSESSMENT_STEPS.length,
+    stepStatus,
+    isComplete: validCount === ASSESSMENT_STEPS.length,
+  };
+}
