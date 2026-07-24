@@ -47,10 +47,10 @@ describe("MyStartupPage component", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: "Acme Climate" }),
+      screen.getAllByRole("heading", { name: "Acme Climate" })[0],
     ).toBeInTheDocument();
-    expect(screen.getByText(/complete/i)).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Startup Profile/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/complete/i)[0]).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Startup Resume/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Assessment/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Document Intake/i })).toBeInTheDocument();
   });
@@ -66,10 +66,10 @@ describe("MyStartupPage component", () => {
     );
 
     expect(
-      screen.getAllByRole("heading", { name: "Company overview" })[0],
+      screen.getAllByRole("heading", { name: /Company overview/i })[0],
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Compliance & registrations" }),
+      screen.getByRole("heading", { name: /Compliance & registrations/i }),
     ).toBeInTheDocument();
   });
 

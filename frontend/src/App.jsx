@@ -464,8 +464,6 @@ function Navigation({
         ["startup", "◉", "My startup"],
         ["builder", "🛠", "Startup Builder"],
         ["capital-planner", "📊", "Capital planner"],
-        ["starting-plan", "◎", "Starting plan"],
-        ["funding-plan", "≋", "Funding plan"],
         ["roadmap", "↗", "Action roadmap"],
       ],
     },
@@ -1282,7 +1280,7 @@ function DashboardHome({
           <m.button
             className="hero-primary-action"
             onClick={() =>
-              onNavigate(nextAction ? "starting-plan" : "assessment")
+              onNavigate("roadmap")
             }
             type="button"
             whileHover={{ x: 3 }}
@@ -1438,26 +1436,6 @@ function DashboardHome({
             </div>
           </div>
           <div className="support-map-grid">
-            <m.button
-              onClick={() => onNavigate("starting-plan")}
-              type="button"
-              whileHover={{ y: -3 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <span>◎</span>
-              <strong>Starting plan</strong>
-              <small>Your ordered readiness and scheme actions</small>
-            </m.button>
-            <m.button
-              onClick={() => onNavigate("funding-plan")}
-              type="button"
-              whileHover={{ y: -3 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <span>≋</span>
-              <strong>Funding plan</strong>
-              <small>Verified dependencies, sequencing and parallel work</small>
-            </m.button>
             <m.button
               onClick={() => onNavigate("requirements")}
               type="button"
@@ -3425,9 +3403,10 @@ function Workspace({ onSignOut }) {
         startupProfileId={selectedProfileId}
       />
     );
-  } else if (activeView === "starting-plan") {
+  } else if (activeView === "starting-plan" || activeView === "funding-plan") {
+    // Redirect removed plan views to roadmap
     page = (
-      <StartingPlanPage
+      <ActionRoadmapPage
         onNavigate={handleNavigate}
         startupProfileId={selectedProfileId}
       />
@@ -3451,13 +3430,7 @@ function Workspace({ onSignOut }) {
         onNavigate={handleNavigate}
       />
     );
-  } else if (activeView === "funding-plan") {
-    page = (
-      <FundingPlanPage
-        onNavigate={handleNavigate}
-        startupProfileId={selectedProfileId}
-      />
-    );
+
   } else if (activeView === "advisor") {
     page = (
       <AdvisorWorkspace

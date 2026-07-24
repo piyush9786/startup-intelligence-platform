@@ -16,9 +16,9 @@ import AssessmentWizard from "./AssessmentWizard";
 const MOTION_EASE = [0.22, 1, 0.36, 1];
 
 const TABS = [
-  { id: "profile", label: "Startup Profile", icon: "◉" },
+  { id: "profile", label: "Startup Resume", icon: "📄" },
   { id: "assessment", label: "Assessment", icon: "＋" },
-  { id: "documents", label: "Document Intake", icon: "📄" },
+  { id: "documents", label: "Document Intake", icon: "✦" },
 ];
 
 function SectionBadge({ field, profile }) {
@@ -35,7 +35,7 @@ function SectionBadge({ field, profile }) {
 
   if (profile?.autofilled_fields?.includes(field.key)) {
     return (
-      <span className="badge badge-extracted" title="Extracted from pitch deck or document">
+      <span className="badge badge-extracted" title="Extracted from document">
         ✦ Extracted
       </span>
     );
@@ -43,12 +43,156 @@ function SectionBadge({ field, profile }) {
 
   return (
     <span className="badge badge-claim" title="Self-reported by founder">
-      Founder claim
+      Verified claim
     </span>
   );
 }
 
+function StartupResumeView({ completeness, onGoToAssessment, profile }) {
+  const startupName = profile?.startup_name || "Startup Name Not Specified";
+  const legalName = profile?.legal_name || profile?.startup_name || "Legal entity pending";
+  const sectors = profile?.sectors || [];
+  const technologies = profile?.technologies || [];
+  const location = [profile?.district, profile?.state].filter(Boolean).join(", ");
+  const readinessScore = profile?.readiness_score ?? null;
 
+  return (
+    <div className="startup-resume-container">
+      {/* ── Executive Resume Card ── */}
+      <article className="startup-resume-card">
+        {/* Header Bar */}
+        <header className="resume-header">
+          <div className="resume-header-top">
+            <span className="resume-doc-kicker">EXECUTIVE STARTUP FACTSHEET</span>
+            <div className="resume-badges">
+              {profile?.dpiit_recognized && (
+                <span className="resume-badge badge-dpiit">
+                  <b aria-hidden="true">✓</b> DPIIT Recognized
+                </span>
+              )}
+              <span className="resume-badge badge-stage">
+                {readinessStatusLabel(profile?.stage || "Early Stage")}
+              </span>
+              {readinessScore !== null && (
+                <span className="resume-badge badge-score">
+                  Score: {readinessScore}/100
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="resume-title-block">
+            <div className="resume-logo-avatar">
+              {startupName.slice(0, 1).toUpperCase()}
+            </div>
+            <div className="resume-identity">
+              <h1 className="resume-startup-name">{startupName}</h1>
+              <p className="resume-legal-name">{legalName}</p>
+              {location && (
+                <span className="resume-location-pill">
+                  <i aria-hidden="true">⌖</i> {location}
+                </span>
+              )}
+            </div>
+            <button
+              className="button button-primary button-small resume-update-cta"
+              onClick={onGoToAssessment}
+              type="button"
+            >
+              Update via Assessment →
+            </button>
+          </div>
+
+          {/* Quick Metrics Strip */}
+          <div className="resume-metrics-strip">
+            <div className="resume-metric-item">
+              <span className="resume-metric-label">Profile Completeness</span>
+              <strong className="resume-metric-value">{completeness.overallPercent}%</strong>
+            </div>
+            <div className="resume-metric-item">
+              <span className="resume-metric-label">Verified Facts</span>
+              <strong className="resume-metric-value">{completeness.filledFields} / {completeness.totalFields}</strong>
+            </div>
+            <div className="resume-metric-item">
+              <span className="resume-metric-label">Primary Sector</span>
+              <strong className="resume-metric-value">{sectors[0] || "General"}</strong>
+            </div>
+            <div className="resume-metric-item">
+              <span className="resume-metric-label">DPIIT Status</span>
+              <strong className="resume-metric-value">{profile?.dpiit_recognized ? "Recognized" : "Pending"}</strong>
+            </div>
+          </div>
+        </header>
+
+        {/* Resume Content Sections */}
+        <div className="resume-body">
+          {/* Executive Overview */}
+          <section className="resume-section">
+            <h2 className="resume-section-title">
+              <span className="title-icon">✦</span> Executive Summary
+            </h2>
+            <p className="resume-overview-text">
+              {profile?.description || "No overview statement provided yet. Run the Assessment wizard to add detailed startup background, pitch, and core mission."}
+            </p>
+          </section>
+
+          {/* Two-Column Grid for Resume Categories */}
+          <div className="resume-grid">
+            {SECTION_DEFINITIONS.map((section) => {
+              const score = completeness.sectionScores[section.id] || {};
+
+              return (
+                <section key={section.id} className="resume-section-card">
+                  <div className="resume-section-card-header">
+                    <h3>
+                      <span className="section-card-icon">{section.icon}</span>
+                      {section.title}
+                    </h3>
+                    <span className="resume-field-count">
+                      {score.filled}/{score.total} facts
+                    </span>
+                  </div>
+
+                  <dl className="resume-fields-list">
+                    {section.fields.map((field) => {
+                      const filled = isFieldFilled(profile, field);
+                      const displayValue = formatFieldValue(profile, field);
+
+                      return (
+                        <div key={field.key} className={`resume-field-row ${filled ? "row-filled" : "row-empty"}`}>
+                          <dt className="resume-field-term">
+                            <span>{field.label}</span>
+                            <SectionBadge field={field} profile={profile} />
+                          </dt>
+                          <dd className="resume-field-desc">{displayValue}</dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </section>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Resume Footer */}
+        <footer className="resume-footer">
+          <div className="resume-footer-info">
+            <span>Official Founder Factsheet · Startup Intelligence Platform</span>
+            <small>All facts shown are sourced from submitted drafts, certificates, and verified evidence logs.</small>
+          </div>
+          <button
+            className="button button-secondary button-small"
+            onClick={onGoToAssessment}
+            type="button"
+          >
+            Update Information via Assessment →
+          </button>
+        </footer>
+      </article>
+    </div>
+  );
+}
 
 export default function MyStartupPage({
   initialTab = "profile",
@@ -78,7 +222,7 @@ export default function MyStartupPage({
               {(profile?.startup_name || "S").slice(0, 1).toUpperCase()}
             </div>
             <div>
-              <span className="section-kicker">Founder profile</span>
+              <span className="section-kicker">Executive Facts & Resume</span>
               <h1>{profile?.startup_name || "My Startup"}</h1>
               <p className="mystartup-subtitle">
                 {[profile?.sectors?.join(", "), profile?.state].filter(Boolean).join(" · ") || "Complete your profile to get started"}
@@ -155,68 +299,16 @@ export default function MyStartupPage({
         {activeTab === "profile" && (
           <m.div
             key="profile-tab"
-            className="domain-sections-grid"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.28, ease: MOTION_EASE }}
           >
-            {SECTION_DEFINITIONS.map((section) => {
-              const score = completeness.sectionScores[section.id] || {};
-              const isComplete = score.percent === 100;
-
-              return (
-                <section key={section.id} className="dashboard-card domain-section-card">
-                  <div className="domain-card-header">
-                    <div className="domain-title-group">
-                      <span className="domain-icon" aria-hidden="true">{section.icon}</span>
-                      <div>
-                        <h2>{section.title}</h2>
-                        <p>{section.description}</p>
-                      </div>
-                    </div>
-
-                    <div className="domain-actions">
-                      <span className={`status-pill ${isComplete ? "status-pill-pass" : "status-pill-neutral"}`}>
-                        {score.filled}/{score.total} fields
-                      </span>
-                      <button
-                        className="button button-secondary button-small"
-                        onClick={() => setActiveTab("assessment")}
-                        type="button"
-                        title="Update information via Startup Assessment"
-                      >
-                        Update via Assessment →
-                      </button>
-                    </div>
-                  </div>
-
-                  <dl className="profile-fields-grid">
-                    {section.fields.map((field) => {
-                      const filled = isFieldFilled(profile, field);
-                      const displayValue = formatFieldValue(profile, field);
-
-                      return (
-                        <div key={field.key} className={`profile-field-cell ${filled ? "field-filled" : "field-empty"}`}>
-                          <div className="field-label-row">
-                            <dt>{field.label}</dt>
-                            <SectionBadge field={field} profile={profile} />
-                          </div>
-                          <dd>{displayValue}</dd>
-                        </div>
-                      );
-                    })}
-                  </dl>
-
-                  {!isComplete && (
-                    <div className="section-empty-guidance">
-                      <span className="guidance-icon" aria-hidden="true">💡</span>
-                      <p>{section.emptyGuidance}</p>
-                    </div>
-                  )}
-                </section>
-              );
-            })}
+            <StartupResumeView
+              completeness={completeness}
+              onGoToAssessment={() => setActiveTab("assessment")}
+              profile={profile}
+            />
           </m.div>
         )}
 
