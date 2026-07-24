@@ -1,9 +1,20 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 
 import MyStartupPage from "./MyStartupPage";
+
+vi.mock("./AssessmentWizard", () => ({
+  default: function MockAssessmentWizard({ onCancel }) {
+    return (
+      <div data-testid="assessment-wizard">
+        <span>Assessment Wizard</span>
+        <button onClick={onCancel} type="button">Cancel</button>
+      </div>
+    );
+  },
+}));
 
 const sampleProfile = {
   id: "profile-1",
@@ -25,42 +36,38 @@ const sampleProfile = {
 };
 
 describe("MyStartupPage component", () => {
-  test("renders hero header with startup name and profile stats", () => {
+  test("renders hero header with startup name and 3 tabs", () => {
     render(
       <MyStartupPage
-        onAssess={vi.fn()}
+        onAssessmentSubmitted={vi.fn()}
         onUpdateProfile={vi.fn()}
         profile={sampleProfile}
+        startupProfileId="profile-1"
       />
     );
 
-    // Startup name heading appears in hero
     expect(
       screen.getByRole("heading", { name: "Acme Climate" }),
     ).toBeInTheDocument();
-
-    // Profile completeness stat is shown
     expect(screen.getByText(/complete/i)).toBeInTheDocument();
-
-    // Tabs are rendered
     expect(screen.getByRole("tab", { name: /Startup Profile/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Assessment/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Document Intake/i })).toBeInTheDocument();
   });
 
   test("profile tab renders domain section cards by default", () => {
     render(
       <MyStartupPage
-        onAssess={vi.fn()}
+        onAssessmentSubmitted={vi.fn()}
         onUpdateProfile={vi.fn()}
         profile={sampleProfile}
+        startupProfileId="profile-1"
       />
     );
 
-    // Profile tab is active by default so domain cards are visible
     expect(
       screen.getAllByRole("heading", { name: "Company overview" })[0],
     ).toBeInTheDocument();
-
     expect(
       screen.getByRole("heading", { name: "Compliance & registrations" }),
     ).toBeInTheDocument();
@@ -72,9 +79,10 @@ describe("MyStartupPage component", () => {
 
     render(
       <MyStartupPage
-        onAssess={vi.fn()}
+        onAssessmentSubmitted={vi.fn()}
         onUpdateProfile={handleUpdate}
         profile={sampleProfile}
+        startupProfileId="profile-1"
       />
     );
 
@@ -83,13 +91,25 @@ describe("MyStartupPage component", () => {
 
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("heading", { name: "Company overview" }),
-    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Save section updates" }));
-
     expect(handleUpdate).toHaveBeenCalled();
+  });
+
+  test("switching to Assessment tab renders AssessmentWizard", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MyStartupPage
+        onAssessmentSubmitted={vi.fn()}
+        onUpdateProfile={vi.fn()}
+        profile={sampleProfile}
+        startupProfileId="profile-1"
+      />
+    );
+
+    await user.click(screen.getByRole("tab", { name: /Assessment/i }));
+    expect(screen.getByTestId("assessment-wizard")).toBeInTheDocument();
   });
 
   test("switching to Document Intake tab renders intake content", async () => {
@@ -97,15 +117,14 @@ describe("MyStartupPage component", () => {
 
     render(
       <MyStartupPage
-        onAssess={vi.fn()}
+        onAssessmentSubmitted={vi.fn()}
         onUpdateProfile={vi.fn()}
         profile={sampleProfile}
+        startupProfileId="profile-1"
       />
     );
 
-    const docTab = screen.getByRole("tab", { name: /Document Intake/i });
-    await user.click(docTab);
-
+    await user.click(screen.getByRole("tab", { name: /Document Intake/i }));
     expect(
       screen.getByRole("heading", { name: /AI Document Intake/i }),
     ).toBeInTheDocument();

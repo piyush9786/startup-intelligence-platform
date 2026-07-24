@@ -11,11 +11,13 @@ import {
 } from "./profileCompleteness";
 import { readinessStatusLabel } from "./dashboard";
 import DocumentIntakeWorkspace from "./DocumentIntakeWorkspace";
+import AssessmentWizard from "./AssessmentWizard";
 
 const MOTION_EASE = [0.22, 1, 0.36, 1];
 
 const TABS = [
   { id: "profile", label: "Startup Profile", icon: "◉" },
+  { id: "assessment", label: "Assessment", icon: "＋" },
   { id: "documents", label: "Document Intake", icon: "📄" },
 ];
 
@@ -161,11 +163,14 @@ function SectionEditModal({
 }
 
 export default function MyStartupPage({
-  onAssess,
+  initialTab = "profile",
+  onAssessmentSubmitted,
+  onNavigate,
   onUpdateProfile,
   profile,
+  startupProfileId,
 }) {
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [editingSection, setEditingSection] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -247,13 +252,6 @@ export default function MyStartupPage({
               );
             })}
           </div>
-        </div>
-
-        {/* CTA */}
-        <div className="mystartup-hero-cta">
-          <button className="button button-secondary" onClick={onAssess} type="button">
-            Update assessment
-          </button>
         </div>
       </header>
 
@@ -343,6 +341,26 @@ export default function MyStartupPage({
                 </section>
               );
             })}
+          </m.div>
+        )}
+
+        {activeTab === "assessment" && (
+          <m.div
+            key="assessment-tab"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.28, ease: MOTION_EASE }}
+          >
+            <AssessmentWizard
+              onCancel={() => setActiveTab("profile")}
+              onSubmitted={(submission) => {
+                if (onAssessmentSubmitted) onAssessmentSubmitted(submission);
+                setActiveTab("profile");
+              }}
+              profile={profile}
+              startupProfileId={startupProfileId || null}
+            />
           </m.div>
         )}
 

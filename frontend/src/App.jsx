@@ -464,7 +464,6 @@ function Navigation({
         ["startup", "◉", "My startup"],
         ["builder", "🛠", "Startup Builder"],
         ["capital-planner", "📊", "Capital planner"],
-        ["assessment", "＋", "Startup assessment"],
         ["starting-plan", "◎", "Starting plan"],
         ["funding-plan", "≋", "Funding plan"],
         ["roadmap", "↗", "Action roadmap"],
@@ -560,49 +559,73 @@ function ProductSidebar({
   onNavigate,
   profile,
 }) {
+  const completenessPercent = profile
+    ? Math.round(
+        (Object.keys(profile).filter((k) => profile[k] !== null && profile[k] !== undefined && profile[k] !== "").length /
+          Math.max(Object.keys(profile).length, 1)) *
+          100,
+      )
+    : 0;
+
   return (
     <aside className="product-sidebar">
-      <div className="product-brand">
-        <span className="product-brand-mark" aria-hidden="true">SI</span>
-        <div>
+      {/* Brand */}
+      <div className="sidebar-brand">
+        <div className="sidebar-brand-mark" aria-hidden="true">
+          <span>SI</span>
+        </div>
+        <div className="sidebar-brand-text">
           <strong>Startup Intelligence</strong>
-          <span>Founder support workspace</span>
+          <span>Founder OS</span>
         </div>
       </div>
 
+      {/* Profile preview */}
+      {profile && (
+        <button
+          className="sidebar-profile-card"
+          onClick={() => onNavigate("startup")}
+          type="button"
+        >
+          <span className="sidebar-avatar" aria-hidden="true">
+            {(profile.startup_name || "S").slice(0, 1).toUpperCase()}
+          </span>
+          <div className="sidebar-profile-info">
+            <strong>{profile.startup_name}</strong>
+            <span>{readinessStatusLabel(profile.stage || "early stage")}</span>
+          </div>
+          <span className="sidebar-profile-arrow" aria-hidden="true">→</span>
+        </button>
+      )}
+
+      {/* Navigation */}
       <Navigation
         activeView={activeView}
         canReviewEligibility={canReviewEligibility}
         onNavigate={onNavigate}
       />
 
-      <section className="sidebar-evidence-card">
-        <span className="sidebar-evidence-icon" aria-hidden="true">✓</span>
-        <strong>Evidence-backed support</strong>
-        <p>
-          Schemes, requirements, funding and guidance are shown from persisted
-          platform records.
-        </p>
-        <div className="sidebar-evidence-stats">
-          <span><strong>{metrics.recommendations}</strong> matched schemes</span>
-          <span><strong>{metrics.actions}</strong> roadmap actions</span>
-        </div>
-      </section>
-
-      {profile && (
-        <div className="sidebar-profile">
-          <span className="profile-avatar" aria-hidden="true">
-            {(profile.startup_name || "S").slice(0, 1).toUpperCase()}
+      {/* Stats footer */}
+      <div className="sidebar-stats-footer">
+        <div className="sidebar-stat-row">
+          <span className="sidebar-stat-chip">
+            <b>{metrics.recommendations}</b>
+            <span>schemes</span>
           </span>
-          <div>
-            <strong>{profile.startup_name}</strong>
-            <span>{readinessStatusLabel(profile.stage || "stage pending")}</span>
-          </div>
+          <span className="sidebar-stat-chip">
+            <b>{metrics.actions}</b>
+            <span>actions</span>
+          </span>
+          <span className="sidebar-stat-chip sidebar-stat-chip-green">
+            <b>✓</b>
+            <span>verified data</span>
+          </span>
         </div>
-      )}
+      </div>
     </aside>
   );
 }
+
 
 function ProductTopbar({
   loadingProfiles,
@@ -3343,20 +3366,25 @@ function Workspace({ onSignOut }) {
       />
     );
   } else if (activeView === "assessment") {
+    // Assessment is now embedded inside MyStartupPage — redirect there
     page = (
-      <AssessmentWizard
-        onCancel={() => handleNavigate(profiles.length ? "startup" : "overview")}
-        onSubmitted={handleAssessmentSubmitted}
+      <MyStartupPage
+        onAssessmentSubmitted={handleAssessmentSubmitted}
+        onNavigate={handleNavigate}
+        onUpdateProfile={handleUpdateProfile}
         profile={selectedProfile}
-        startupProfileId={selectedProfileId || null}
+        startupProfileId={selectedProfileId}
+        initialTab="assessment"
       />
     );
   } else if (activeView === "startup") {
     page = (
       <MyStartupPage
-        onAssess={() => handleNavigate("assessment")}
+        onAssessmentSubmitted={handleAssessmentSubmitted}
+        onNavigate={handleNavigate}
         onUpdateProfile={handleUpdateProfile}
         profile={selectedProfile}
+        startupProfileId={selectedProfileId}
       />
     );
   } else if (activeView === "document-intake") {
