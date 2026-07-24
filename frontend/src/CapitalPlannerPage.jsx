@@ -23,10 +23,10 @@ export default function CapitalPlannerPage({ onNavigate }) {
       const data = await getCurrentCapitalPlan();
       setPlan(data);
       if (data) {
-        setCapitalInput(data.available_capital || "2400000");
-        setRevenueInput(data.monthly_revenue || "300000");
-        setFixedCostsInput(data.fixed_costs || "400000");
-        setVariableCostsInput(data.variable_costs || "100000");
+        setCapitalInput(data.available_capital || "");
+        setRevenueInput(data.monthly_revenue || "");
+        setFixedCostsInput(data.fixed_costs || "");
+        setVariableCostsInput(data.variable_costs || "");
       }
     } catch {
       // Plan not generated yet
@@ -208,14 +208,14 @@ export default function CapitalPlannerPage({ onNavigate }) {
                 <p style={{ margin: "0 0 1rem", color: "var(--muted)", fontSize: "0.9rem" }}>{currentScenario.description}</p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
                   <div>
-                    <span style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", display: "block" }}>Monthly Burn</span>
-                    <strong style={{ fontSize: "1.1rem", color: "var(--ink)" }}>₹{Number(currentScenario.monthly_burn).toLocaleString("en-IN")}</strong>
-                  </div>
-                  <div>
                     <span style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", display: "block" }}>Projected Runway</span>
                     <strong style={{ fontSize: "1.1rem", color: "var(--ink)" }}>
                       {currentScenario.runway_months >= 99 ? "Infinite" : `${currentScenario.runway_months} Months`}
                     </strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", display: "block" }}>Monthly Burn</span>
+                    <strong style={{ fontSize: "1.1rem", color: "var(--ink)" }}>₹{Number(currentScenario.monthly_burn).toLocaleString("en-IN")}</strong>
                   </div>
                   <div>
                     <span style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", display: "block" }}>Cost Shift</span>
@@ -271,9 +271,14 @@ export default function CapitalPlannerPage({ onNavigate }) {
                 </div>
               )}
               {plan.ai_explanation?.scenario_tradeoffs && (
-                <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--muted)", lineHeight: 1.5 }}>
-                  <strong>Tradeoffs:</strong> {plan.ai_explanation.scenario_tradeoffs}
-                </p>
+                <div style={{ margin: 0, fontSize: "0.88rem", color: "var(--muted)", lineHeight: 1.5 }}>
+                  <strong style={{ color: "var(--ink)", display: "block", marginBottom: "0.4rem" }}>Tradeoffs:</strong>
+                  <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
+                    {plan.ai_explanation.scenario_tradeoffs.split(/(?:\. )|(?:\n)/).filter(Boolean).map((pt, i) => (
+                      <li key={i} style={{ marginBottom: "0.25rem" }}>{pt.trim()}{pt.endsWith('.') ? '' : '.'}</li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </section>
           </div>

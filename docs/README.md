@@ -41,6 +41,7 @@ workflow, and immediate next milestone.
 - [Startup assessment wizard](frontend/STARTUP_ASSESSMENT_WIZARD_V1.md)
 - [Founder advisor briefing workspace](frontend/FOUNDER_ADVISOR_BRIEFING_WORKSPACE_V1.md)
 - [Founder advisor workspace hardening](frontend/FOUNDER_ADVISOR_WORKSPACE_HARDENING_V1.md)
+- [Multi-Language Support (i18n)](frontend/I18N_V1.md)
 
 ## Documentation maintenance
 
