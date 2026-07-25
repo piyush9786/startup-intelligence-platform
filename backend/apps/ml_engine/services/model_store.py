@@ -33,27 +33,34 @@ def save_model(
     metadata: dict | None = None,
 ) -> MLModelRegistry:  # noqa: F821 — imported at call time to avoid circular
     from apps.ml_engine.models import MLModelRegistry
+    from django.db import transaction
 
     path = _artifact_path(model_name, version)
+    
+    # Save candidate artifact to storage
     joblib.dump(model_obj, path)
 
-    # Retire previous active model of the same type
-    MLModelRegistry.objects.filter(
-        model_type=model_type, status=MLModelRegistry.Status.ACTIVE
-    ).update(status=MLModelRegistry.Status.RETIRED)
+    with transaction.atomic():
+        # Acquire a database lock on the active model of this type to prevent concurrent promotion races
+        active_models = MLModelRegistry.objects.select_for_update().filter(
+            model_type=model_type, status=MLModelRegistry.Status.ACTIVE
+        )
+        
+        # Retire previous active model of the same type
+        active_models.update(status=MLModelRegistry.Status.RETIRED)
 
-    registry_entry = MLModelRegistry.objects.create(
-        model_type=model_type,
-        model_name=model_name,
-        model_version=version,
-        status=MLModelRegistry.Status.ACTIVE,
-        training_sample_count=training_sample_count,
-        primary_metric_name=primary_metric_name,
-        primary_metric_value=primary_metric_value,
-        artifact_path=str(path),
-        training_metadata=metadata or {},
-        trained_at=timezone.now(),
-    )
+        registry_entry = MLModelRegistry.objects.create(
+            model_type=model_type,
+            model_name=model_name,
+            model_version=version,
+            status=MLModelRegistry.Status.ACTIVE,
+            training_sample_count=training_sample_count,
+            primary_metric_name=primary_metric_name,
+            primary_metric_value=primary_metric_value,
+            artifact_path=str(path),
+            training_metadata=metadata or {},
+            trained_at=timezone.now(),
+        )
     return registry_entry
 
 
