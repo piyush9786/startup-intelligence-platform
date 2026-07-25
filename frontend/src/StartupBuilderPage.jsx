@@ -14,10 +14,10 @@ const SAMPLE_IDEAS = [
 ];
 
 export default function StartupBuilderPage({ onNavigate }) {
-  // Input fields
+  // Input fields (Start 100% empty by default)
   const [customConcept, setCustomConcept] = useState("");
-  const [sectorInput, setSectorInput] = useState("Technology / General");
-  const [fundingInput, setFundingInput] = useState("₹25 Lakhs");
+  const [sectorInput, setSectorInput] = useState("");
+  const [fundingInput, setFundingInput] = useState("");
   
   // State
   const [consulting, setConsulting] = useState(false);
