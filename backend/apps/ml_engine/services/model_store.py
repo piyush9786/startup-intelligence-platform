@@ -32,8 +32,9 @@ def save_model(
     primary_metric_value: float | None = None,
     metadata: dict | None = None,
 ) -> MLModelRegistry:  # noqa: F821 — imported at call time to avoid circular
-    from apps.ml_engine.models import MLModelRegistry
     from django.db import transaction
+
+    from apps.ml_engine.models import MLModelRegistry
 
     path = _artifact_path(model_name, version)
     
