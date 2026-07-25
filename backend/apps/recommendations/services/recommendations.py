@@ -68,10 +68,26 @@ def _quantize(value: Decimal) -> Decimal:
     )
 
 
+_SVM_WEIGHT = Decimal("0.400000")
+_ELIGIBILITY_COMPONENT_SVM = Decimal("0.400000")  # reduced to make room for SVM
+_RULE_MATCH_COMPONENT_MAX_SVM = Decimal("0.100000")  # rule-match becomes a tiebreaker
+
+
+def _get_svm_score(startup_profile, scheme_version) -> Decimal | None:
+    """Attempt to get SVM success probability; return None on any failure."""
+    try:
+        from apps.ml_engine.services.models.svm_ranker import predict_scheme_probability
+        prob = predict_scheme_probability(startup_profile, scheme_version)
+        return Decimal(str(prob))
+    except Exception:
+        return None
+
+
 def _score_assessment(
     *,
     assessment: EligibilityAssessment,
     scheme_version: SchemeVersion,
+    startup_profile=None,
 ) -> tuple[Decimal, dict[str, Any]]:
     matched_count = len(assessment.matched_rules)
     failed_count = len(assessment.failed_rules)
@@ -82,25 +98,36 @@ def _score_assessment(
         raise ValueError("A recommendation cannot be scored without evaluated rules.")
 
     match_ratio = Decimal(matched_count) / Decimal(total_count)
-    rule_match_component = _quantize(match_ratio * _RULE_MATCH_COMPONENT_MAX)
     application_component = _APPLICATION_STATUS_COMPONENTS[scheme_version.application_status]
-    score = _quantize(_ELIGIBILITY_COMPONENT + rule_match_component + application_component)
+
+    # Try ML-blended scoring (SVM)
+    svm_score = _get_svm_score(startup_profile, scheme_version) if startup_profile else None
+
+    if svm_score is not None:
+        # ML Blend: 40% eligibility + 10% rule match + 40% SVM + 10% app status
+        rule_match_component = _quantize(match_ratio * _RULE_MATCH_COMPONENT_MAX_SVM)
+        score = _quantize(
+            _ELIGIBILITY_COMPONENT_SVM
+            + rule_match_component
+            + _quantize(svm_score * _SVM_WEIGHT)
+            + _quantize(application_component * Decimal("0.250000"))
+        )
+        ml_mode = "svm_blended"
+    else:
+        # Fallback: original heuristic scoring
+        rule_match_component = _quantize(match_ratio * _RULE_MATCH_COMPONENT_MAX)
+        score = _quantize(_ELIGIBILITY_COMPONENT + rule_match_component + application_component)
+        ml_mode = "heuristic_fallback"
 
     return score, {
         "ranking_version": RANKING_VERSION,
-        "formula": ("eligibility_component + rule_match_component + application_status_component"),
-        "eligibility_component": format(
-            _ELIGIBILITY_COMPONENT,
-            "f",
-        ),
-        "rule_match_component": format(
-            rule_match_component,
-            "f",
-        ),
-        "application_status_component": format(
-            application_component,
-            "f",
-        ),
+        "ml_scoring_mode": ml_mode,
+        "formula": "eligibility_component + rule_match_component + svm_component + application_status_component",
+        "eligibility_component": format(_ELIGIBILITY_COMPONENT, "f"),
+        "rule_match_component": format(rule_match_component, "f"),
+        "svm_component": format(svm_score * _SVM_WEIGHT if svm_score else Decimal(0), "f"),
+        "application_status_component": format(application_component, "f"),
+        "svm_score": format(svm_score, "f") if svm_score is not None else None,
         "matched_rule_count": matched_count,
         "failed_rule_count": failed_count,
         "unknown_rule_count": unknown_count,
@@ -108,6 +135,7 @@ def _score_assessment(
         "application_status": scheme_version.application_status,
         "score": format(score, "f"),
     }
+
 
 
 def _evidence_snapshot(
@@ -291,6 +319,7 @@ def generate_recommendations(
         score, score_breakdown = _score_assessment(
             assessment=assessment,
             scheme_version=scheme_version,
+            startup_profile=locked_profile,
         )
         candidates.append(
             ScoredCandidate(

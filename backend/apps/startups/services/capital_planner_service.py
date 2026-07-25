@@ -121,6 +121,28 @@ def _generate_capital_ai_explanation(
     }
 
 
+def _get_ml_runway(
+    profile: StartupProfile,
+    *,
+    available_capital: float,
+    monthly_revenue: float,
+    fixed_costs: float,
+    variable_costs: float,
+) -> float | None:
+    """Get ML-predicted runway from Random Forest; returns None if model unavailable."""
+    try:
+        from apps.ml_engine.services.models.random_forest_capital import predict_ml_runway
+        return predict_ml_runway(
+            profile,
+            available_capital=available_capital,
+            monthly_revenue=monthly_revenue,
+            fixed_costs=fixed_costs,
+            variable_costs=variable_costs,
+        )
+    except Exception:
+        return None
+
+
 def generate_startup_capital_plan(
     *,
     owner: Any,
@@ -145,6 +167,18 @@ def generate_startup_capital_plan(
         stage=profile.stage,
     )
     sensitivity = calculate_sensitivity_matrix(metrics)
+
+    # Enhance metrics with ML-predicted runway
+    ml_runway = _get_ml_runway(
+        profile,
+        available_capital=metrics["available_capital"],
+        monthly_revenue=metrics["monthly_revenue"],
+        fixed_costs=metrics["fixed_costs"],
+        variable_costs=metrics["variable_costs"],
+    )
+    if ml_runway is not None:
+        metrics["ml_runway_months"] = ml_runway
+
     ai_explanation = _generate_capital_ai_explanation(
         profile=profile,
         metrics=metrics,
