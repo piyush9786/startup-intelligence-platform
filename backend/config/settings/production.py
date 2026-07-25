@@ -1,5 +1,6 @@
-from .base import *
 import os
+
+from .base import *
 
 DEBUG = False
 ALLOWED_HOSTS = [x.strip() for x in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if x.strip()]
