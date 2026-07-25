@@ -10,7 +10,10 @@ from apps.recommendations.models import (
     EligibilityAssessment,
     Recommendation,
 )
-from apps.recommendations.services import generate_recommendations
+from apps.recommendations.services import (
+    RANKING_VERSION,
+    generate_recommendations,
+)
 from apps.recommendations.tests.test_recommendation_api import (
     authenticated_client,
     make_profile,
@@ -59,7 +62,7 @@ def test_owner_retrieves_current_set_without_database_writes():
     assert response.data["startup_profile_id"] == str(profile.id)
     assert response.data["has_generation"] is True
     assert response.data["generation_id"] == str(generation.generation_id)
-    assert response.data["ranking_version"] == ("recommendations-v1")
+    assert response.data["ranking_version"] == RANKING_VERSION
     assert response.data["assessment_date"] == "2026-07-20"
     assert response.data["generated_at"] is not None
     assert response.data["assessed_scheme_count"] == 2

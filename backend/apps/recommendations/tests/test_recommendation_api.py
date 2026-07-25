@@ -11,6 +11,7 @@ from apps.recommendations.models import (
     EligibilityAssessment,
     Recommendation,
 )
+from apps.recommendations.services import RANKING_VERSION
 from apps.schemes.models import (
     Authority,
     EligibilityRule,
@@ -129,7 +130,7 @@ def test_owner_can_generate_recommendations():
     assert response.data["assessed_scheme_count"] == 1
     assert response.data["recommendation_count"] == 1
     assert response.data["excluded_scheme_count"] == 0
-    assert response.data["ranking_version"] == ("recommendations-v1")
+    assert response.data["ranking_version"] == RANKING_VERSION
     recommendation = response.data["recommendations"][0]
     assert recommendation["scheme_id"] == str(scheme.id)
     assert recommendation["rank"] == 1
