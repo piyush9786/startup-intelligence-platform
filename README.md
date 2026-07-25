@@ -54,7 +54,7 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 - interactive user journey routing dialogue for new founders vs existing startups;
 - AI Capital Planner UI with runway, burn, and deterministic scenario modeling.
 
-## System architecture
+## System architecture & Domain boundaries
 
 ```text
 React / Vite (with i18n context)
@@ -70,8 +70,47 @@ Django REST Framework
       └── Ollama — local embeddings and controlled generation
 ```
 
-See [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) for the complete product,
-architecture, safety, and implementation context.
+### Domain Boundaries
+- **Frontend**: React and Vite application implementing multi-language (i18n) support, modern web design paradigms, AI Capital Planner UI, and accessible routing.
+- **Startups**: Owns founder profiles, assessment drafts, readiness plans, and advisor snapshots.
+- **Schemes**: Owns canonical programmes, immutable versions, eligibility requirements, and executable rules.
+- **Recommendations**: Owns deterministic rule evaluation, eligibility assessments, scoring, ranking, and reviewer decisions.
+- **Assistant**: Provides persisted agent sessions, tool-call logs, the founder concierge, and site-wide chatbots.
+
+## Project Structure
+
+```text
+.
+├── backend/                  # Django REST Framework backend
+│   ├── apps/                 # Domain applications (startups, schemes, recommendations, assistant, etc.)
+│   ├── config/               # Django project configuration
+│   └── manage.py             # CLI entrypoint
+├── frontend/                 # React + Vite frontend
+│   ├── src/                  # React components, contexts (i18n), and styling
+│   ├── public/               # Static assets
+│   ├── package.json          # Frontend dependencies
+│   └── vite.config.js        # Vite build configuration
+├── docs/                     # Comprehensive architecture and domain documentation
+│   ├── architecture/         # System architecture decisions
+│   ├── frontend/             # UI/UX and routing documentation
+│   ├── startups/             # Readiness and funding plan logic
+│   └── PRODUCT_VISION_V2.md  # Vision and roadmap
+├── infrastructure/           # Deployment and operational scripts
+├── contracts/                # API and data contracts
+├── docker-compose.yml        # Local development orchestration
+├── PROJECT_CONTEXT.md        # Technical execution and invariants
+└── README.md                 # Project entry point and summary
+```
+
+## Final Project Summary
+
+The Startup Intelligence Platform has successfully reached an advanced MVP state aligned with the Product Vision V2. By combining a strictly verified PostgreSQL data core with deterministic logic engines, the platform delivers reliable, hallucination-free guidance for founders. The recent milestone integrated:
+1. **Global i18n Localization**: Seamless English, Hindi, and Marathi switching across public and authenticated views.
+2. **AI Capital Planner**: Interactive UI for burn-rate and financial scenario modeling.
+3. **Modern Web Paradigms**: Enhanced accessibility and premium glassmorphism layouts.
+4. **Agentic Workflows**: Bounded concierge and founder assistance using LangGraph and localized embeddings.
+
+See [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) for the complete technical implementation context.
 
 ## Documentation
 
