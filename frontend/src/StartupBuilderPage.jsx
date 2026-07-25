@@ -91,7 +91,7 @@ export default function StartupBuilderPage({ onNavigate }) {
       setMasterPackage(res);
       setFeedback({
         type: "success",
-        message: "🧠 Master Strategy Package generated! Executive Business Plan, Matched Grants, and Printable Pitch Resume unlocked below.",
+        message: "AI-drafted strategy and potential scheme ideas generated for your review. Verify all claims before relying on them.",
       });
     } catch (err) {
       setFeedback({

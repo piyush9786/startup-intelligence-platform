@@ -1,16 +1,15 @@
 """
-Milestone execution business logic & dependency validation.
+Milestone execution business logic and dependency validation.
 """
+
 from __future__ import annotations
 
-import logging
 from typing import Any
 
+from django.db import transaction
 from django.utils import timezone
 
 from apps.startups.models import StartupMilestone
-
-logger = logging.getLogger(__name__)
 
 
 class MilestoneError(RuntimeError):
@@ -25,92 +24,143 @@ class MilestoneCycleError(MilestoneError):
     pass
 
 
-def check_prerequisites_completed(milestone: StartupMilestone) -> tuple[bool, list[str]]:
+def check_prerequisites_completed(
+    milestone: StartupMilestone,
+) -> tuple[bool, list[str]]:
     """
-    Check if all prerequisite milestones for the given milestone are completed.
-    Returns (all_completed: bool, uncompleted_titles: list[str]).
+    Return whether all prerequisite milestones are completed and the titles of
+    any incomplete prerequisites.
     """
-    uncompleted = []
-    for dep in milestone.dependencies.all():
-        if dep.status != StartupMilestone.Status.COMPLETED:
-            uncompleted.append(dep.title)
-
-    return (len(uncompleted) == 0, uncompleted)
+    uncompleted = list(
+        milestone.dependencies.exclude(
+            status=StartupMilestone.Status.COMPLETED,
+        ).values_list(
+            "title",
+            flat=True,
+        )
+    )
+    return not uncompleted, uncompleted
 
 
 def detect_dependency_cycle(
     milestone_id: str | None,
     target_dependency_ids: list[str],
+    *,
+    owner_id,
+    startup_profile_id,
 ) -> bool:
     """
-    Check if adding target_dependency_ids to milestone_id creates a cycle.
+    Check whether the proposed dependencies introduce a cycle.
+
+    Traversal is strictly scoped to one founder and one startup profile.
     """
     if not milestone_id:
         return False
 
-    visited = set()
+    scoped_milestones = (
+        StartupMilestone.objects.filter(
+            owner_id=owner_id,
+            startup_profile_id=startup_profile_id,
+        )
+        .prefetch_related("dependencies")
+    )
 
-    def dfs(current_id: str) -> bool:
-        if current_id == str(milestone_id):
+    dependency_map = {
+        str(milestone.id): [
+            str(dependency.id)
+            for dependency in milestone.dependencies.all()
+            if dependency.owner_id == owner_id
+            and dependency.startup_profile_id == startup_profile_id
+        ]
+        for milestone in scoped_milestones
+    }
+
+    root_id = str(milestone_id)
+
+    def reaches_root(current_id: str, visited: set[str]) -> bool:
+        if current_id == root_id:
             return True
+
         if current_id in visited:
             return False
+
         visited.add(current_id)
 
-        try:
-            m = StartupMilestone.objects.get(id=current_id)
-            for dep in m.dependencies.all():
-                if dfs(str(dep.id)):
-                    return True
-        except StartupMilestone.DoesNotExist:
-            pass
+        for dependency_id in dependency_map.get(current_id, []):
+            if reaches_root(dependency_id, visited):
+                return True
 
         return False
 
-    for dep_id in target_dependency_ids:
-        if str(dep_id) == str(milestone_id) or dfs(str(dep_id)):
+    for dependency_id in target_dependency_ids:
+        normalized_id = str(dependency_id)
+
+        if normalized_id == root_id:
+            return True
+
+        if reaches_root(normalized_id, set()):
             return True
 
     return False
 
 
+@transaction.atomic
 def complete_milestone(
     *,
     milestone: StartupMilestone,
     evidence: dict[str, Any] | None = None,
-    force: bool = False,
 ) -> StartupMilestone:
     """
-    Mark a milestone as COMPLETED. Checks prerequisite dependencies unless force=True.
+    Complete a milestone only when every prerequisite is completed.
+
+    There is intentionally no founder-controlled force override.
     """
-    if not force:
-        all_done, uncompleted = check_prerequisites_completed(milestone)
-        if not all_done:
-            titles = ", ".join(f"'{t}'" for t in uncompleted)
-            raise MilestoneDependencyError(
-                f"Cannot complete milestone. Prerequisite milestones are incomplete: {titles}."
-            )
+    locked = StartupMilestone.objects.select_for_update().get(
+        pk=milestone.pk,
+        owner_id=milestone.owner_id,
+        startup_profile_id=milestone.startup_profile_id,
+    )
 
-    milestone.status = StartupMilestone.Status.COMPLETED
-    milestone.completed_at = timezone.now()
+    all_done, uncompleted = check_prerequisites_completed(locked)
+    if not all_done:
+        titles = ", ".join(f"'{title}'" for title in uncompleted)
+        raise MilestoneDependencyError(
+            "Cannot complete milestone. "
+            f"Prerequisite milestones are incomplete: {titles}."
+        )
+
+    now = timezone.now()
+
+    locked.status = StartupMilestone.Status.COMPLETED
+    locked.completed_at = now
+
     if evidence:
-        milestone.completion_evidence = evidence
+        locked.completion_evidence = evidence
 
-    # Log update
-    log_entry = {
-        "timestamp": timezone.now().isoformat(),
-        "action": "completed",
-        "note": "Milestone marked as completed.",
-        "evidence": evidence or {},
-    }
-    updates = list(milestone.updates_log or [])
-    updates.append(log_entry)
-    milestone.updates_log = updates
+    updates = list(locked.updates_log or [])
+    updates.append(
+        {
+            "timestamp": now.isoformat(),
+            "action": "completed",
+            "note": "Milestone marked as completed.",
+            "evidence": evidence or {},
+        }
+    )
+    locked.updates_log = updates
 
-    milestone.save()
-    return milestone
+    locked.save(
+        update_fields=[
+            "status",
+            "completed_at",
+            "completion_evidence",
+            "updates_log",
+            "updated_at",
+        ]
+    )
+    return locked
 
 
+@transaction.atomic
 def append_milestone_log(
     *,
     milestone: StartupMilestone,
@@ -118,16 +168,24 @@ def append_milestone_log(
     author: str = "founder",
 ) -> StartupMilestone:
     """
-    Append a chronological founder update log to a milestone.
+    Append a founder update while holding a database lock so concurrent updates
+    cannot overwrite each other.
     """
-    log_entry = {
-        "timestamp": timezone.now().isoformat(),
-        "author": author,
-        "action": "update",
-        "note": note,
-    }
-    updates = list(milestone.updates_log or [])
-    updates.append(log_entry)
-    milestone.updates_log = updates
-    milestone.save(update_fields=["updates_log", "updated_at"])
-    return milestone
+    locked = StartupMilestone.objects.select_for_update().get(
+        pk=milestone.pk,
+        owner_id=milestone.owner_id,
+        startup_profile_id=milestone.startup_profile_id,
+    )
+
+    updates = list(locked.updates_log or [])
+    updates.append(
+        {
+            "timestamp": timezone.now().isoformat(),
+            "author": author,
+            "action": "update",
+            "note": note,
+        }
+    )
+    locked.updates_log = updates
+    locked.save(update_fields=["updates_log", "updated_at"])
+    return locked

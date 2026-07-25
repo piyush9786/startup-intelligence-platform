@@ -46,8 +46,8 @@ def generate_startup_executive_resume(
         "sector": sector,
         "stage": stage,
         "funding_target": funding_required,
-        "document_type": "OFFICIAL STARTUP EXECUTIVE RESUME",
-        "version": "v1.0 — Verified Intelligence Output",
+        "document_type": "AI-DRAFTED STARTUP EXECUTIVE ONE-PAGER",
+        "version": "Draft v2 — Unverified Strategic Hypothesis",
     }
 
     executive_summary = (
@@ -58,7 +58,8 @@ def generate_startup_executive_resume(
 
     prob_stmt = bp.get("problem", {}).get("problem_statement", f"High friction in '{idea}'.")
     sol_stmt = bp.get("business_model", {}).get(
-        "value_proposition", f"10x faster execution for '{idea}'."
+        "value_proposition",
+        f"A proposed lower-friction workflow for customers dealing with '{idea}'.",
     )
     cust_stmt = bp.get("customer", {}).get(
         "primary_customer_segment", "Target industry buyers."
@@ -74,13 +75,20 @@ def generate_startup_executive_resume(
 
     matched_schemes = [
         {
-            "scheme_name": sch.get("name", "Government Grant"),
-            "authority": "DPIIT / Nodal Ministry",
-            "support": sch.get("support", "Grant Support"),
-            "match_badge": "High Match (96%)",
-            "summary": sch.get("reason", "Proof of Concept & Prototype development grant."),
+            "scheme_name": scheme.get("name", "Potential government scheme"),
+            "authority": "Verify with the official scheme authority",
+            "support": (
+                "Current support terms must be verified on the official scheme page."
+            ),
+            "match_badge": "Suggested fit — not eligibility assessed",
+            "summary": (
+                "This is an unverified scheme idea. Confirm current availability, "
+                "eligibility rules and benefit terms before relying on it."
+            ),
+            "is_verified": False,
         }
-        for sch in schemes_raw
+        for scheme in schemes_raw
+        if isinstance(scheme, dict)
     ]
 
     execution_roadmap = intel.get("execution_roadmap", [])
@@ -93,5 +101,7 @@ def generate_startup_executive_resume(
         "matched_schemes": matched_schemes,
         "execution_roadmap": execution_roadmap,
         "consultant_insights": consultant_insights,
-        "generator_version": "startup-executive-resume-v1",
+        "trust_level": "suggested_hypothesis",
+        "requires_verification": True,
+        "generator_version": "startup-executive-resume-v2",
     }

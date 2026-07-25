@@ -569,7 +569,7 @@ function PasswordRecoveryPage({
         </span>
         <h2>Reset password</h2>
         <p>
-          We will provide account recovery guidance for your founder profile.
+          Self-service password recovery is not yet enabled. Use the approved administrator support channel.
         </p>
       </div>
 
@@ -580,9 +580,10 @@ function PasswordRecoveryPage({
             className="notice notice-success"
             role="status"
           >
-            <strong>Recovery request received</strong>
+            <strong>Self-service password recovery is not available yet</strong>
             <p>
-              If an active founder account matches <strong>{identity}</strong>, password reset instructions and security verification steps have been dispatched. For immediate assistance in local development, contact your platform administrator.
+              No password-reset email was sent. Contact the platform administrator
+              through the approved support channel to recover access.
             </p>
           </div>
 
@@ -611,7 +612,7 @@ function PasswordRecoveryPage({
             className="button button-primary button-wide"
             type="submit"
           >
-            Request password reset
+            View recovery instructions
           </button>
         </form>
       )}

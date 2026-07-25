@@ -35,7 +35,35 @@ class StartupProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StartupProfile
-        fields = "__all__"
+        fields = (
+            "id",
+            "owner",
+            "startup_name",
+            "legal_name",
+            "description",
+            "incorporation_type",
+            "incorporation_date",
+            "state",
+            "district",
+            "stage",
+            "sectors",
+            "technologies",
+            "founder_categories",
+            "founder_gender",
+            "dpiit_recognized",
+            "udyam_registered",
+            "annual_turnover",
+            "revenue_stage",
+            "funding_required",
+            "funding_purpose",
+            "team_size",
+            "profile_data",
+            "ml_cohort_id",
+            "anomaly_score",
+            "is_anomalous",
+            "created_at",
+            "updated_at",
+        )
         read_only_fields = (
             "id",
             "owner",
