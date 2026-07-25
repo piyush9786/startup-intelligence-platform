@@ -23,7 +23,6 @@ class ApplicationTrackerAPITestCase(TestCase):
         )
         self.scheme = Scheme.objects.create(
             canonical_name="Startup India Seed Fund",
-            slug="seed-fund",
         )
         self.scheme_version = SchemeVersion.objects.create(
             scheme=self.scheme,

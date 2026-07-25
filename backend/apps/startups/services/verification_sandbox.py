@@ -38,7 +38,7 @@ def run_instant_verification_sandbox(
 ) -> dict[str, Any]:
     """
     Perform instant sandbox verification for GSTIN or DPIIT numbers.
-    If valid, automatically adds field_name to verified_fields list.
+    If valid, automatically adds field_name to profile_data['verified_fields'].
     """
     field_name = field_name.strip().lower()
     value = field_value.strip().upper()
@@ -54,16 +54,17 @@ def run_instant_verification_sandbox(
         status_label = f"{field_name.upper()} Verified" if is_valid else "Validation Failed"
 
     if is_valid:
-        verified_fields = set(profile.verified_fields or [])
+        verified_fields = set(profile.profile_data.get("verified_fields") or [])
         verified_fields.add(field_name)
-        profile.verified_fields = list(verified_fields)
+        profile.profile_data["verified_fields"] = list(verified_fields)
 
         if field_name == "gstin":
-            profile.gstin = value
+            profile.profile_data["gstin"] = value
         elif field_name in ("dpiit_number", "dpiit_recognized"):
             profile.dpiit_recognized = True
+            profile.profile_data["dpiit_number"] = value
 
-        profile.save(update_fields=["verified_fields", "gstin", "dpiit_recognized"])
+        profile.save(update_fields=["profile_data", "dpiit_recognized"])
 
     return {
         "field_name": field_name,
