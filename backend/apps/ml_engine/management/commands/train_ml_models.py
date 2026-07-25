@@ -131,16 +131,28 @@ class Command(BaseCommand):
         from apps.ml_engine.services.models.svm_ranker import train_svm
         from apps.ml_engine.services.synthetic_data import generate_svm_dataset
 
-        X, y = generate_svm_dataset(n)
-        result = train_svm(X, y)
+        if synthetic:
+            X, y = generate_svm_dataset(n)
+            result = train_svm(X, y)
+        else:
+            # Note: For production real data, this should query StartupProfile
+            # Currently a placeholder until real labels are constructed
+            self.stdout.write(self.style.WARNING("       (Real labels missing; falling back to synthetic for SVM)"))
+            X, y = generate_svm_dataset(n)
+            result = train_svm(X, y)
         return f"accuracy={result['accuracy']:.3f}"
 
     def _train_adaboost(self, synthetic: bool, n: int) -> str:
         from apps.ml_engine.services.models.adaboost_readiness import train_adaboost
         from apps.ml_engine.services.synthetic_data import generate_adaboost_dataset
 
-        X, y = generate_adaboost_dataset(n)
-        result = train_adaboost(X, y)
+        if synthetic:
+            X, y = generate_adaboost_dataset(n)
+            result = train_adaboost(X, y)
+        else:
+            self.stdout.write(self.style.WARNING("       (Real labels missing; falling back to synthetic for AdaBoost)"))
+            X, y = generate_adaboost_dataset(n)
+            result = train_adaboost(X, y)
         roc = f"{result['roc_auc']:.3f}" if result.get("roc_auc") else "N/A"
         return f"accuracy={result['accuracy']:.3f}, roc_auc={roc}"
 
@@ -159,8 +171,13 @@ class Command(BaseCommand):
         from apps.ml_engine.services.models.random_forest_capital import train_random_forest
         from apps.ml_engine.services.synthetic_data import generate_capital_dataset
 
-        X, y = generate_capital_dataset(n)
-        result = train_random_forest(X, y)
+        if synthetic:
+            X, y = generate_capital_dataset(n)
+            result = train_random_forest(X, y)
+        else:
+            self.stdout.write(self.style.WARNING("       (Real labels missing; falling back to synthetic for Random Forest)"))
+            X, y = generate_capital_dataset(n)
+            result = train_random_forest(X, y)
         return f"mae={result['mae_months']:.2f} months"
 
     def _train_tfidf(self, synthetic: bool, n: int) -> str:
@@ -196,6 +213,9 @@ class Command(BaseCommand):
         # DBSCAN runs on-demand from Qdrant embeddings; register a placeholder
         from apps.ml_engine.services.models.dbscan_dedup import find_duplicate_schemes
 
+        if not synthetic:
+            self.stdout.write(self.style.WARNING("       (DBSCAN runs on-demand; registering placeholder with synthetic vectors)"))
+
         # Use a tiny synthetic set so the registry entry is created
         synthetic_embeddings = [
             {"scheme_version_id": f"syn-{i}", "vector": [0.1 * i] * 32}
@@ -203,3 +223,4 @@ class Command(BaseCommand):
         ]
         result = find_duplicate_schemes(synthetic_embeddings)
         return f"duplicate_groups={len(result['duplicate_groups'])}"
+
