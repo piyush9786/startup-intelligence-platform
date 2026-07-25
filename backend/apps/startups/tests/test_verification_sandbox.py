@@ -36,4 +36,4 @@ class InstantVerificationSandboxTestCase(TestCase):
         )
         self.assertTrue(res["is_verified"])
         self.profile.refresh_from_db()
-        self.assertIn("gstin", self.profile.verified_fields)
+        self.assertIn("gstin", self.profile.profile_data.get("verified_fields", []))
