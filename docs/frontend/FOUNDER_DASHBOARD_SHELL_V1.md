@@ -1,74 +1,48 @@
-# Functional Founder Support Dashboard v1
+# Founder Dashboard Shell & React Router Architecture (v1)
 
-## Correction to the dashboard shell
+## Overview
 
-The initial dashboard shell displayed persisted metrics but several navigation
-items only scrolled within the overview page. Phase 4G.3A.1 converts those
-controls into real user workflows.
+The **Founder Dashboard Shell** (`AppShell.jsx`) provides the primary authenticated layout container for the Startup Intelligence Platform. It manages workspace state, multi-tenant startup profile selection, navigation layout, topbar search, and deep-linking via **React Router v7** and **TanStack Query v5**.
 
-## User journeys
+---
 
-The signed-in founder can now:
+## 🧭 URL Route Mapping
 
-- open a dedicated startup profile and readiness page;
-- browse active schemes as clickable cards;
-- filter verified, funding, and loan schemes;
-- open a complete scheme detail page;
-- review structured eligibility rules;
-- review required documents and explicit certification or registration evidence;
-- review application steps and benefits;
-- compare published funding amounts, interest ranges, and equity requirements;
-- open official scheme sources and application links;
-- review a dedicated action roadmap;
-- open or generate evidence-grounded founder guidance;
-- return from scheme detail to the originating workflow.
+The dashboard shell replaces legacy inline state machines (`activeView`) with clean, shareable browser URLs:
 
-## Data boundaries
+| Route Path | Component / Page | Purpose |
+|---|---|---|
+| `/` | `Navigate to=/dashboard` | Root redirect |
+| `/dashboard` | `DashboardHome` | Overview & key startup metrics |
+| `/startup` | `MyStartupPage` | Comprehensive startup profile & attributes |
+| `/builder` | `StartupBuilderPage` | AI Startup Builder & Master Consultant |
+| `/capital-planner` | `CapitalPlannerPage` | Capital runway planner & RF forecasting |
+| `/tracker` | `ApplicationTrackerPage` | Scheme application tracking & status |
+| `/roadmap` | `ActionRoadmapPage` | Actionable readiness roadmap & milestones |
+| `/schemes` | `SchemeExplorerPage` | Scheme discovery catalog & filterable search |
+| `/schemes/:schemeId` | `SchemeDetailPage` | Full scheme detail, rules, & eligibility breakdown |
+| `/requirements` | `RequirementsPage` | External certification & compliance requirements |
+| `/funding` | `FundingPage` | External capital support & investor programs |
+| `/advisor` | `FounderIntelligencePage` | Grounded open-source LLM advisor briefings |
+| `/intelligence` | `FounderConcierge` | Interactive AI concierge & workspace assistant |
+| `/reviewer-verifications` | `ReviewerVerificationWorkspace` | Admin/Reviewer evidence review queue |
+| `/onboarding` | `AssessmentWizard` | First-time founder onboarding wizard |
 
-The implementation uses the existing `SchemeVersion` fields:
+---
 
-- support types and categories;
-- minimum and maximum amounts;
-- interest-rate ranges;
-- equity requirement;
-- application status and dates;
-- official and application URLs;
-- required documents;
-- application steps;
-- benefits and restrictions;
-- structured eligibility rules;
-- verification status.
+## 🔒 Shared Data Context
 
-The certification view does not invent a separate certification database. It
-surfaces explicit certification, registration, licence, compliance, GST,
-Udyam, DPIIT, incorporation, PAN, TAN, FSSAI, ISO, and MSME requirements that
-already appear in current scheme documents or eligibility-rule evidence.
+All routes inside `<Workspace />` inherit the shared workspace context via React Router's `<Outlet context={...} />`:
+- `currentUser`: Authenticated user model & role.
+- `selectedProfile`: Currently selected `StartupProfile`.
+- `schemes`: Loaded scheme catalog with verification statuses.
+- `currentBriefing`: Active grounded LLM briefing.
+- `metrics`: Computed dashboard overview counters.
+- `handleRequestError`: Centralized 401 handling & error formatting.
 
-Funding and loan classification is derived from structured support types,
-amount and interest fields, and explicit funding terminology in the current
-scheme version.
+---
 
-## Not implemented in this phase
+## 🧪 Verification
 
-Meetings, mentor booking, appointments, events, notifications, and application
-tracking do not yet have backend models or APIs. They are intentionally not
-shown as fake working features.
-
-## Testing
-
-The frontend test suite covers:
-
-- sign-in success and failure;
-- real navigation from dashboard actions;
-- scheme explorer rendering;
-- requirements and certification evidence;
-- funding and loan terms;
-- scheme-detail navigation;
-- official and application links;
-- startup readiness;
-- action roadmap;
-- founder guidance;
-- guidance generation;
-- empty-profile handling;
-- session expiry;
-- scheme classification and formatting helpers.
+- **Build Check**: `npm run build` generates production bundle into `build/`.
+- **Router Test Suite**: `App.test.jsx` & `AppShell.test.jsx` verified with Vitest.

@@ -9,6 +9,14 @@ The modular monolith keeps transactions, permissions, and audit trails simple
 while preserving service boundaries that may later be extracted if scale
 requires it.
 
+## Core Architecture Documents
+
+- **[9-Model Machine Learning Engine & Data Engineering Pipeline](ML_ENGINE_V1.md)**
+- **[Modular App Routing, Settings Package & Default-Deny Security](MODULAR_ROUTING_AND_SECURITY_V1.md)**
+- **[Verified Scheme Prerequisite Graph](SCHEME_PREREQUISITE_GRAPH_V1.md)**
+- **[Shared Agent Orchestration Persistence](SHARED_AGENT_ORCHESTRATION_V1.md)**
+- **[Site-Wide Founder Chatbot](SITE_WIDE_CHATBOT_V1.md)**
+
 ## System overview
 
 ```text

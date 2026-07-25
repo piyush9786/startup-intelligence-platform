@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import connection
 from redis import Redis
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
