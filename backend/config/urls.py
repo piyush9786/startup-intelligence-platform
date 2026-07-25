@@ -34,6 +34,7 @@ from apps.documents.views import (
     DocumentExtractionViewSet,
     ProcessDocumentView,
 )
+from apps.recommendations.tracker_views import SchemeApplicationTrackerViewSet
 from apps.recommendations.verification_reviewer_views import (
     EligibilityVerificationReviewerDecisionCreateView,
     EligibilityVerificationReviewerEvidenceDownloadView,
@@ -90,6 +91,7 @@ from apps.startups.onboarding_views import (
     StartupOnboardingCurrentView,
 )
 from apps.startups.startup_intelligence_views import StartupIntelligenceView
+from apps.startups.verification_sandbox_views import InstantVerificationSandboxView
 from apps.startups.views import (
     StartupFundingPlanCurrentView,
     StartupFundingPlanDetailView,
@@ -144,7 +146,12 @@ router.register(
     DocumentQualityAssessmentViewSet,
     basename="document-quality",
 )
-router.register("schemes", SchemeViewSet, basename="scheme")
+router.register(
+    r"tracker-applications",
+    SchemeApplicationTrackerViewSet,
+    basename="tracker-application",
+)
+router.register(r"schemes", SchemeViewSet, basename="scheme")
 router.register(
     "startup-profiles",
     StartupProfileViewSet,
@@ -399,6 +406,11 @@ urlpatterns = [
         "api/v1/recommendations/generate/",
         RecommendationGenerateView.as_view(),
         name="recommendation-generate",
+    ),
+    path(
+        "api/v1/startups/verify-instant/",
+        InstantVerificationSandboxView.as_view(),
+        name="startup-verify-instant",
     ),
     path(
         "api/v1/recommendations/current/",
