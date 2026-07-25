@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useT } from "./i18n/index.jsx";
 import {
   generateSchemeProposal,
   getTrackerApplications,
@@ -6,19 +7,20 @@ import {
   verifyInstantSandbox,
 } from "./applicationTrackerApi";
 
-const STAGES = [
-  { id: "draft", label: "Draft", badge: "badge-claim" },
-  { id: "submitted", label: "Submitted", badge: "badge-extracted" },
-  { id: "under_review", label: "Under Review", badge: "badge-dpiit" },
-  { id: "approved", label: "Approved / Granted", badge: "badge-verified" },
-];
-
 export default function ApplicationTrackerPage({ onNavigate }) {
+  const { t } = useT();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState(null);
   const [activeProposal, setActiveProposal] = useState(null);
   const [feedback, setFeedback] = useState(null);
+
+  const stages = [
+    { id: "draft", label: t("tracker.stage.draft"), badge: "badge-claim" },
+    { id: "submitted", label: t("tracker.stage.submitted"), badge: "badge-extracted" },
+    { id: "under_review", label: t("tracker.stage.under_review"), badge: "badge-dpiit" },
+    { id: "approved", label: t("tracker.stage.approved"), badge: "badge-verified" },
+  ];
 
   // Instant Verification Inputs
   const [gstinInput, setGstinInput] = useState("");
@@ -95,9 +97,9 @@ export default function ApplicationTrackerPage({ onNavigate }) {
       <header className="page-header">
         <div>
           <span className="section-kicker">ACTION COMMAND CENTER</span>
-          <h1 style={{ fontSize: "1.8rem", margin: "0.25rem 0 0.4rem" }}>Application Pipeline Tracker</h1>
+          <h1 style={{ fontSize: "1.8rem", margin: "0.25rem 0 0.4rem" }}>{t("tracker.title")}</h1>
           <p className="page-subtitle" style={{ margin: 0, color: "var(--muted)" }}>
-            Track government grant submissions across 4 stages, generate AI executive proposals, and run instant GSTIN/DPIIT sandbox verifications.
+            {t("tracker.subtitle")}
           </p>
         </div>
       </header>
@@ -107,9 +109,9 @@ export default function ApplicationTrackerPage({ onNavigate }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
           <div>
             <span className="section-kicker">⚡ INSTANT VERIFICATION SANDBOX</span>
-            <h3 style={{ fontSize: "1.1rem", margin: "0.2rem 0" }}>Instant GSTIN & DPIIT Verification</h3>
+            <h3 style={{ fontSize: "1.1rem", margin: "0.2rem 0" }}>{t("tracker.sandbox_title")}</h3>
             <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--muted)" }}>
-              Bypass 2-day manual queue waiting. Enter format-valid GSTIN or DPIIT numbers for instant verification.
+              {t("tracker.sandbox_subtitle")}
             </p>
           </div>
           <form onSubmit={handleInstantVerify} style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
@@ -121,7 +123,7 @@ export default function ApplicationTrackerPage({ onNavigate }) {
               style={{ padding: "0.5rem 0.75rem", borderRadius: "6px", border: "1px solid var(--line)", background: "rgba(255,255,255,0.05)", color: "inherit", fontSize: "0.85rem" }}
             />
             <button type="submit" className="button button-primary button-small" disabled={verifying || (!gstinInput && !dpiitInput)}>
-              {verifying ? "Verifying..." : "⚡ Verify Instantly"}
+              {verifying ? t("action.loading") : t("tracker.verify_instant")}
             </button>
           </form>
         </div>
@@ -135,7 +137,7 @@ export default function ApplicationTrackerPage({ onNavigate }) {
 
       {/* 4-Stage Kanban Pipeline */}
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
-        {STAGES.map((stg) => {
+        {stages.map((stg) => {
           const stageItems = items.filter((it) => it.stage === stg.id);
           return (
             <div key={stg.id} className="card" style={{ padding: "1rem", background: "rgba(255,255,255,0.02)" }}>
@@ -161,11 +163,11 @@ export default function ApplicationTrackerPage({ onNavigate }) {
                           disabled={generatingId === item.id}
                           style={{ width: "100%", fontSize: "0.78rem" }}
                         >
-                          {generatingId === item.id ? "Drafting AI Proposal…" : "📄 Generate AI Proposal Draft"}
+                          {generatingId === item.id ? t("tracker.drafting_proposal") : t("tracker.generate_proposal")}
                         </button>
 
                         <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
-                          {STAGES.filter((s) => s.id !== item.stage).map((s) => (
+                          {stages.filter((s) => s.id !== item.stage).map((s) => (
                             <button
                               key={s.id}
                               type="button"

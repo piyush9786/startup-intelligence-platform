@@ -181,6 +181,27 @@ const hi = {
   "reviewer.reject": "अस्वीकार करें",
   "reviewer.pending": "समीक्षा लंबित",
 
+  // ── Tracker ───────────────────────────────────────────────────────────────────
+  "tracker.title": "आवेदन पाइपलाइन ट्रैकर",
+  "tracker.subtitle": "4 चरणों में सरकारी अनुदान आवेदनों को ट्रैक करें, AI प्रस्ताव बनाएं, और त्वरित सत्यापन चलाएं।",
+  "tracker.sandbox_title": "त्वरित GSTIN और DPIIT सत्यापन",
+  "tracker.sandbox_subtitle": "2 दिनों के मैनुअल प्रतीक्षा समय को बायपास करें। त्वरित सत्यापन के लिए वैध GSTIN या DPIIT दर्ज करें।",
+  "tracker.verify_instant": "⚡ तुरंत सत्यापित करें",
+  "tracker.generate_proposal": "📄 AI प्रस्ताव ड्राफ्ट बनाएं",
+  "tracker.drafting_proposal": "AI प्रस्ताव तैयार हो रहा है…",
+  "tracker.stage.draft": "ड्राफ्ट",
+  "tracker.stage.submitted": "जमा किया गया",
+  "tracker.stage.under_review": "समीक्षा के तहत",
+  "tracker.stage.approved": "स्वीकृत / स्वीकृत अनुदान",
+
+  // ── Intelligence Dashboard ───────────────────────────────────────────────────
+  "intelligence.title": "फाउंडर इंटेलिजेंस डैशबोर्ड",
+  "intelligence.subtitle": "वास्तविक समय तत्परता स्कोर, सक्रिय आवेदन, ML कोहोर्ट एनालिटिक्स और अनुपालन अलर्ट।",
+  "intelligence.readiness_score": "तत्परता स्कोर",
+  "intelligence.active_applications": "सक्रिय आवेदन",
+  "intelligence.compliance_health": "अनुपालन स्वास्थ्य",
+  "intelligence.capital_runway": "पूंजी रनवे",
+
   // ── Errors ────────────────────────────────────────────────────────────────────
   "error.generic": "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
   "error.session_expired": "आपका सत्र समाप्त हो गया है। कृपया पुनः साइन इन करें।",
