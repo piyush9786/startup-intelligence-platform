@@ -31,6 +31,12 @@ class SchemeApplicationTrackerSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "owner", "created_at", "updated_at"]
 
+    def validate_startup_profile(self, value):
+        request = self.context.get("request")
+        if request and request.user and not request.user.is_staff and value.owner_id != request.user.id:
+            raise serializers.ValidationError("The specified startup profile does not belong to you.")
+        return value
+
     def to_representation(self, instance: SchemeApplicationTracker):
         ret = super().to_representation(instance)
         ret["scheme_name"] = instance.scheme_version.scheme.canonical_name

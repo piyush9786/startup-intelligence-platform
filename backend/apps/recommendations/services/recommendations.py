@@ -275,7 +275,7 @@ def generate_recommendations(
                 excluded_schemes.append({
                     "scheme_id": str(scheme.id),
                     "scheme_name": scheme.canonical_name,
-                    "reason": "non_actionable_application_status",
+                    "reason": f"application_status:{scheme_version.application_status}",
                     "application_status": (
                         scheme_version.application_status
                     ),
