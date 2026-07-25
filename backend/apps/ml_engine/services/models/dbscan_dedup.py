@@ -14,7 +14,7 @@ from __future__ import annotations
 import numpy as np
 from sklearn.cluster import DBSCAN
 
-from apps.ml_engine.services.model_store import load_model, next_version, save_model
+from apps.ml_engine.services.model_store import next_version, save_model
 
 MODEL_TYPE = "dbscan"
 MODEL_NAME = "dbscan_scheme_dedup"
@@ -58,7 +58,7 @@ def find_duplicate_schemes(
 
     # Group scheme_version_ids by cluster label (excluding noise = -1)
     clusters: dict[int, list[str]] = {}
-    for sid, label in zip(ids, labels):
+    for sid, label in zip(ids, labels, strict=False):
         if label == -1:
             continue
         clusters.setdefault(label, []).append(sid)

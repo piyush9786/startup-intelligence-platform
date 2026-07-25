@@ -6,7 +6,6 @@ keeps the MLModelRegistry up to date.
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +31,7 @@ def save_model(
     primary_metric_name: str = "",
     primary_metric_value: float | None = None,
     metadata: dict | None = None,
-) -> "MLModelRegistry":  # noqa: F821 — imported at call time to avoid circular
+) -> MLModelRegistry:  # noqa: F821 — imported at call time to avoid circular
     from apps.ml_engine.models import MLModelRegistry
 
     path = _artifact_path(model_name, version)

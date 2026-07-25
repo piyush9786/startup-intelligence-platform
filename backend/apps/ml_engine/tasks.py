@@ -101,9 +101,10 @@ def on_demand_scheme_dedup():
     Run DBSCAN deduplication on scheme embeddings stored in Qdrant.
     Logs any duplicate groups found for admin review.
     """
-    from apps.ml_engine.services.models.dbscan_dedup import find_duplicate_schemes
-    from apps.knowledge.services.vector_search import get_qdrant_client
     from django.conf import settings
+
+    from apps.knowledge.services.vector_search import get_qdrant_client
+    from apps.ml_engine.services.models.dbscan_dedup import find_duplicate_schemes
 
     try:
         client = get_qdrant_client()

@@ -19,7 +19,10 @@ from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
-    help = "Train all ML models (K-Means, SVM, AdaBoost, Isolation Forest, Random Forest, TF-IDF, DBSCAN)"
+    help = (
+        "Train all ML models "
+        "(K-Means, SVM, AdaBoost, Isolation Forest, Random Forest, TF-IDF, DBSCAN)"
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -36,7 +39,16 @@ class Command(BaseCommand):
             "--model",
             type=str,
             default="all",
-            choices=["all", "kmeans", "svm", "adaboost", "isolation_forest", "random_forest", "tfidf", "dbscan"],
+            choices=[
+                "all",
+                "kmeans",
+                "svm",
+                "adaboost",
+                "isolation_forest",
+                "random_forest",
+                "tfidf",
+                "dbscan",
+            ],
             help="Train a specific model or all (default: all).",
         )
         parser.add_argument(
@@ -59,11 +71,16 @@ class Command(BaseCommand):
             if use_synthetic:
                 self.stdout.write(
                     self.style.WARNING(
-                        f"Only {count} profiles found. Using synthetic data (need ≥50 for real training)."
+                        f"Only {count} profiles found. "
+                        "Using synthetic data (need ≥50 for real training)."
                     )
                 )
 
-        self.stdout.write(self.style.MIGRATE_HEADING("\n🤖 Startup Intelligence — ML Model Training Pipeline"))
+        self.stdout.write(
+            self.style.MIGRATE_HEADING(
+                "\n🤖 Startup Intelligence — ML Model Training Pipeline"
+            )
+        )
         self.stdout.write(f"   Mode: {'SYNTHETIC' if use_synthetic else 'REAL DATA'}")
         self.stdout.write(f"   Target: {target_model.upper()}\n")
 
@@ -92,7 +109,9 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"     ✗ FAILED: {exc}"))
                 raise CommandError(f"Training failed for {model_name}: {exc}") from exc
 
-        self.stdout.write(self.style.SUCCESS("\n✅ All models trained and registered successfully!\n"))
+        self.stdout.write(
+            self.style.SUCCESS("\n✅ All models trained and registered successfully!\n")
+        )
 
     # ─── Individual trainers ───────────────────────────────────────────
 
@@ -131,9 +150,9 @@ class Command(BaseCommand):
 
         if synthetic:
             X, _ = generate_startup_features(n), None
-            result = train_isolation_forest(X=X)
+            train_isolation_forest(X=X)
         else:
-            result = train_isolation_forest()
+            train_isolation_forest()
         return "trained on contamination=0.05"
 
     def _train_random_forest(self, synthetic: bool, n: int) -> str:
@@ -163,7 +182,10 @@ class Command(BaseCommand):
         if not corpus:
             # Synthetic fallback
             corpus = [
-                {"scheme_version_id": f"synthetic-{i}", "text": f"Startup scheme for sector {i} with grants"}
+                {
+                    "scheme_version_id": f"synthetic-{i}",
+                    "text": f"Startup scheme for sector {i} with grants",
+                }
                 for i in range(50)
             ]
 
