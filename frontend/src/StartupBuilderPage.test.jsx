@@ -10,6 +10,7 @@ vi.mock("./startupBuilderApi", () => ({
   getBuilderSection: vi.fn(),
   updateBuilderSection: vi.fn(),
   requestBuilderSectionDraft: vi.fn(),
+  generateMasterStartupPlan: vi.fn(),
 }));
 
 describe("StartupBuilderPage", () => {

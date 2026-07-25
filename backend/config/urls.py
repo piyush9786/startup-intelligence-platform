@@ -72,6 +72,7 @@ from apps.startups.assessment_views import (
     StartupAssessmentDraftSubmitView,
     StartupAssessmentDraftViewSet,
 )
+from apps.startups.builder_consultant_views import MasterConsultantGeneratorView
 from apps.startups.builder_views import (
     StartupBuilderSectionDetailView,
     StartupBuilderSectionDraftView,
@@ -406,6 +407,11 @@ urlpatterns = [
         "api/v1/recommendations/generate/",
         RecommendationGenerateView.as_view(),
         name="recommendation-generate",
+    ),
+    path(
+        "api/v1/startup-builder/generate-master-plan/",
+        MasterConsultantGeneratorView.as_view(),
+        name="startup-builder-generate-master-plan",
     ),
     path(
         "api/v1/startups/verify-instant/",

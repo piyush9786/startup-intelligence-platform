@@ -22,3 +22,8 @@ export async function requestBuilderSectionDraft(sectionType) {
   const response = await authenticatedApiClient.post(`/startup-builder/sections/${sectionType}/draft/`);
   return response.data;
 }
+
+export async function generateMasterStartupPlan(payload) {
+  const response = await authenticatedApiClient.post("/startup-builder/generate-master-plan/", payload);
+  return response.data;
+}
