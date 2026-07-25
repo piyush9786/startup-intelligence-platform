@@ -1,51 +1,66 @@
-# Documentation
+# Startup Intelligence Platform — Documentation Index
 
-Start with the repository-level [README](../README.md).
+Welcome to the comprehensive documentation index for the **Startup Intelligence Platform**.
 
-It describes the current product state, system architecture, 9-model ML ensemble, data engineering pipelines, validation workflow, and completed milestones.
+---
 
-## Product direction
+## 🏛️ Documentation Categories
 
-- [Roadmap](ROADMAP.md)
-- [Product Vision v2](PRODUCT_VISION_V2.md)
-- [Infrastructure roadmap](../infrastructure/README.md)
+### 1. 🏗️ [Architecture & AI Engine](architecture/README.md)
+Core system architecture, 9-model ML engine, stateful agent sessions, and dependency graphs.
+- **[System Architecture & Domain Boundaries](architecture/README.md)**
+- **[9-Model Machine Learning Engine & Data Engineering Pipeline](architecture/ML_ENGINE_V1.md)**
+- **[Verified Scheme Prerequisite Graph](architecture/SCHEME_PREREQUISITE_GRAPH_V1.md)**
+- **[Shared Agent Orchestration Persistence](architecture/SHARED_AGENT_ORCHESTRATION_V1.md)**
+- **[Site-Wide Founder Chatbot](architecture/SITE_WIDE_CHATBOT_V1.md)**
 
-## Architecture & Machine Learning
+### 2. 🏛️ [Schemes, Eligibility & Recommendations](schemes/RECOMMENDATIONS_ENGINE_V1.md)
+Canonical scheme catalog, executable eligibility rules, and SVM-blended ML ranking.
+- **[Deterministic Eligibility Engine](schemes/ELIGIBILITY_ENGINE_V1.md)**
+- **[Eligibility Assessment API](schemes/ELIGIBILITY_ASSESSMENT_API.md)**
+- **[SVM-Blended Recommendation Engine](schemes/RECOMMENDATIONS_ENGINE_V1.md)**
+- **[Recommendation Generation Runs](schemes/RECOMMENDATION_GENERATION_RUNS_V1.md)**
+- **[Recommendation Retrieval API](schemes/RECOMMENDATION_RETRIEVAL_API.md)**
+- **[Recommendation Generation History API](schemes/RECOMMENDATION_GENERATION_HISTORY_API_V1.md)**
+- **[Canonical Scheme Publication](schemes/CANONICAL_PUBLICATION.md)**
 
-- [System architecture](architecture/README.md)
-- [Shared agent orchestration](architecture/SHARED_AGENT_ORCHESTRATION_V1.md)
-- [Site-wide founder chatbot](architecture/SITE_WIDE_CHATBOT_V1.md)
-- [Verified scheme prerequisite graph](architecture/SCHEME_PREREQUISITE_GRAPH_V1.md)
+### 3. 🚀 [Startups & Intelligence Workspaces](startups/FOUNDER_INTELLIGENCE_DASHBOARD_V1.md)
+Founder profiles, capital planning, execution milestones, startup builder, and intelligence dashboards.
+- **[Founder Intelligence Dashboard](startups/FOUNDER_INTELLIGENCE_DASHBOARD_V1.md)**
+- **[Structured My Startup Experience](startups/MY_STARTUP_EXPERIENCE_V1.md)**
+- **[AI Capital Planner Workspace & Random Forest Forecast](startups/STARTUP_CAPITAL_PLANNER_V1.md)**
+- **[Execution & Milestones Engine](startups/EXECUTION_MILESTONES_V1.md)**
+- **[AI Startup Builder Workspace](startups/STARTUP_BUILDER_V1.md)**
+- **[Universal AI Copilot](startups/UNIVERSAL_AI_COPILOT_V1.md)**
+- **[Startup Assessment Wizard & Workflow](startups/STARTUP_ASSESSMENT_WORKFLOW_V1.md)**
+- **[Consolidated Starting Plan](startups/STARTING_PLAN_V1.md)**
+- **[Dependency-Aware Funding Plan](startups/FUNDING_PLAN_V1.md)**
+- **[Readiness Engine & Roadmap](startups/READINESS_ENGINE_V1.md)**
+- **[Grounded Open-Source LLM Advisor Briefings](startups/GROUNDED_OPEN_SOURCE_LLM_ADVISOR_BRIEFINGS_V1.md)**
 
-## Eligibility, Machine Learning & Recommendations
+### 4. 🎨 [Frontend & UI/UX](frontend/PUBLIC_ENTRY_V1.md)
+React application, i18n localization, responsive design, onboarding tour, and dashboard motion.
+- **[Public Entry & Authentication](frontend/PUBLIC_ENTRY_V1.md)**
+- **[Multi-Language Support (i18n)](frontend/I18N_V1.md)**
+- **[First-Open Onboarding Tour](frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md)**
+- **[Founder Dashboard Shell](frontend/FOUNDER_DASHBOARD_SHELL_V1.md)**
+- **[Founder Dashboard Motion & Hierarchy](frontend/FOUNDER_DASHBOARD_MOTION_V1.md)**
+- **[Founder Advisor Briefing Workspace](frontend/FOUNDER_ADVISOR_BRIEFING_WORKSPACE_V1.md)**
 
-- [Deterministic eligibility engine](eligibility/ENGINE_V1.md)
-- [Eligibility assessment API](eligibility/ASSESSMENT_API.md)
-- [Verified rule revisions](review-operations/VERIFIED_RULE_REVISIONS.md)
+### 5. 🛠️ [Operations, Ingestion & Reviewer Workflows](operations/EXTERNAL_SCHEME_REVIEW.md)
+Crawler pipelines, document processing, external scheme reviews, and reviewer queues.
+- **[Data Ingestion Pipeline](operations/DATA_INGESTION.md)**
+- **[Deep Discovery Crawler & Assessor](operations/DEEP_DISCOVERY.md)**
+- **[Document Processing & Extraction](operations/DOCUMENT_PROCESSING.md)**
+- **[Structured Knowledge Extraction](operations/STRUCTURED_KNOWLEDGE.md)**
+- **[External Scheme Catalog Review](operations/EXTERNAL_SCHEME_REVIEW.md)**
+- **[Verified Rule Revisions](operations/VERIFIED_RULE_REVISIONS.md)**
+- **[Reviewer Pilot Manifest](operations/PILOT_MANIFEST.md)**
 
-## Startup readiness and advisor
+---
 
-- [Readiness engine](startups/READINESS_ENGINE_V1.md)
-- [Consolidated deterministic starting plan](startups/STARTING_PLAN_V1.md)
-- [Deterministic dependency-aware funding plan](startups/FUNDING_PLAN_V1.md)
-- [Grounded open-source LLM advisor briefings](startups/GROUNDED_OPEN_SOURCE_LLM_ADVISOR_BRIEFINGS_V1.md)
-- [Advisor briefing retrieval API](startups/STARTUP_ADVISOR_BRIEFING_RETRIEVAL_API_V1.md)
+## 📌 Vision & Roadmap
 
-## Founder frontend
-
-- [Founder dashboard shell](frontend/FOUNDER_DASHBOARD_SHELL_V1.md)
-- [Founder dashboard motion and hierarchy](frontend/FOUNDER_DASHBOARD_MOTION_V1.md)
-- [First-open onboarding tour](frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md)
-- [Startup assessment wizard](frontend/STARTUP_ASSESSMENT_WIZARD_V1.md)
-- [Founder advisor briefing workspace](frontend/FOUNDER_ADVISOR_BRIEFING_WORKSPACE_V1.md)
-- [Founder advisor workspace hardening](frontend/FOUNDER_ADVISOR_WORKSPACE_HARDENING_V1.md)
-- [Multi-Language Support (i18n)](frontend/I18N_V1.md)
-
-## Documentation maintenance
-
-After each major milestone:
-
-1. update affected domain documents;
-2. update `docs/ROADMAP.md`;
-3. update the root `README.md` when setup, architecture, ML models, or headline capabilities change;
-4. verify all relative Markdown links.
+- **[Product Vision V2](PRODUCT_VISION_V2.md)**
+- **[Product Roadmap & Milestone Phases](ROADMAP.md)**
+- **[Infrastructure Roadmap](../infrastructure/README.md)**
