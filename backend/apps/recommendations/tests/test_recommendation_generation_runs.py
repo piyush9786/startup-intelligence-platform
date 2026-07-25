@@ -94,8 +94,8 @@ def test_repeated_generation_retains_run_history():
     assert second.generation_run.is_current is True
     assert first.generation_run.recommendation_count == 1
     assert len(first.generation_run.recommendation_snapshot) == 1
-    assert Recommendation.objects.count() == 1
-    assert Recommendation.objects.get().generation_run == (second.generation_run)
+    assert Recommendation.objects.count() == 2
+    assert Recommendation.objects.get(generation_run__is_current=True).generation_run == (second.generation_run)
 
 
 def test_generation_assessments_are_linked_to_run():
