@@ -28,16 +28,21 @@ def generate_startup_executive_resume(
     Synthesizes minimal founder inputs into a One-Page Startup Executive Resume / Pitch Teaser.
     """
     idea = idea_description.strip()
-    startup_name = profile.startup_name if (profile and profile.startup_name) else "Startup Entity"
 
     # Synthesize context intelligence
     intel = _generate_sector_context_intelligence(idea, sector, stage, funding_required)
+    startup_title = intel.get("generated_title") or (
+        profile.startup_name if (profile and profile.startup_name) else "Startup Entity"
+    )
+
     bp = intel.get("business_plan", {})
     schemes_raw = intel.get("recommended_schemes", [])
+    idea_und = intel.get("idea_understanding", {})
 
     resume_header = {
-        "startup_name": startup_name,
-        "tagline": f"An innovative {sector} platform transforming '{idea}'.",
+        "startup_name": startup_title,
+        "tagline": idea_und.get("value_proposition")
+        or f"An innovative {sector} platform transforming '{idea}'.",
         "sector": sector,
         "stage": stage,
         "funding_target": funding_required,
@@ -46,10 +51,9 @@ def generate_startup_executive_resume(
     }
 
     executive_summary = (
-        f"{startup_name} is an early-stage Indian startup operating in the "
-        f"{sector} space at the {stage} stage. The venture addresses market "
-        f"inefficiencies in '{idea}' by deploying digital infrastructure, "
-        f"aiming for self-sustaining unit economics and scaling to target revenues."
+        f"{startup_title} is an early-stage Indian startup operating in the "
+        f"{sector} space at the {stage} stage. {idea_und.get('core_concept', '')} "
+        f"{idea_und.get('market_opportunity', '')}"
     )
 
     prob_stmt = bp.get("problem", {}).get("problem_statement", f"High friction in '{idea}'.")
