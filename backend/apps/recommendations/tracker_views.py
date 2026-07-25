@@ -20,6 +20,7 @@ class SchemeApplicationTrackerSerializer(serializers.ModelSerializer):
             "id",
             "startup_profile",
             "scheme_version",
+            "scheme_name",
             "stage",
             "submission_reference",
             "notes",

@@ -1,10 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.recommendations.models import SchemeApplicationTracker
-from apps.schemes.models import Scheme, SchemeVersion
+from apps.schemes.models import Authority, Scheme, SchemeVersion
+from apps.sources.models import Source, SourceDocument
 from apps.startups.models import StartupProfile
 
 User = get_user_model()
@@ -21,13 +23,33 @@ class ApplicationTrackerAPITestCase(TestCase):
             startup_name="Tracker Startup",
             stage="validation",
         )
+        self.authority = Authority.objects.create(
+            name="DPIIT Authority",
+        )
         self.scheme = Scheme.objects.create(
             canonical_name="Startup India Seed Fund",
+            authority=self.authority,
+            lifecycle_status=Scheme.LifecycleStatus.ACTIVE,
+        )
+        self.source = Source.objects.create(
+            name="Seed Fund Source",
+            official_domain="seedfund.gov.in",
+            listing_url="https://seedfund.gov.in",
+        )
+        self.document = SourceDocument.objects.create(
+            source=self.source,
+            source_url="https://seedfund.gov.in/doc",
+            content_hash="hash-1",
+            retrieved_at=timezone.now(),
         )
         self.scheme_version = SchemeVersion.objects.create(
             scheme=self.scheme,
-            funding_amount="₹50 Lakhs",
-            verification_status="verified",
+            version_number=1,
+            source_document=self.document,
+            captured_at=timezone.now(),
+            content_hash="hash-version-1",
+            official_url="https://seedfund.gov.in/scheme",
+            verification_status=SchemeVersion.VerificationStatus.VERIFIED,
         )
 
     def test_create_tracker_application(self):
