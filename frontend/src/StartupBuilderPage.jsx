@@ -6,10 +6,10 @@ import {
 } from "./startupBuilderApi";
 
 const SAMPLE_IDEAS = [
-  { label: "🚀 B2B AI SaaS", concept: "AI-powered automated invoice processing & GST reconciliation for Indian SMBs", sector: "B2B SaaS / FinTech", funding: "₹25 Lakhs" },
-  { label: "🛒 D2C Organic Snacks", concept: "Farm-direct millet-based healthy snacks with zero artificial preservatives", sector: "D2C / Consumer Goods", funding: "₹15 Lakhs" },
+  { label: "🚀 B2B AI SaaS", concept: "AI-powered automated invoice processing & GST reconciliation for Indian SMBs", sector: "B2B SaaS / Software", funding: "₹25 Lakhs" },
+  { label: "🛒 D2C Organic Snacks", concept: "Farm-direct millet-based healthy snacks with zero artificial preservatives", sector: "D2C / E-Commerce & Retail", funding: "₹15 Lakhs" },
   { label: "🩺 HealthTech Teleclinic", concept: "Affordable IoT remote diagnostics and teleconsultation for rural tier-3 clinics", sector: "HealthTech / BioTech", funding: "₹50 Lakhs" },
-  { label: "🌾 AgriTech Supply Chain", concept: "Micro-cold-storage units and direct farm-to-retail B2B marketplace", sector: "AgriTech / Supply Chain", funding: "₹30 Lakhs" },
+  { label: "🌾 AgriTech Supply Chain", concept: "Micro-cold-storage units and direct farm-to-retail B2B marketplace", sector: "AgriTech / Food Processing", funding: "₹30 Lakhs" },
   { label: "⚡ EV Battery Swapping", concept: "Modular battery swapping station network for 2-wheeler and 3-wheeler delivery fleets", sector: "CleanTech / EV Mobility", funding: "₹1 Crore" },
 ];
 
@@ -158,20 +158,32 @@ export default function StartupBuilderPage({ onNavigate }) {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
               <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--muted)" }}>Industry Sector *</label>
-              <input
-                type="text"
-                placeholder="Sector (e.g. HealthTech, B2B SaaS)"
+              <select
                 value={sectorInput}
                 onChange={(e) => setSectorInput(e.target.value)}
                 style={{
                   padding: "0.8rem 1rem",
                   borderRadius: "8px",
                   border: "1px solid var(--line)",
-                  background: "rgba(255,255,255,0.04)",
-                  color: "inherit",
+                  background: "#0d131f",
+                  color: sectorInput ? "inherit" : "var(--muted)",
                   fontSize: "0.92rem",
                 }}
-              />
+              >
+                <option value="">Select Industry Sector...</option>
+                <option value="B2B SaaS / Software">B2B SaaS / Software</option>
+                <option value="HealthTech / BioTech">HealthTech / BioTech</option>
+                <option value="AgriTech / Food Processing">AgriTech / Food Processing</option>
+                <option value="CleanTech / EV Mobility">CleanTech / EV Mobility</option>
+                <option value="D2C / E-Commerce & Retail">D2C / E-Commerce & Retail</option>
+                <option value="FinTech / InsurTech">FinTech / InsurTech</option>
+                <option value="EdTech / Skilling">EdTech / Skilling</option>
+                <option value="DeepTech / AI & Robotics">DeepTech / AI & Robotics</option>
+                <option value="Logistics / Supply Chain">Logistics / Supply Chain</option>
+                <option value="DefenseTech & Aerospace">DefenseTech & Aerospace</option>
+                <option value="Renewable Energy & Sustainability">Renewable Energy & Sustainability</option>
+                <option value="Other / General Technology">Other / General Technology</option>
+              </select>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>

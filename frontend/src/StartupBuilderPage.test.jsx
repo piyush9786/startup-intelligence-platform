@@ -31,11 +31,11 @@ describe("StartupBuilderPage", () => {
     fireEvent.click(chip);
 
     const ideaInput = screen.getByPlaceholderText("Describe your startup idea in 1 sentence...");
-    const sectorInput = screen.getByPlaceholderText("Sector (e.g. HealthTech, B2B SaaS)");
+    const sectorSelect = screen.getByRole("combobox");
     const fundingInput = screen.getByPlaceholderText("Funding Required (e.g. ₹25 Lakhs)");
 
     expect(ideaInput.value).toContain("AI-powered automated invoice processing");
-    expect(sectorInput.value).toBe("B2B SaaS / FinTech");
+    expect(sectorSelect.value).toBe("B2B SaaS / Software");
     expect(fundingInput.value).toBe("₹25 Lakhs");
 
     const submitBtn = screen.getByText("🚀 Launch AI Consultant & Auto-Generate Master Plan");
