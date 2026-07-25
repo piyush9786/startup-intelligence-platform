@@ -34,7 +34,10 @@ class SchemeApplicationTrackerSerializer(serializers.ModelSerializer):
     def to_representation(self, instance: SchemeApplicationTracker):
         ret = super().to_representation(instance)
         ret["scheme_name"] = instance.scheme_version.scheme.canonical_name
-        ret["support_amount"] = getattr(instance.scheme_version, "funding_amount", "") or "Published support"
+        ret["support_amount"] = (
+            getattr(instance.scheme_version, "funding_amount", "")
+            or "Published support"
+        )
         return ret
 
 

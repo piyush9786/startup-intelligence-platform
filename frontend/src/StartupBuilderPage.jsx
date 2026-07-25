@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  generateMasterStartupPlan,
   getBuilderSection,
   listBuilderSections,
   requestBuilderSectionDraft,
@@ -110,12 +111,14 @@ export default function StartupBuilderPage({ onNavigate }) {
   const [drafting, setDrafting] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
-  // Beginner Quick Idea State
+  // Master Consultant Generator Inputs
   const [customConcept, setCustomConcept] = useState("");
-  const [showTips, setShowTips] = useState(true);
+  const [sectorInput, setSectorInput] = useState("Technology / General");
+  const [fundingInput, setFundingInput] = useState("₹25 Lakhs");
+  const [consulting, setConsulting] = useState(false);
+  const [masterPackage, setMasterPackage] = useState(null);
 
   const activeConfig = SECTION_CONFIGS.find((c) => c.id === activeSectionId) || SECTION_CONFIGS[0];
-  const activeSection = sectionsMap[activeSectionId] || {};
 
   useEffect(() => {
     loadSections();
@@ -152,10 +155,35 @@ export default function StartupBuilderPage({ onNavigate }) {
 
   function handleApplySampleIdea(concept) {
     setCustomConcept(concept);
-    setFeedback({
-      type: "info",
-      message: `Selected idea: "${concept}". Click "✨ Auto-Draft Section with AI" below to populate fields!`,
-    });
+  }
+
+  async function handleLaunchMasterConsultant(e) {
+    if (e) e.preventDefault();
+    if (!customConcept.trim()) return;
+
+    setConsulting(true);
+    setFeedback(null);
+    try {
+      const res = await generateMasterStartupPlan({
+        idea_description: customConcept,
+        sector: sectorInput,
+        funding_required: fundingInput,
+      });
+
+      setMasterPackage(res);
+      await loadSections(); // Reload auto-persisted sections
+      setFeedback({
+        type: "success",
+        message: "🚀 Master Startup Strategy Package generated! Complete plan, matched schemes, and roadmap created.",
+      });
+    } catch (err) {
+      setFeedback({
+        type: "danger",
+        message: err.message || "Failed to generate master startup plan.",
+      });
+    } finally {
+      setConsulting(false);
+    }
   }
 
   function handleAutoSuggestField(field) {
@@ -164,7 +192,7 @@ export default function StartupBuilderPage({ onNavigate }) {
       handleFieldChange(field.key, tipExample);
       setFeedback({
         type: "success",
-        message: `✓ Auto-suggested starter response for "${field.label}"! Edit it to match your startup.`,
+        message: `✓ Auto-suggested response for "${field.label}". Edit as needed!`,
       });
     }
   }
@@ -203,12 +231,12 @@ export default function StartupBuilderPage({ onNavigate }) {
       }
       setFeedback({
         type: "info",
-        message: "✨ AI draft generated! Review the responses below and customize them for your startup.",
+        message: "✨ AI draft generated! Review responses below.",
       });
     } catch (err) {
       setFeedback({
         type: "danger",
-        message: err.message || "AI draft generation unavailable. Fill in the section using starter tips.",
+        message: err.message || "AI draft generation unavailable.",
       });
     } finally {
       setDrafting(false);
@@ -224,9 +252,9 @@ export default function StartupBuilderPage({ onNavigate }) {
       <header className="page-header">
         <div>
           <span className="section-kicker">AI STARTUP OPERATING SYSTEM</span>
-          <h1 style={{ fontSize: "1.8rem", margin: "0.25rem 0 0.4rem" }}>AI Startup Builder</h1>
+          <h1 style={{ fontSize: "1.8rem", margin: "0.25rem 0 0.4rem" }}>AI Startup Builder & Consultant</h1>
           <p className="page-subtitle" style={{ margin: 0, color: "var(--muted)" }}>
-            Zero experience required! Pick a startup concept or type your idea, and let AI structure your complete 6-part startup plan.
+            Enter your raw startup idea. Our AI Consultant generates your full business plan, matches government schemes, and creates your execution roadmap.
           </p>
         </div>
         <div className="builder-header-badge">
@@ -236,52 +264,128 @@ export default function StartupBuilderPage({ onNavigate }) {
         </div>
       </header>
 
-      {/* Beginner Starter Kit Banner */}
-      <section className="card" style={{ padding: "1.25rem 1.5rem", borderLeft: "4px solid var(--lime)", background: "rgba(255,255,255,0.02)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-          <div>
-            <span className="section-kicker">🎓 BEGINNER NOOB STARTER KIT</span>
-            <h3 style={{ fontSize: "1.1rem", margin: "0.2rem 0" }}>Need Inspiration? Pick a Sample Idea or Type Yours</h3>
-          </div>
-          <button
-            type="button"
-            className="button button-small"
-            onClick={() => setShowTips(!showTips)}
-            style={{ fontSize: "0.78rem" }}
-          >
-            {showTips ? "Hide Tips 👁️" : "Show Beginner Guide 💡"}
-          </button>
-        </div>
+      {/* 🚀 AI CONSULTANT MASTER PLAN GENERATOR HERO BOX */}
+      <section className="card" style={{ padding: "1.5rem", borderLeft: "4px solid var(--lime)", background: "rgba(255,255,255,0.02)" }}>
+        <span className="section-kicker">🤖 AI STARTUP CONSULTANT ENGINE</span>
+        <h3 style={{ fontSize: "1.2rem", margin: "0.2rem 0 0.5rem" }}>Generate Master Strategy & Matched Government Schemes</h3>
+        <p style={{ margin: "0 0 1rem", fontSize: "0.88rem", color: "var(--muted)" }}>
+          Just type a 1-sentence concept or click a sample idea below. The AI Consultant will generate a complete 6-section business plan, recommended government grants, and execution roadmap for you!
+        </p>
 
-        {showTips && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--muted)" }}>
-              Click any sample concept below to prefill your startup context, then hit <strong>"✨ Auto-Draft Section with AI"</strong>:
-            </p>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {SAMPLE_IDEAS.map((idea, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleApplySampleIdea(idea.concept)}
-                  style={{
-                    padding: "0.4rem 0.75rem",
-                    borderRadius: "20px",
-                    border: "1px solid var(--line)",
-                    background: customConcept === idea.concept ? "var(--lime)" : "rgba(255,255,255,0.05)",
-                    color: customConcept === idea.concept ? "#000" : "inherit",
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  {idea.label}
-                </button>
-              ))}
+        <form onSubmit={handleLaunchMasterConsultant} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.25rem" }}>
+            {SAMPLE_IDEAS.map((idea, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleApplySampleIdea(idea.concept)}
+                style={{
+                  padding: "0.35rem 0.75rem",
+                  borderRadius: "20px",
+                  border: "1px solid var(--line)",
+                  background: customConcept === idea.concept ? "var(--lime)" : "rgba(255,255,255,0.05)",
+                  color: customConcept === idea.concept ? "#000" : "inherit",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {idea.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.75rem" }}>
+            <input
+              type="text"
+              placeholder="Describe your startup idea in 1 sentence..."
+              value={customConcept}
+              onChange={(e) => setCustomConcept(e.target.value)}
+              style={{ gridColumn: "span 2", padding: "0.7rem 0.9rem", borderRadius: "6px", border: "1px solid var(--line)", background: "rgba(255,255,255,0.04)", color: "inherit", fontSize: "0.9rem" }}
+            />
+            <input
+              type="text"
+              placeholder="Sector (e.g. HealthTech, B2B SaaS)"
+              value={sectorInput}
+              onChange={(e) => setSectorInput(e.target.value)}
+              style={{ padding: "0.7rem 0.9rem", borderRadius: "6px", border: "1px solid var(--line)", background: "rgba(255,255,255,0.04)", color: "inherit", fontSize: "0.9rem" }}
+            />
+            <input
+              type="text"
+              placeholder="Funding Required (e.g. ₹25 Lakhs)"
+              value={fundingInput}
+              onChange={(e) => setFundingInput(e.target.value)}
+              style={{ padding: "0.7rem 0.9rem", borderRadius: "6px", border: "1px solid var(--line)", background: "rgba(255,255,255,0.04)", color: "inherit", fontSize: "0.9rem" }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="button button-primary"
+            disabled={consulting || !customConcept.trim()}
+            style={{ width: "fit-content", padding: "0.7rem 1.4rem", fontSize: "0.92rem", fontWeight: 700 }}
+          >
+            {consulting ? "🧠 AI Consultant Synthesizing Master Package…" : "🚀 Launch AI Consultant & Auto-Generate Master Plan"}
+          </button>
+        </form>
+      </section>
+
+      {/* MASTER CONSULTANT PACKAGE RESULTS (If Generated) */}
+      {masterPackage && (
+        <section className="card" style={{ padding: "1.5rem", border: "1px solid var(--lime)", background: "rgba(255,255,255,0.03)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <span className="section-kicker">✨ AI CONSULTANT MASTER STRATEGY PACKAGE</span>
+            <button type="button" className="button button-small" onClick={() => setMasterPackage(null)}>Close Package ✕</button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
+            {/* Executive Strategy Note */}
+            <div className="card" style={{ padding: "1rem", background: "rgba(0,0,0,0.2)" }}>
+              <h4 style={{ margin: "0 0 0.5rem", color: "var(--lime)" }}>💡 Consultant Executive Strategy</h4>
+              <p style={{ fontSize: "0.88rem", margin: 0, lineHeight: 1.5 }}>
+                {masterPackage.consultant_recommendations?.executive_summary}
+              </p>
+              <div style={{ marginTop: "0.75rem", fontSize: "0.8rem" }}>
+                <strong>Top Risks to Watch:</strong>
+                <ul style={{ margin: "0.4rem 0 0", paddingLeft: "1.2rem" }}>
+                  {masterPackage.consultant_recommendations?.top_risks?.map((r, idx) => (
+                    <li key={idx}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Matched Government Schemes */}
+            <div className="card" style={{ padding: "1rem", background: "rgba(0,0,0,0.2)" }}>
+              <h4 style={{ margin: "0 0 0.5rem", color: "var(--lime)" }}>🏛️ Top Matched Government Schemes</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {masterPackage.recommended_schemes?.map((sch, idx) => (
+                  <div key={idx} style={{ padding: "0.5rem", background: "rgba(255,255,255,0.03)", borderRadius: "4px", border: "1px solid var(--line)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", fontWeight: 700 }}>
+                      <span>{sch.scheme_name}</span>
+                      <span className="badge badge-verified" style={{ fontSize: "0.7rem" }}>{sch.eligibility_match}</span>
+                    </div>
+                    <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>{sch.grant_amount} — {sch.key_benefit}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Execution Roadmap */}
+            <div className="card" style={{ padding: "1rem", background: "rgba(0,0,0,0.2)" }}>
+              <h4 style={{ margin: "0 0 0.5rem", color: "var(--lime)" }}>📊 12-Month Execution Roadmap</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {masterPackage.execution_roadmap?.map((m, idx) => (
+                  <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.82rem" }}>
+                    <span style={{ fontWeight: 700, minWidth: "80px" }}>{m.phase}:</span>
+                    <span style={{ color: "var(--muted)", flex: 1 }}>{m.milestone}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {feedback && (
         <div className={`notice notice-${feedback.type}`}>
