@@ -1,1 +1,1 @@
-# config.settings package
+from .development import *  # noqa: F401, F403
