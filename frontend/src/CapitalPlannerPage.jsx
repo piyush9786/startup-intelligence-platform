@@ -161,11 +161,29 @@ export default function CapitalPlannerPage({ onNavigate }) {
               <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--lime)" }}>
                 PROJECTED CAPITAL RUNWAY
               </span>
-              <div style={{ display: "flex", alignItems: "baseline", marginTop: "0.4rem" }}>
+              <div style={{ display: "flex", alignItems: "baseline", marginTop: "0.4rem", gap: "0.75rem", flexWrap: "wrap" }}>
                 <span className="capital-runway-big">
                   {plan.runway_months >= 99 ? "Infinite" : plan.runway_months}
                 </span>
                 {plan.runway_months < 99 && <span className="capital-runway-unit">months</span>}
+
+                {plan.ml_runway_months !== undefined && plan.ml_runway_months !== null && (
+                  <span
+                    className="badge"
+                    style={{
+                      background: "rgba(99, 102, 241, 0.2)",
+                      color: "#a5b4fc",
+                      border: "1px solid rgba(99, 102, 241, 0.4)",
+                      padding: "0.4rem 0.8rem",
+                      borderRadius: "8px",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                    }}
+                    title="Random Forest Regressor (Model 8) sector & burn velocity ML forecast"
+                  >
+                    🤖 ML Forecast: {plan.ml_runway_months} months
+                  </span>
+                )}
               </div>
               <p style={{ margin: "0.5rem 0 0", color: "rgba(255,255,255,0.8)", fontSize: "0.9rem" }}>
                 {plan.net_burn > 0 ? "Net burn rate" : "Net profit"}: <strong>₹{Number(Math.abs(plan.net_burn)).toLocaleString("en-IN")} / month</strong>
