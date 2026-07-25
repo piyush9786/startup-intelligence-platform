@@ -58,6 +58,15 @@ the source of truth for eligibility or permissions.
 
 ## Domain boundaries
 
+### Frontend
+
+The frontend domain is built on React and Vite and implements:
+
+- global multi-language (i18n) support across public and authenticated views;
+- responsive user interfaces adopting modern web design paradigms (glassmorphism, vibrant palettes, modern typography, semantic layouts);
+- deterministic AI Capital Planner UI for burn-rate and scenario modeling;
+- accessible routing, page transitions, and authenticated dashboard layouts.
+
 ### Sources, documents, discovery, and knowledge
 
 This path collects external material and creates reviewable knowledge
@@ -169,9 +178,9 @@ deadlines, or funding-plan ordering.
 Qdrant retrieval should fail open for optional guidance without breaking the
 authoritative founder workspace.
 
-## Planned assistant layer
+## Assistant layer
 
-A future `apps/assistant` application will add:
+The `apps/assistant` application provides:
 
 - persisted agent sessions and messages;
 - immutable tool-call logs;
