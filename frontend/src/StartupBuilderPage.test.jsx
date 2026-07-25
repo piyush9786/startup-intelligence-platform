@@ -23,16 +23,19 @@ describe("StartupBuilderPage", () => {
 
     const submitBtn = screen.getByText("🚀 Launch AI Consultant & Auto-Generate Master Plan");
     expect(submitBtn).toBeDisabled();
+    
+    const resumeBtn = screen.getByText("🔒 Generate Master Plan First to Unlock Resume");
+    expect(resumeBtn).toBeDisabled();
   });
 
-  it("enables buttons and populates all 3 fields when sample chip is clicked", async () => {
+  it("enables launch button when sample chip is clicked while keeping resume locked until master plan is generated", async () => {
     render(<StartupBuilderPage />);
     const chip = screen.getByText("🚀 B2B AI SaaS");
     fireEvent.click(chip);
 
-    const ideaInput = screen.getByPlaceholderText("Describe your startup idea in 1 sentence...");
+    const ideaInput = screen.getByPlaceholderText(/Describe your startup idea in 1 sentence/);
     const sectorSelect = screen.getByRole("combobox");
-    const fundingInput = screen.getByPlaceholderText("Funding Required (e.g. ₹25 Lakhs)");
+    const fundingInput = screen.getByPlaceholderText(/Funding Target/);
 
     expect(ideaInput.value).toContain("AI-powered automated invoice processing");
     expect(sectorSelect.value).toBe("B2B SaaS / Software");
@@ -40,9 +43,12 @@ describe("StartupBuilderPage", () => {
 
     const submitBtn = screen.getByText("🚀 Launch AI Consultant & Auto-Generate Master Plan");
     expect(submitBtn).not.toBeDisabled();
+
+    const resumeBtn = screen.getByText("🔒 Generate Master Plan First to Unlock Resume");
+    expect(resumeBtn).toBeDisabled();
   });
 
-  it("launches LLM reasoning engine after all 3 fields are filled and displays results below", async () => {
+  it("launches LLM reasoning engine, unlocks resume button, and displays results below", async () => {
     builderApi.generateMasterStartupPlan.mockResolvedValue({
       generated_title: "FinRec AI Automation",
       sector: "B2B SaaS / FinTech",
@@ -75,8 +81,12 @@ describe("StartupBuilderPage", () => {
       });
     });
 
-    expect(await screen.findByText("FinRec AI Automation")).toBeInTheDocument();
+    expect(await screen.findByText(/FinRec AI Automation/)).toBeInTheDocument();
     expect(screen.getByText("📌 Core Concept Analysis")).toBeInTheDocument();
     expect(screen.getByText("SISFS")).toBeInTheDocument();
+
+    // Verify unlocked resume button
+    const unlockedResumeBtn = screen.getByText("📄 Generate Printable Startup Executive Resume");
+    expect(unlockedResumeBtn).not.toBeDisabled();
   });
 });
