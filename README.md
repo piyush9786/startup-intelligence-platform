@@ -132,80 +132,18 @@ docker compose exec -T frontend npm run build
 git diff --check
 ```
 
-## Next product phase
+## Product Vision V2 roadmap
 
-The next milestone is verification-aware founder progress feedback.
+The platform is currently progressing through the **Product Vision V2** phases, transforming it into an AI Startup Operating System. 
 
-Phase 50 will connect execution of the persisted funding plan back to readiness
-and recommendations through explicit states such as `not_started`,
-`in_progress`, `founder_reported_complete`, `evidence_submitted`, and
-`verified`.
+Recent delivery and active milestones include:
+- **Phase 50** — Public entry and authentication (landing, registration, responsive public navigation)
+- **Phase 51** — Structured My Startup experience
+- **Phase 52** — AI startup document intake
+- **Phase 53** — Scheme knowledge completeness
+- **Phase 54** — AI Startup Builder
+- **Phase 55** — AI Capital Planner
+- **Phase 56** — Universal AI Copilot
+- **Phase 57** — Orchestration and data platform
 
-Founder-reported completion will remain separate from reviewer-approved or
-otherwise authoritative verification facts.
-<!-- phase-46-founder-concierge:start -->
-## Phase 46: Bounded founder concierge
-
-Phase 46 adds the authenticated founder-only `founder-concierge-v1` workflow while preserving the startup assessment as the authoritative source of founder and startup inputs.
-
-The concierge follows nine bounded states: `greeting`, `basic_info`, `location_legal`, `founder_details`, `funding_need`, `documents_check`, `confirm_profile`, `generating_plan`, and `plan_ready`.
-
-The frontend reads the authoritative current state and renders only the backend-provided `allowed_fields`. Draft changes use the narrowly allowlisted and audited assessment-draft update capability. Every public transition includes `expected_state`, and browser clients never send `system_transition`.
-
-At `confirm_profile`, the founder must explicitly confirm submission. The existing deterministic assessment submission service remains authoritative for readiness, roadmap, eligibility, and recommendation generation. Successful submission performs the internal `generating_plan` to `plan_ready` transition.
-
-The founder concierge remains separate from the site-wide read-only founder chatbot. It does not calculate or invent readiness, eligibility, recommendations, amounts, deadlines, ordering, or verification results in the browser.
-
-API endpoints:
-
-- `GET /api/v1/assistant/concierge/current/`
-- `POST /api/v1/assistant/concierge/current/updates/`
-- `POST /api/v1/assistant/concierge/current/transitions/`
-
-Validation completed with 20 frontend test files and 124 frontend tests, the 465-test backend suite, the production frontend build, Ruff, Django system checks, and migration drift checks. No database migration was required.
-<!-- phase-46-founder-concierge:end -->
-
-## Phase 47: Consolidated deterministic starting plan
-
-Phase 47 adds the persisted `startup-starting-plan-v1` contract.
-
-It transactionally composes the exact readiness assessment, readiness action
-plan, and recommendation generation created by confirmed assessment
-submission. Each plan retains source snapshots, identifiers, engine versions,
-counts, normalized items, history, and one current version per startup.
-
-Readiness actions preserve readiness priority and scheme opportunities preserve
-recommendation rank. Every item explicitly reports that dependency ordering has
-not been evaluated; verified prerequisite ordering remains reserved for Phases
-48 and 49.
-
-Founder APIs support idempotent generation, current retrieval, history, and
-detail. The founder workspace adds a dedicated Starting plan view with source
-provenance and direct roadmap and scheme-explorer actions.
-
-See
-[Consolidated deterministic starting plan](docs/startups/STARTING_PLAN_V1.md).
-
-## Phase 49: Deterministic dependency-aware funding plan
-
-Phase 49 adds the persisted `startup-funding-plan-v1` contract.
-
-It converts the Phase 47 starting plan and reviewed Phase 48 prerequisite graph
-into deterministic ordered steps and parallel execution waves. Hard
-dependencies block successors; supporting relationships remain non-blocking
-provenance.
-
-Only verified graph relationships, verified scheme versions, verified
-application windows, and strictly sourced processing-time metadata influence
-the plan. PostgreSQL remains authoritative, while Neo4j remains a derived
-projection.
-
-Founder APIs support idempotent generation, current retrieval, immutable
-history, and detail. The founder dashboard includes a dedicated Funding plan
-workspace with dependency, deadline, timing, execution-wave, and provenance
-information.
-
-Language models may narrate a persisted plan but do not select its ordering.
-
-See
-[Deterministic dependency-aware funding plan](docs/startups/FUNDING_PLAN_V1.md).
+See [PRODUCT_VISION_V2.md](docs/PRODUCT_VISION_V2.md) for the complete vision, principles, and roadmap.
