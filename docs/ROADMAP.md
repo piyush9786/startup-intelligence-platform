@@ -479,3 +479,28 @@ See
 
 See
 [Founder Intelligence Dashboard workspace](startups/FOUNDER_INTELLIGENCE_DASHBOARD_V1.md).
+
+## Phase 59 — 9-Model ML Engine & Data Engineering Pipeline
+
+**Status: Completed**
+
+- Built `apps.ml_engine` Django application featuring 9 Machine Learning models:
+  * Model 1: Transformer Embeddings (`embeddinggemma` via Ollama)
+  * Model 2: Generative AI / LLM (`qwen3.5:9b` via Ollama)
+  * Model 3: K-Means Clustering (`KMeans(n_clusters=8)`, silhouette = 0.089)
+  * Model 4: Calibrated SVM (`CalibratedClassifierCV(SVC)`, accuracy = 75%)
+  * Model 5: AdaBoost (`AdaBoostClassifier`, ROC-AUC = 0.606)
+  * Model 6: Isolation Forest (`IsolationForest`, contamination = 5%)
+  * Model 7: TF-IDF + RRF (`TfidfVectorizer`, 3-stage RAG hybrid search)
+  * Model 8: Random Forest Regressor (`RandomForestRegressor`, MAE = 11.88m)
+  * Model 9: DBSCAN (`DBSCAN`, scheme deduplication)
+- Created 29-dimensional NumPy/Pandas feature extraction ETL (`MLFeatureStore`) and model version registry (`MLModelRegistry`).
+- Added 3 Celery Beat periodic tasks (`nightly_feature_extraction`, `nightly_anomaly_and_cohort`, `weekly_model_retraining`).
+- Integrated SVM probability ranking into recommendations engine and Random Forest runway forecast into AI Capital Planner.
+- Added synthetic data generator and `python manage.py train_ml_models` management command.
+- Rendered K-Means cohort badges, Isolation Forest integrity badges, SVM match probability scores, and ML runway forecast badges in frontend UI.
+- Validated 560+ backend pytest tests, 203 frontend vitest tests, frontend production build, Ruff, Django checks, and zero migration drift.
+
+See
+[9-Model Machine Learning Engine & Data Engineering Pipeline](architecture/ML_ENGINE_V1.md).
+
