@@ -223,3 +223,15 @@ tracing;
 data lineage;
 analytics and benchmark pipelines;
 production hardening.
+Phase 59 — 9-Model ML Engine & Data Engineering Pipeline
+K-Means cohort clustering;
+Calibrated SVM scheme success ranking;
+AdaBoost 30-day readiness predictor;
+Isolation Forest anomaly detection;
+TF-IDF + RRF 3-stage RAG hybrid search;
+Random Forest capital forecasting;
+DBSCAN scheme deduplication;
+29-dimensional feature store (MLFeatureStore);
+model version registry (MLModelRegistry);
+Celery Beat periodic retraining pipelines.
+
