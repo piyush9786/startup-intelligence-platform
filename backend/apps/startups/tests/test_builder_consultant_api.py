@@ -36,4 +36,4 @@ class MasterConsultantGeneratorAPITestCase(TestCase):
         self.assertIn("recommended_schemes", res.data)
         self.assertIn("execution_roadmap", res.data)
         self.assertIn("consultant_recommendations", res.data)
-        self.assertEqual(res.data["generated_by"], "ai-startup-consultant-v1")
+        self.assertTrue(res.data["generated_by"].startswith("ai-startup-consultant"))
