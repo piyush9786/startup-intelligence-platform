@@ -249,6 +249,61 @@ def _generate_sector_context_intelligence(
     }
 
 
+def _normalize_llm_payload(
+    payload: dict[str, Any], idea: str, sector: str, stage: str, funding: str
+) -> dict[str, Any]:
+    """Ensures LLM output conforms to the standard API contract."""
+    fallback = _generate_sector_context_intelligence(idea, sector, stage, funding)
+
+    business_plan = payload.get("business_plan") or {
+        "problem": {"problem_statement": payload.get("context") or idea},
+        "customer": {"primary_customer_segment": str(payload.get("target_audience", ""))},
+        "validation": {"core_hypothesis": str(payload.get("value_proposition", ""))},
+        "business_model": {"revenue_model": str(payload.get("operational_model", ""))},
+        "pricing": {"pricing_model": str(payload.get("funding_breakdown", ""))},
+    }
+
+    recommended_schemes = payload.get("recommended_schemes") or fallback["recommended_schemes"]
+    raw_roadmap = payload.get("execution_roadmap") or payload.get("roadmap") or []
+
+    execution_roadmap = []
+    if isinstance(raw_roadmap, list):
+        for item in raw_roadmap:
+            if isinstance(item, dict):
+                execution_roadmap.append({
+                    "phase": item.get("phase") or item.get("quarter") or "Phase",
+                    "milestone": item.get("milestone") or str(item.get("activities", "")),
+                    "status": "Upcoming",
+                })
+
+    if not execution_roadmap:
+        execution_roadmap = fallback["execution_roadmap"]
+
+    consultant_recommendations = payload.get("consultant_recommendations") or {
+        "executive_advice": str(
+            payload.get("advice_for_founders")
+            or fallback["consultant_recommendations"]["executive_advice"]
+        ),
+        "risks_to_watch": (
+            payload.get("risk_analysis")
+            or fallback["consultant_recommendations"]["risks_to_watch"]
+        ),
+        "next_best_action": "Apply for DPIIT Recognition and matched seed grants.",
+    }
+
+    return {
+        "concept": idea,
+        "sector": sector,
+        "stage": stage,
+        "funding_required": funding,
+        "business_plan": business_plan,
+        "recommended_schemes": recommended_schemes,
+        "execution_roadmap": execution_roadmap,
+        "consultant_recommendations": consultant_recommendations,
+        "generated_by": "ai-startup-consultant-llm-v2",
+    }
+
+
 def generate_master_startup_consultant_package(
     *,
     idea_description: str,
@@ -284,7 +339,7 @@ def generate_master_startup_consultant_package(
         ]
         res = provider.generate(messages=prompt_messages, response_schema={})
         if res and res.payload:
-            return res.payload
+            return _normalize_llm_payload(res.payload, idea, sector, stage, funding_required)
     except (LLMProviderError, Exception) as err:
         logger.info(
             "LLM Provider unavailable for consultant package, using context engine: %s", err
