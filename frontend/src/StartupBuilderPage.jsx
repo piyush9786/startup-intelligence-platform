@@ -348,7 +348,7 @@ export default function StartupBuilderPage({ onNavigate }) {
           {activeConfig.fields.map((field) => (
             <div key={field.key} style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <label style={{ fontWeight: 600, fontSize: "0.9rem" }}>{field.label}</label>
+                <label htmlFor={field.key} style={{ fontWeight: 600, fontSize: "0.9rem" }}>{field.label}</label>
                 <button
                   type="button"
                   onClick={() => handleAutoSuggestField(field)}
@@ -359,6 +359,7 @@ export default function StartupBuilderPage({ onNavigate }) {
               </div>
 
               <textarea
+                id={field.key}
                 rows={3}
                 placeholder={field.placeholder}
                 value={formData[field.key] || ""}
