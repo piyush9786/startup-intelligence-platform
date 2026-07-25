@@ -2,187 +2,182 @@
 
 A verified startup-support intelligence platform for readiness assessment,
 scheme eligibility, recommendations, evidence verification, grounded guidance,
-and deterministic dependency-aware funding planning.
+deterministic dependency-aware funding planning, and **integrated multi-model AI/ML data engineering**.
 
-The platform is currently an advanced MVP and functional internal alpha.
+The platform combines a verified deterministic data core with a **9-model ML ensemble** and an enhanced **3-stage RAG pipeline**.
 
-## Core principle
+---
 
-Deterministic engines decide. Verified evidence supports those decisions.
+## Core Principles
 
-Language models retrieve and explain. They do not invent eligibility, funding
-amounts, deadlines, reviewer decisions, or prerequisite ordering.
+1. **Deterministic Engines Decide**: Core eligibility, funding amounts, deadlines, and prerequisite graph rules are enforced deterministically.
+2. **ML Models Predict & Rank**: Learning models handle feature extraction, startup cohort clustering, scheme success probability ranking, anomaly detection, and capital forecasting.
+3. **Generative AI Explains**: Language models retrieve, summarize, and explain recommendations with grounded citations — without inventing facts.
 
-## Implemented capabilities
+---
 
-- persisted first-open founder onboarding with empty-profile and
-  returning-founder variants;
-- resumable, dismissible onboarding with no repeat after completion;
-- interactive react-joyride website tour;
-- shared agent-orchestration persistence foundation;
-- bounded owner-scoped agent sessions;
-- append-only messages, immutable tool-call logs, and claim references;
-- versioned whitelisted read-only tool registry with authorization snapshots
-  and canonical output hashes;
-- persistent founder-only site-wide chatbot integrated with local Qwen 3:4b LLM
-  via Ollama, featuring page-aware context and deterministic navigation;
-- startup profile and assessment-draft workflow;
-- document-assisted profile autofill;
-- deterministic startup-readiness assessment;
-- persisted readiness action plans;
-- persisted, versioned consolidated starting plans with source provenance;
-- persisted dependency-aware funding plans with verified prerequisites,
-  deterministic execution waves, exact-source idempotency, and immutable
-  history;
-- verified canonical scheme catalog and versioning;
-- verified prerequisite concepts and reviewed scheme dependency relationships;
-- deterministic cycle validation and rebuildable Neo4j graph projection;
-- executable deterministic eligibility engine (`rules-v5`);
-- immutable eligibility assessments and recommendation runs;
-- deterministic recommendation ranking;
-- founder manual-verification submissions and private evidence uploads;
-- reviewer queue, protected evidence access, and immutable decisions;
-- effective and expiring reviewer approvals;
-- founder-facing reviewer-approved evidence provenance;
-- Qdrant-backed evidence retrieval;
-- grounded Ollama founder-advisor briefings with robust validation handling
-  for LLM hallucination and fallback citations;
-- global multi-language (i18n) support across public and product views (English, Hindi, Marathi);
-- founder and reviewer React workspaces;
-- readiness-first responsive founder dashboard with accessible Motion
-  transitions and premium modern UI/UX (glassmorphism, vibrant palettes);
-- interactive user journey routing dialogue for new founders vs existing startups;
-- AI Capital Planner UI with runway, burn, and deterministic scenario modeling.
+## 🤖 Integrated 9 ML Models Architecture
 
-## System architecture & Domain boundaries
+The platform embeds **9 specialized ML models** across 4 functional layers:
+
+| # | Model | Algorithm | Engine / Library | Purpose |
+|---|-------|-----------|------------------|---------|
+| **1** | **Transformer Embeddings** | `embeddinggemma` | Ollama | **RAG Vector Search** — encodes scheme PDFs & queries into Qdrant dense vectors |
+| **2** | **Generative AI / LLM** | `qwen3.5:9b` | Ollama | **Reasoning & Chat** — site-wide copilot, document parsing, scheme summaries |
+| **3** | **K-Means Clustering** | `KMeans(n_clusters=8)` | `scikit-learn` | **Startup Cohort Segmentation** — groups startups into cohorts by stage, sector, & turnover |
+| **4** | **SVM Classifier** | `CalibratedClassifierCV(SVC)` | `scikit-learn` | **Scheme Success Ranking** — predicts probability (0.0–1.0) of a startup successfully acquiring a scheme |
+| **5** | **AdaBoost Classifier** | `AdaBoostClassifier` | `scikit-learn` | **Readiness Predictor** — predicts probability of a startup becoming "READY" within 30 days |
+| **6** | **Isolation Forest** | `IsolationForest` | `scikit-learn` | **Anomaly & Fraud Detection** — flags statistically anomalous or fraudulent startup profiles |
+| **7** | **TF-IDF + Cosine** | `TfidfVectorizer` | `scikit-learn` | **Hybrid RAG Retrieval** — sparse keyword search combined with Qdrant via Reciprocal Rank Fusion (RRF) |
+| **8** | **Random Forest Regressor** | `RandomForestRegressor` | `scikit-learn` | **Capital Runway Forecasting** — sector-aware ML runway estimation for the AI Capital Planner |
+| **9** | **DBSCAN Clustering** | `DBSCAN` | `scikit-learn` | **Scheme Deduplication** — clusters embedding vectors to flag near-duplicate government scheme versions |
+
+---
+
+## 🔄 Enhanced 3-Stage RAG Pipeline
+
+```text
+Stage 1: HYBRID RETRIEVAL
+  User Query ─┬─► Embedding (embeddinggemma) ─► Dense Search (Qdrant)  ─┐
+             └─► Sparse TF-IDF (Model 7)     ─► Keyword Search        ─┴─► Reciprocal Rank Fusion (RRF) [Top 20]
+
+Stage 2: ML RE-RANKING
+  Top 20 Candidates ─► Calibrated SVM Ranker (Model 4) ─► Success Probability Ranking [Top 6]
+
+Stage 3: LLM GROUNDED EXPLANATION
+  Top 6 Chunks + Startup Profile ─► LLM (qwen3.5:9b) ─► Grounded Answer + Source Citations
+```
+
+---
+
+## 🏗️ Data Engineering & MLOps Infrastructure
+
+- **29-Dimensional Feature Store (`MLFeatureStore`)**: Pandas/NumPy feature engineering pipeline extracting stage ordinals, log-scaled financial metrics (turnover, team size, funding required), DPIIT/Udyam status, readiness scores, and 18-sector one-hot encodings.
+- **Model Registry (`MLModelRegistry`)**: Tracks every trained model artifact (`.joblib`), version number, training dataset size, primary metrics (silhouette score, accuracy, MAE, ROC-AUC), and active state.
+- **Celery Beat Batch Pipelines**:
+  - `nightly_feature_extraction`: 24-hour periodic ETL caching feature vectors for all startup profiles.
+  - `nightly_anomaly_and_cohort`: Automated nightly Isolation Forest anomaly scanning & K-Means re-clustering.
+  - `weekly_model_retraining`: Automatic weekly re-training of all scikit-learn model artifacts.
+- **Bootstrap Synthetic Data Generator**: Provides realistic training distributions for initial zero-data deployments.
+
+---
+
+## 🏛️ System Architecture
 
 ```text
 React / Vite (with i18n context)
       │
       ▼
-Django REST Framework
+Django REST Framework (Python 3.13)
       │
-      ├── PostgreSQL — authoritative business data
-      ├── Redis / Celery — asynchronous work
-      ├── MinIO — raw documents and private evidence
-      ├── Qdrant — derived embeddings and retrieval
-      ├── Neo4j — derived verified dependency-graph projection
-      └── Ollama — local embeddings and controlled generation
+      ├── PostgreSQL — Authoritative business data, MLFeatureStore & MLModelRegistry
+      ├── Redis / Celery — Asynchronous tasks & scheduled ML retraining
+      ├── scikit-learn / joblib — ML Engine (K-Means, SVM, AdaBoost, Isolation Forest, RF, TF-IDF, DBSCAN)
+      ├── Qdrant — Vector database for dense RAG embeddings
+      ├── Neo4j — Verified dependency graph projection
+      ├── MinIO — Raw document storage & private evidence uploads
+      └── Ollama — Local LLM (qwen3.5:9b) & Embeddings (embeddinggemma)
 ```
 
-### Domain Boundaries
-- **Frontend**: React and Vite application implementing multi-language (i18n) support, modern web design paradigms, AI Capital Planner UI, and accessible routing.
-- **Startups**: Owns founder profiles, assessment drafts, readiness plans, and advisor snapshots.
-- **Schemes**: Owns canonical programmes, immutable versions, eligibility requirements, and executable rules.
-- **Recommendations**: Owns deterministic rule evaluation, eligibility assessments, scoring, ranking, and reviewer decisions.
-- **Assistant**: Provides persisted agent sessions, tool-call logs, the founder concierge, and site-wide chatbots.
+---
 
-## Project Structure
+## 📁 Project Structure
 
 ```text
-.
-├── backend/                  # Django REST Framework backend
-│   ├── apps/                 # Domain applications (startups, schemes, recommendations, assistant, etc.)
-│   ├── config/               # Django project configuration
-│   └── manage.py             # CLI entrypoint
-├── frontend/                 # React + Vite frontend
-│   ├── src/                  # React components, contexts (i18n), and styling
-│   ├── public/               # Static assets
+startup-intelligence-platform/
+├── .env / .env.example       # Local development environment configuration
+├── .gitignore                # Ignore rules (excludes staticfiles, ml_models, node_modules)
+├── docker-compose.yml        # Local orchestration (Backend, Postgres, Redis, Qdrant, Neo4j, MinIO, Ollama)
+├── Makefile                  # Developer workflow shortcuts
+├── README.md                 # Primary project overview
+├── backend/                  # Django REST Framework Backend
+│   ├── apps/
+│   │   ├── accounts/         # Authentication, user management & JWT
+│   │   ├── assistant/        # Site-wide chatbot & AI sessions
+│   │   ├── core/             # Shared base models & utilities
+│   │   ├── discovery/        # Web crawler & URL frontier
+│   │   ├── documents/        # Document extraction & chunking
+│   │   ├── knowledge/        # RAG embeddings, vector search, & datasets
+│   │   ├── ml_engine/        # 🆕 9-Model ML Engine, Feature Store, & Celery Tasks
+│   │   ├── recommendations/  # Eligibility engine & SVM-blended scheme ranking
+│   │   ├── schemes/          # Canonical scheme catalog & dependency graph
+│   │   ├── sources/          # Data source registry
+│   │   └── startups/         # Startup profiles, readiness, & AI Capital Planner
+│   ├── catalog/              # Data source discovery catalog
+│   ├── config/               # Django settings, URLs, & Celery config
+│   ├── ml_models/            # Trained .joblib model artifacts (gitignored)
+│   ├── scripts/              # Startup scripts (`start-web.sh`)
+│   ├── manage.py             # Django CLI
+│   ├── pyproject.toml        # Ruff linter config
+│   └── requirements.txt      # Python dependencies (scikit-learn, pandas, numpy, joblib, scipy)
+├── frontend/                 # React + Vite Frontend
+│   ├── src/                  # React components, i18n translations, API clients, & styles
 │   ├── package.json          # Frontend dependencies
-│   └── vite.config.js        # Vite build configuration
+│   └── vite.config.js        # Vite configuration
 ├── docs/                     # Comprehensive architecture and domain documentation
-│   ├── architecture/         # System architecture decisions
-│   ├── frontend/             # UI/UX and routing documentation
-│   ├── startups/             # Readiness and funding plan logic
-│   └── PRODUCT_VISION_V2.md  # Vision and roadmap
-├── infrastructure/           # Deployment and operational scripts
-├── contracts/                # API and data contracts
-├── docker-compose.yml        # Local development orchestration
-├── PROJECT_CONTEXT.md        # Technical execution and invariants
-└── README.md                 # Project entry point and summary
+└── infrastructure/           # Deployment scripts
 ```
 
-## Final Project Summary
+---
 
-The Startup Intelligence Platform has successfully reached an advanced MVP state aligned with the Product Vision V2. By combining a strictly verified PostgreSQL data core with deterministic logic engines, the platform delivers reliable, hallucination-free guidance for founders. The recent milestone integrated:
-1. **Global i18n Localization**: Seamless English, Hindi, and Marathi switching across public and authenticated views.
-2. **AI Capital Planner**: Interactive UI for burn-rate and financial scenario modeling.
-3. **Modern Web Paradigms**: Enhanced accessibility and premium glassmorphism layouts.
-4. **Agentic Workflows**: Bounded concierge and founder assistance using LangGraph and localized embeddings.
-
-See [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) for the complete technical implementation context.
-
-## Documentation
-
-- [Documentation index](docs/README.md)
-- [Shared agent orchestration](docs/architecture/SHARED_AGENT_ORCHESTRATION_V1.md)
-- [Site-wide founder chatbot](docs/architecture/SITE_WIDE_CHATBOT_V1.md)
-- [Multi-Language Support (i18n)](docs/frontend/I18N_V1.md)
-- [First-open onboarding tour](docs/frontend/FIRST_OPEN_ONBOARDING_TOUR_V1.md)
-- [Consolidated starting plan](docs/startups/STARTING_PLAN_V1.md)
-- [Dependency-aware funding plan](docs/startups/FUNDING_PLAN_V1.md)
-- [Verified scheme prerequisite graph](docs/architecture/SCHEME_PREREQUISITE_GRAPH_V1.md)
-- [Project roadmap](docs/ROADMAP.md)
-- [Architecture](docs/architecture/README.md)
-- [Eligibility engine](docs/eligibility/ENGINE_V1.md)
-- [Infrastructure](infrastructure/README.md)
-
-## Local setup
+## 🚀 Local Setup & ML Model Training
 
 ```bash
+# 1. Environment configuration
 cp .env.example .env
+
+# 2. Start services via Docker Compose
 docker compose build
 docker compose up -d
+
+# 3. Apply database migrations
 docker compose exec -T backend python manage.py migrate
+
+# 4. Train & register all 7 scikit-learn ML models
+docker compose exec backend python manage.py train_ml_models --synthetic
+
+# 5. Seed initial scheme data & create admin account
 docker compose exec backend python manage.py seed_sources
 docker compose exec backend python manage.py createsuperuser
 ```
 
-Optional local Ollama models:
-
+### ML Management Command Usage
 ```bash
-docker compose exec ollama ollama pull qwen3.5:9b
-docker compose exec ollama ollama pull embeddinggemma
+# Train all models with synthetic data (bootstrap mode)
+docker compose exec backend python manage.py train_ml_models --synthetic
+
+# Train all models with real database data (requires ≥50 profiles)
+docker compose exec backend python manage.py train_ml_models --real
+
+# Train a specific model
+docker compose exec backend python manage.py train_ml_models --model svm
+docker compose exec backend python manage.py train_ml_models --model kmeans
 ```
 
-## Local URLs
+---
 
-- Web: <http://localhost:5173>
-- API health: <http://localhost:8000/api/v1/health/>
-- API status: <http://localhost:8000/api/v1/status/>
-- API docs: <http://localhost:8000/api/docs/>
-- Django admin: <http://localhost:8000/admin/>
-- Qdrant: <http://localhost:6333/dashboard>
-- Neo4j: <http://localhost:7474>
-- MinIO: <http://localhost:9001>
-- Mailpit: <http://localhost:8025>
+## 🌐 Local URLs
 
-## Validation
+- **Web App**: <http://localhost:5173>
+- **API Health**: <http://localhost:8000/api/v1/health/>
+- **API Swagger Docs**: <http://localhost:8000/api/docs/>
+- **Django Admin**: <http://localhost:8000/admin/> (includes ML Model Registry & Feature Store views)
+- **Qdrant Dashboard**: <http://localhost:6333/dashboard>
+- **Neo4j Browser**: <http://localhost:7474>
+- **MinIO Console**: <http://localhost:9001>
+- **Mailpit**: <http://localhost:8025>
+
+---
+
+## 🧪 Validation & Testing
 
 ```bash
+# Backend pytest suite & ruff linting
 docker compose exec -T backend pytest -q
 docker compose exec -T backend ruff check .
 docker compose exec -T backend python manage.py check
-docker compose exec -T backend   python manage.py makemigrations --check --dry-run
 
+# Frontend test suite & production build validation
 docker compose exec -T frontend npm test
 docker compose exec -T frontend npm run build
-
-git diff --check
 ```
-
-## Product Vision V2 roadmap
-
-The platform has successfully completed the **Product Vision V2** roadmap, fully transforming it into an AI Startup Operating System.
-
-Completed milestones include:
-- **Phase 50** — Public entry and authentication (landing, registration, responsive public navigation)
-- **Phase 51** — Structured My Startup experience
-- **Phase 52** — AI startup document intake
-- **Phase 53** — Scheme knowledge completeness
-- **Phase 54** — AI Startup Builder
-- **Phase 55** — AI Capital Planner
-- **Phase 56** — Universal AI Copilot
-- **Phase 57** — Orchestration and data platform
-
-See [PRODUCT_VISION_V2.md](docs/PRODUCT_VISION_V2.md) for the complete vision, principles, and roadmap.
