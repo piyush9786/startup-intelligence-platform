@@ -38,4 +38,4 @@ class StartupResumeGeneratorAPITestCase(TestCase):
         self.assertIn("matched_schemes", res.data)
         self.assertIn("execution_roadmap", res.data)
         self.assertIn("consultant_insights", res.data)
-        self.assertEqual(res.data["generator_version"], "startup-executive-resume-v1")
+        self.assertEqual(res.data["generator_version"], "startup-executive-resume-v2")
