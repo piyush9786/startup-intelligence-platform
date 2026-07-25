@@ -79,7 +79,7 @@ def _persist_cohort_assignments(model: KMeans, X: np.ndarray, ids: list[int]) ->
     from apps.startups.models import StartupProfile
 
     labels = model.predict(X)
-    for pk, label in zip(ids, labels):
+    for pk, label in zip(ids, labels, strict=False):
         MLFeatureStore.objects.filter(startup_profile_id=pk).update(cohort_id=int(label))
         StartupProfile.objects.filter(pk=pk).update(ml_cohort_id=int(label))
 

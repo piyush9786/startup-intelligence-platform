@@ -122,7 +122,10 @@ def _score_assessment(
     return score, {
         "ranking_version": RANKING_VERSION,
         "ml_scoring_mode": ml_mode,
-        "formula": "eligibility_component + rule_match_component + svm_component + application_status_component",
+        "formula": (
+            "eligibility_component + rule_match_component + "
+            "svm_component + application_status_component"
+        ),
         "eligibility_component": format(_ELIGIBILITY_COMPONENT, "f"),
         "rule_match_component": format(rule_match_component, "f"),
         "svm_component": format(svm_score * _SVM_WEIGHT if svm_score else Decimal(0), "f"),
