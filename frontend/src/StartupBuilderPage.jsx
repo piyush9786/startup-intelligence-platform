@@ -89,9 +89,9 @@ export default function StartupBuilderPage({ onNavigate }) {
       <header className="page-header">
         <div>
           <span className="section-kicker">AI STARTUP OPERATING SYSTEM</span>
-          <h1 style={{ fontSize: "1.8rem", margin: "0.25rem 0 0.4rem" }}>AI Startup Builder & Consultant</h1>
+          <h1 style={{ fontSize: "1.8rem", margin: "0.25rem 0 0.4rem" }}>AI Startup Builder & Reasoning Consultant</h1>
           <p className="page-subtitle" style={{ margin: 0, color: "var(--muted)" }}>
-            Enter your raw startup idea. Our AI Consultant generates your full business plan, matches government grants, creates your execution roadmap, and drafts a printable Executive Resume.
+            Enter your raw startup concept. Our AI Reasoning Model analyzes your idea, generates a startup brand title, synthesizes an executive plan, and matches government grants.
           </p>
         </div>
       </header>
@@ -101,7 +101,7 @@ export default function StartupBuilderPage({ onNavigate }) {
         <span className="section-kicker" style={{ color: "var(--lime)", fontWeight: 700 }}>🤖 AI STARTUP CONSULTANT ENGINE</span>
         <h3 style={{ fontSize: "1.3rem", margin: "0.25rem 0 0.5rem", fontWeight: 800 }}>Generate Master Plan & Printable Pitch Resume</h3>
         <p style={{ margin: "0 0 1.25rem", fontSize: "0.9rem", color: "var(--muted)", lineHeight: 1.5 }}>
-          Just type a 1-sentence concept or click a sample idea below. The AI Consultant will generate a complete business plan, recommended government grants, and printable executive resume for you!
+          Just type a 1-sentence concept or click a sample idea below. The AI Reasoning Model will generate your startup title, general idea analysis, complete executive plan, and printable pitch resume!
         </p>
 
         <form onSubmit={handleLaunchMasterConsultant} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -184,7 +184,7 @@ export default function StartupBuilderPage({ onNavigate }) {
               disabled={consulting || !customConcept.trim()}
               style={{ padding: "0.75rem 1.5rem", fontSize: "0.95rem", fontWeight: 700 }}
             >
-              {consulting ? "🧠 AI Consultant Synthesizing Master Package…" : "🚀 Launch AI Consultant & Auto-Generate Master Plan"}
+              {consulting ? "🧠 AI Reasoning Engine Analyzing Concept…" : "🚀 Launch AI Consultant & Auto-Generate Master Plan"}
             </button>
 
             <button
@@ -217,100 +217,152 @@ export default function StartupBuilderPage({ onNavigate }) {
 
       {/* MASTER CONSULTANT PACKAGE RESULTS */}
       {masterPackage && (
-        <section className="card" style={{ padding: "1.75rem", border: "1px solid var(--lime)", background: "rgba(255,255,255,0.02)", borderRadius: "10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.5rem" }}>
-            <div>
-              <span className="section-kicker" style={{ color: "var(--lime)", fontWeight: 700 }}>💡 MASTER CONSULTANT STRATEGY PACKAGE</span>
-              <h3 style={{ fontSize: "1.4rem", margin: "0.2rem 0 0", fontWeight: 800 }}>Generated Strategy, Matched Grants & Roadmap</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          
+          {/* 🧠 1. AI GENERATED STARTUP TITLE & GENERAL IDEA UNDERSTANDING CARD */}
+          <section className="card" style={{ padding: "1.75rem", borderLeft: "4px solid var(--lime)", background: "rgba(255,255,255,0.02)", borderRadius: "10px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+              <div>
+                <span className="section-kicker" style={{ color: "var(--lime)", fontWeight: 700 }}>🏷️ AI BRAND IDENTIFIER & CONCEPT REASONING</span>
+                <h2 style={{ fontSize: "1.8rem", margin: "0.2rem 0 0.2rem", fontWeight: 800, color: "#fff" }}>
+                  {masterPackage.generated_title || "Startup Entity"}
+                </h2>
+                <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+                  Sector: <strong>{masterPackage.sector}</strong> | Stage: <strong>{masterPackage.stage}</strong> | Funding Target: <strong style={{ color: "var(--lime)" }}>{masterPackage.funding_required}</strong>
+                </div>
+              </div>
+              <span className="badge badge-verified" style={{ fontSize: "0.85rem", padding: "0.4rem 0.8rem" }}>
+                ⚡ Reasoning Model Generated
+              </span>
             </div>
-            <span className="badge badge-verified" style={{ fontSize: "0.85rem", padding: "0.4rem 0.8rem" }}>
-              ⚡ Verified AI Package
-            </span>
-          </div>
 
-          {/* 3-Column Grid Breakdown */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
-            {/* Matched Government Schemes */}
-            <div style={{ background: "rgba(255,255,255,0.02)", padding: "1.1rem", borderRadius: "8px", border: "1px solid var(--line)" }}>
-              <h4 style={{ fontSize: "1.05rem", color: "var(--lime)", margin: "0 0 0.85rem", display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 700 }}>
-                🏛️ Top Matched Grants ({masterPackage.recommended_schemes?.length || 0})
-              </h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                {masterPackage.recommended_schemes?.map((sch, idx) => (
-                  <div key={idx} style={{ padding: "0.75rem", background: "rgba(255,255,255,0.03)", borderRadius: "6px", border: "1px solid var(--line)" }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{sch.name}</div>
-                    <div style={{ fontSize: "0.82rem", color: "var(--lime)", fontWeight: 700, margin: "0.15rem 0" }}>{sch.support}</div>
-                    <div style={{ fontSize: "0.78rem", color: "var(--muted)", lineHeight: 1.4 }}>{sch.reason}</div>
-                  </div>
-                ))}
+            {/* Idea Understanding Grid */}
+            {masterPackage.idea_understanding && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem", marginTop: "1rem" }}>
+                <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--line)" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--lime)", marginBottom: "0.3rem" }}>📌 Core Concept Analysis</div>
+                  <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
+                    {masterPackage.idea_understanding.core_concept}
+                  </p>
+                </div>
+
+                <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--line)" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--lime)", marginBottom: "0.3rem" }}>📈 Market Opportunity in India</div>
+                  <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
+                    {masterPackage.idea_understanding.market_opportunity}
+                  </p>
+                </div>
+
+                <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--line)" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--lime)", marginBottom: "0.3rem" }}>💎 Unique Value Proposition</div>
+                  <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
+                    {masterPackage.idea_understanding.value_proposition}
+                  </p>
+                </div>
+
+                <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--line)" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--lime)", marginBottom: "0.3rem" }}>👥 Primary Target Audience</div>
+                  <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
+                    {masterPackage.idea_understanding.target_audience}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* 📑 2. MASTER CONSULTANT STRATEGY PACKAGE */}
+          <section className="card" style={{ padding: "1.75rem", border: "1px solid var(--line)", background: "rgba(255,255,255,0.02)", borderRadius: "10px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.5rem" }}>
+              <div>
+                <span className="section-kicker" style={{ color: "var(--lime)", fontWeight: 700 }}>💡 EXECUTIVE STRATEGY & SCHEMES PACKAGE</span>
+                <h3 style={{ fontSize: "1.4rem", margin: "0.2rem 0 0", fontWeight: 800 }}>Matched Grants, Roadmap & AI Advice</h3>
               </div>
             </div>
 
-            {/* 12-Month Execution Roadmap */}
-            <div style={{ background: "rgba(255,255,255,0.02)", padding: "1.1rem", borderRadius: "8px", border: "1px solid var(--line)" }}>
-              <h4 style={{ fontSize: "1.05rem", color: "var(--lime)", margin: "0 0 0.85rem", display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 700 }}>
-                📊 12-Month Execution Roadmap
-              </h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                {masterPackage.execution_roadmap?.map((phase, idx) => (
-                  <div key={idx} style={{ padding: "0.65rem 0.85rem", background: "rgba(255,255,255,0.03)", borderRadius: "6px", border: "1px solid var(--line)" }}>
-                    <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "var(--lime)" }}>{phase.phase}</div>
-                    <div style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: "0.15rem" }}>{phase.milestone}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* AI Consultant Advice & Risk Matrix */}
-            <div style={{ background: "rgba(255,255,255,0.02)", padding: "1.1rem", borderRadius: "8px", border: "1px solid var(--line)" }}>
-              <h4 style={{ fontSize: "1.05rem", color: "var(--lime)", margin: "0 0 0.85rem", display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 700 }}>
-                💡 Executive Strategy & Risk Matrix
-              </h4>
-              <p style={{ fontSize: "0.85rem", lineHeight: 1.5, color: "inherit", margin: "0 0 0.85rem" }}>
-                {masterPackage.consultant_recommendations?.executive_advice}
-              </p>
-              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--muted)", marginBottom: "0.3rem" }}>Top Risks to Watch:</div>
-              <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.8rem", color: "var(--muted)", lineHeight: 1.5 }}>
-                {masterPackage.consultant_recommendations?.risks_to_watch?.map((risk, idx) => (
-                  <li key={idx} style={{ marginBottom: "0.25rem" }}>{risk}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Clean Generated Business Plan Summary Cards */}
-          {masterPackage.business_plan && (
-            <div style={{ marginTop: "1.5rem", paddingTop: "1.25rem", borderTop: "1px solid var(--line)" }}>
-              <h4 style={{ fontSize: "1.1rem", color: "var(--lime)", margin: "0 0 1rem", fontWeight: 700 }}>
-                📑 Generated 6-Section Business Plan Summary
-              </h4>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "0.85rem" }}>
-                {Object.entries(masterPackage.business_plan).map(([secKey, secContent], idx) => {
-                  let textDisplay = "";
-                  if (typeof secContent === "object" && secContent !== null) {
-                    textDisplay = Object.entries(secContent)
-                      .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
-                      .join("\n• ");
-                  } else {
-                    textDisplay = String(secContent);
-                  }
-
-                  return (
-                    <div key={idx} style={{ padding: "0.9rem", background: "rgba(255,255,255,0.03)", borderRadius: "8px", border: "1px solid var(--line)" }}>
-                      <span style={{ fontSize: "0.78rem", color: "var(--lime)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                        {secKey.replace(/_/g, " ")}
-                      </span>
-                      <p style={{ fontSize: "0.82rem", color: "var(--muted)", margin: "0.4rem 0 0", lineHeight: 1.5, whiteSpace: "pre-line" }}>
-                        {textDisplay.slice(0, 220)}
-                        {textDisplay.length > 220 ? "…" : ""}
-                      </p>
+            {/* 3-Column Grid Breakdown */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
+              {/* Matched Government Schemes */}
+              <div style={{ background: "rgba(255,255,255,0.02)", padding: "1.1rem", borderRadius: "8px", border: "1px solid var(--line)" }}>
+                <h4 style={{ fontSize: "1.05rem", color: "var(--lime)", margin: "0 0 0.85rem", display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 700 }}>
+                  🏛️ Top Matched Grants ({masterPackage.recommended_schemes?.length || 0})
+                </h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                  {masterPackage.recommended_schemes?.map((sch, idx) => (
+                    <div key={idx} style={{ padding: "0.75rem", background: "rgba(255,255,255,0.03)", borderRadius: "6px", border: "1px solid var(--line)" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{sch.name}</div>
+                      <div style={{ fontSize: "0.82rem", color: "var(--lime)", fontWeight: 700, margin: "0.15rem 0" }}>{sch.support}</div>
+                      <div style={{ fontSize: "0.78rem", color: "var(--muted)", lineHeight: 1.4 }}>{sch.reason}</div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              </div>
+
+              {/* 12-Month Execution Roadmap */}
+              <div style={{ background: "rgba(255,255,255,0.02)", padding: "1.1rem", borderRadius: "8px", border: "1px solid var(--line)" }}>
+                <h4 style={{ fontSize: "1.05rem", color: "var(--lime)", margin: "0 0 0.85rem", display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 700 }}>
+                  📊 12-Month Execution Roadmap
+                </h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                  {masterPackage.execution_roadmap?.map((phase, idx) => (
+                    <div key={idx} style={{ padding: "0.65rem 0.85rem", background: "rgba(255,255,255,0.03)", borderRadius: "6px", border: "1px solid var(--line)" }}>
+                      <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "var(--lime)" }}>{phase.phase}</div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: "0.15rem" }}>{phase.milestone}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* AI Consultant Advice & Risk Matrix */}
+              <div style={{ background: "rgba(255,255,255,0.02)", padding: "1.1rem", borderRadius: "8px", border: "1px solid var(--line)" }}>
+                <h4 style={{ fontSize: "1.05rem", color: "var(--lime)", margin: "0 0 0.85rem", display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 700 }}>
+                  💡 Executive Strategy & Risk Matrix
+                </h4>
+                <p style={{ fontSize: "0.85rem", lineHeight: 1.5, color: "inherit", margin: "0 0 0.85rem" }}>
+                  {masterPackage.consultant_recommendations?.executive_advice}
+                </p>
+                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--muted)", marginBottom: "0.3rem" }}>Top Risks to Watch:</div>
+                <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.8rem", color: "var(--muted)", lineHeight: 1.5 }}>
+                  {masterPackage.consultant_recommendations?.risks_to_watch?.map((risk, idx) => (
+                    <li key={idx} style={{ marginBottom: "0.25rem" }}>{risk}</li>
+                  ))}
+                </ul>
               </div>
             </div>
-          )}
-        </section>
+
+            {/* Clean Generated Business Plan Summary Cards */}
+            {masterPackage.business_plan && (
+              <div style={{ marginTop: "1.5rem", paddingTop: "1.25rem", borderTop: "1px solid var(--line)" }}>
+                <h4 style={{ fontSize: "1.1rem", color: "var(--lime)", margin: "0 0 1rem", fontWeight: 700 }}>
+                  📑 Executive Business Plan (6 Pillars)
+                </h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "0.85rem" }}>
+                  {Object.entries(masterPackage.business_plan).map(([secKey, secContent], idx) => {
+                    let textDisplay = "";
+                    if (typeof secContent === "object" && secContent !== null) {
+                      textDisplay = Object.entries(secContent)
+                        .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
+                        .join("\n• ");
+                    } else {
+                      textDisplay = String(secContent);
+                    }
+
+                    return (
+                      <div key={idx} style={{ padding: "0.9rem", background: "rgba(255,255,255,0.03)", borderRadius: "8px", border: "1px solid var(--line)" }}>
+                        <span style={{ fontSize: "0.78rem", color: "var(--lime)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          {secKey.replace(/_/g, " ")}
+                        </span>
+                        <p style={{ fontSize: "0.82rem", color: "var(--muted)", margin: "0.4rem 0 0", lineHeight: 1.5, whiteSpace: "pre-line" }}>
+                          {textDisplay.slice(0, 220)}
+                          {textDisplay.length > 220 ? "…" : ""}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
       )}
 
       {/* CTA Footer Link to Assessment Wizard */}

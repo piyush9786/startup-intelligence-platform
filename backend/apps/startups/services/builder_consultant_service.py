@@ -1,7 +1,7 @@
 """
-AI Startup Consultant Master Strategy Package Generator.
-Provides dynamic, context-aware AI plan generation based on a simple founder idea input,
-sector context, stage, and funding requirements.
+AI Startup Consultant Master Strategy & Reasoning Engine.
+Provides dynamic, reasoning-based AI plan generation using LLM providers
+with intelligent sector-aware reasoning fallback.
 """
 from __future__ import annotations
 
@@ -17,18 +17,58 @@ from apps.startups.services.llm_provider import (
 logger = logging.getLogger(__name__)
 
 
+def _generate_startup_title(idea: str, sector: str) -> str:
+    """Generates an intuitive AI brand title for the startup idea."""
+    idea_lower = idea.lower()
+    sector_lower = sector.lower()
+
+    if any(
+        k in sector_lower or k in idea_lower
+        for k in ["drone", "vaccine", "health", "med", "doctor"]
+    ):
+        return "AeroMed Express AI"
+    elif any(
+        k in sector_lower or k in idea_lower
+        for k in ["agri", "cold", "farm", "crop", "mandi"]
+    ):
+        return "AgriVault Logistics"
+    elif any(
+        k in sector_lower or k in idea_lower
+        for k in ["ev", "battery", "swap", "clean"]
+    ):
+        return "SwapVolt Mobility"
+    elif any(
+        k in sector_lower or k in idea_lower
+        for k in ["d2c", "snack", "organic", "food"]
+    ):
+        return "Naturals D2C Organics"
+    elif any(
+        k in sector_lower or k in idea_lower
+        for k in ["invoice", "gst", "saas", "fintech", "tax"]
+    ):
+        return "FinRec AI Automation"
+    else:
+        words = [w.capitalize() for w in idea.split()[:2] if len(w) > 2]
+        prefix = "".join(words) if words else "Venture"
+        return f"{prefix} Tech"
+
+
 def _generate_sector_context_intelligence(
     idea: str, sector: str, stage: str, funding: str
 ) -> dict[str, Any]:
     """
-    Synthesizes rich, context-aware business plan modules, scheme matches, and roadmaps
-    tailored to the founder's specific idea concept.
+    Synthesizes rich, reasoning-backed startup analysis, AI title, business plan modules,
+    scheme matches, and roadmaps tailored to the founder's specific idea concept.
     """
     idea_lower = idea.lower()
     sector_lower = sector.lower()
+    startup_title = _generate_startup_title(idea, sector)
 
-    # Sector-Specific Scheme Rules & Benefit Mapping
-    if any(k in sector_lower or k in idea_lower for k in ["health", "bio", "med", "clinic"]):
+    # Sector-Specific Reasoning & Scheme Mapping
+    if any(
+        k in sector_lower or k in idea_lower
+        for k in ["health", "bio", "med", "clinic", "drone"]
+    ):
         sector_category = "HealthTech & BioTech"
         schemes = [
             {
@@ -50,10 +90,19 @@ def _generate_sector_context_intelligence(
                 "reason": "Exempts corporate profits from tax during commercial rollout.",
             },
         ]
-        interview_persona = "Hospital Directors, Senior Clinicians, and Rural Health Officers"
-        experiment_pilot = "Run 10-patient clinical pilot with partner teleclinic or hospital."
-        monetization = "Per-consultation revenue share + annual clinic SaaS license."
-    elif any(k in sector_lower or k in idea_lower for k in ["agri", "farm", "crop", "mandi"]):
+        interview_persona = (
+            "Hospital Directors, Senior Clinicians, and Rural Health Officers"
+        )
+        experiment_pilot = (
+            "Run 10-patient clinical pilot with partner teleclinic or district hospital."
+        )
+        monetization = (
+            "Per-delivery/consultation fee + annual health system SaaS license."
+        )
+    elif any(
+        k in sector_lower or k in idea_lower
+        for k in ["agri", "farm", "crop", "mandi", "food"]
+    ):
         sector_category = "AgriTech & Supply Chain"
         schemes = [
             {
@@ -69,19 +118,32 @@ def _generate_sector_context_intelligence(
             {
                 "name": "Credit Guarantee Scheme for Startups (CGSS)",
                 "support": "Up to ₹10 Crore Collateral-Free Loans",
-                "reason": "Secures bank credit for cold storage or supply chain equipment.",
+                "reason": (
+                    "Secures bank credit for cold storage or supply chain equipment."
+                ),
             },
         ]
-        interview_persona = "Farmer Producer Organizations (FPOs), mandi traders, and agronomists"
-        experiment_pilot = "Deploy 2 micro-cold-storage units with 5 local FPOs for 30 days."
-        monetization = "5% supply-chain transaction margin + monthly equipment lease fee."
-    elif any(k in sector_lower or k in idea_lower for k in ["ev", "battery", "clean", "energy"]):
+        interview_persona = (
+            "Farmer Producer Organizations (FPOs), mandi traders, and agronomists"
+        )
+        experiment_pilot = (
+            "Deploy 2 micro-cold-storage units with 5 local FPOs for 30 days."
+        )
+        monetization = (
+            "5% supply-chain transaction margin + monthly equipment lease fee."
+        )
+    elif any(
+        k in sector_lower or k in idea_lower
+        for k in ["ev", "battery", "clean", "energy"]
+    ):
         sector_category = "CleanTech & EV Mobility"
         schemes = [
             {
                 "name": "FAME-II & PLI Auto Innovation Scheme",
                 "support": "Capital Subsidy & Battery Incentive",
-                "reason": f"Incentive support for clean mobility platforms targeting '{idea}'.",
+                "reason": (
+                    f"Incentive support for clean mobility platforms targeting '{idea}'."
+                ),
             },
             {
                 "name": "Startup India Seed Fund Scheme (SISFS)",
@@ -94,10 +156,16 @@ def _generate_sector_context_intelligence(
                 "reason": "Backs debt financing for battery fleet procurement.",
             },
         ]
-        interview_persona = "Delivery fleet managers (Zomato/Swiggy) and 3W auto drivers"
-        experiment_pilot = "Set up 1 trial battery swap kiosk serving 15 delivery drivers."
+        interview_persona = (
+            "Delivery fleet managers (Zomato/Swiggy) and 3W auto drivers"
+        )
+        experiment_pilot = (
+            "Set up 1 trial battery swap kiosk serving 15 delivery drivers."
+        )
         monetization = "Pay-per-swap fee + monthly battery subscription plan."
-    elif any(k in sector_lower or k in idea_lower for k in ["d2c", "consumer", "snack", "brand"]):
+    elif any(
+        k in sector_lower or k in idea_lower for k in ["d2c", "consumer", "snack", "brand"]
+    ):
         sector_category = "D2C & Consumer Goods"
         schemes = [
             {
@@ -117,7 +185,9 @@ def _generate_sector_context_intelligence(
             },
         ]
         interview_persona = "Health-conscious urban consumers and specialty grocery buyers"
-        experiment_pilot = "Produce 200 sample snack boxes and run Instagram D2C campaign."
+        experiment_pilot = (
+            "Produce 200 sample snack boxes and run Instagram D2C campaign."
+        )
         monetization = "Direct e-commerce sales (65% gross margin) + monthly subscription."
     else:
         sector_category = "B2B AI & DeepTech SaaS"
@@ -130,7 +200,9 @@ def _generate_sector_context_intelligence(
             {
                 "name": "Startup India Seed Fund Scheme (SISFS)",
                 "support": "Up to ₹20 Lakhs Grant",
-                "reason": "Funds cloud infrastructure, AI model training, and pilot integrations.",
+                "reason": (
+                    "Funds cloud infrastructure, AI model training, and pilot integrations."
+                ),
             },
             {
                 "name": "DPIIT 80-IAC 3-Year Income Tax Holiday",
@@ -139,9 +211,31 @@ def _generate_sector_context_intelligence(
             },
         ]
         interview_persona = "CTOs, Finance Directors, and SMB Business Owners"
-        experiment_pilot = "Launch interactive prototype & secure 3 paid design partner pilots."
-        monetization = "Tiered SaaS monthly subscription (Starter ₹4,999/mo, Pro ₹19,999/mo)."
+        experiment_pilot = (
+            "Launch interactive prototype & secure 3 paid design partner pilots."
+        )
+        monetization = (
+            "Tiered SaaS monthly subscription (Starter ₹4,999/mo, Pro ₹19,999/mo)."
+        )
 
+    # 1. AI Reasoning & General Idea Understanding
+    idea_understanding = {
+        "generated_title": startup_title,
+        "core_concept": (
+            f"{startup_title} is an innovative {sector_category} startup built to address '{idea}'."
+        ),
+        "market_opportunity": (
+            f"India is experiencing rapid digital infrastructure growth in {sector_category}. "
+            f"Solving '{idea}' addresses an urgent market gap with strong scalability potential."
+        ),
+        "value_proposition": f"Delivering 10x faster execution and 50% cost savings for '{idea}'.",
+        "target_audience": interview_persona,
+        "competitive_edge": (
+            f"First-mover technology advantage and deep compliance alignment for '{idea}'."
+        ),
+    }
+
+    # 2. Complete Executive Plan
     business_plan = {
         "problem": {
             "problem_statement": (
@@ -149,7 +243,9 @@ def _generate_sector_context_intelligence(
                 f"when dealing with '{idea}'."
             ),
             "who_has_this_problem": f"{interview_persona} operating in {sector}.",
-            "current_alternatives": "Fragmented spreadsheets and expensive legacy paper processes.",
+            "current_alternatives": (
+                "Fragmented spreadsheets and expensive legacy paper processes."
+            ),
             "why_now": (
                 f"Rapid adoption of digital infrastructure and demand for automated "
                 f"{sector_category} solutions in India."
@@ -160,7 +256,9 @@ def _generate_sector_context_intelligence(
         },
         "customer": {
             "primary_customer_segment": f"{interview_persona} seeking solutions for '{idea}'.",
-            "customer_profile": f"Tech-forward decision-makers with dedicated budgets in {sector}.",
+            "customer_profile": (
+                f"Tech-forward decision-makers with dedicated budgets in {sector}."
+            ),
             "customer_pain_intensity": "High (9/10). Critical operational bottleneck.",
             "customer_willingness_to_pay": (
                 f"Strong willingness to allocate capital to achieve ROI aligned with {funding}."
@@ -170,19 +268,26 @@ def _generate_sector_context_intelligence(
         "interviews": {
             "interview_goal": f"Validate willingness-to-pay and feature priorities for '{idea}'.",
             "target_interviewees": f"15 decision-makers matching {interview_persona}.",
-            "key_questions": "1) How do you solve this today? 2) Cost of manual errors?",
+            "key_questions": (
+                "1) How do you solve this today? 2) Cost of manual errors? "
+                "3) Would you pay for a 10x faster solution?"
+            ),
             "success_criteria": "At least 10 of 15 interviewees request a pilot demo.",
             "recruitment_approach": "Warm network introductions and direct founder outreach.",
         },
         "validation": {
-            "core_hypothesis": f"Customers will switch to our platform for '{idea}' if 10x faster.",
+            "core_hypothesis": (
+                f"Customers will switch to our platform for '{idea}' if 10x faster."
+            ),
             "experiment_1": "1-Page Landing Page: Target 100 waitlist signups in 14 days.",
             "experiment_2": experiment_pilot,
-            "minimum_evidence": "3 signed pilot letters of intent (LOIs) or paid upfront deposits.",
+            "minimum_evidence": "3 signed pilot letters of intent (LOIs) or paid deposits.",
         },
         "business_model": {
             "revenue_model": monetization,
-            "value_proposition": f"Delivering 10x faster execution and 50% savings for '{idea}'.",
+            "value_proposition": (
+                f"Delivering 10x faster execution and 50% savings for '{idea}'."
+            ),
             "key_activities": "Product development, pilot onboarding, and grant compliance.",
             "key_resources": "Proprietary software IP, domain expertise, and seed capital.",
             "cost_structure": "Engineering salaries, cloud infrastructure, and legal compliance.",
@@ -193,7 +298,7 @@ def _generate_sector_context_intelligence(
             "price_point": "Starter: ₹4,999/month | Pro: ₹19,999/month | Enterprise: Custom.",
             "pricing_basis": "Based on processed volume, active seats, or transaction milestones.",
             "competitive_positioning": "Priced 35% below legacy alternatives with zero friction.",
-            "early_customer_offer": "50% lifetime discount for first 10 founding design partners.",
+            "early_customer_offer": "50% lifetime discount for first 10 founding partners.",
         },
     }
 
@@ -222,7 +327,7 @@ def _generate_sector_context_intelligence(
 
     consultant_recommendations = {
         "executive_advice": (
-            f"Your venture '{idea}' has strong market potential in {sector_category}. "
+            f"Your venture '{startup_title}' has strong market potential in {sector_category}. "
             f"Focus initially on securing 3 pilot commitments from {interview_persona} "
             "before building complex custom code."
         ),
@@ -232,20 +337,22 @@ def _generate_sector_context_intelligence(
             "Delayed GSTIN or DPIIT registration blocking seed grant disbursements.",
         ],
         "next_best_action": (
-            f"Apply for DPIIT Recognition and submit your application for {schemes[0]['name']}."
+            f"Apply for DPIIT Recognition and submit application for {schemes[0]['name']}."
         ),
     }
 
     return {
+        "generated_title": startup_title,
         "concept": idea,
         "sector": sector,
         "stage": stage,
         "funding_required": funding,
+        "idea_understanding": idea_understanding,
         "business_plan": business_plan,
         "recommended_schemes": schemes,
         "execution_roadmap": execution_roadmap,
         "consultant_recommendations": consultant_recommendations,
-        "generated_by": "ai-startup-consultant-context-v2",
+        "generated_by": "ai-startup-consultant-reasoning-v3",
     }
 
 
@@ -255,14 +362,27 @@ def _normalize_llm_payload(
     """Ensures LLM output conforms to the standard API contract."""
     fallback = _generate_sector_context_intelligence(idea, sector, stage, funding)
 
-    business_plan = payload.get("business_plan") or {
-        "problem": {"problem_statement": payload.get("context") or idea},
-        "customer": {"primary_customer_segment": str(payload.get("target_audience", ""))},
-        "validation": {"core_hypothesis": str(payload.get("value_proposition", ""))},
-        "business_model": {"revenue_model": str(payload.get("operational_model", ""))},
-        "pricing": {"pricing_model": str(payload.get("funding_breakdown", ""))},
+    startup_title = payload.get("generated_title") or _generate_startup_title(idea, sector)
+
+    idea_understanding = payload.get("idea_understanding") or {
+        "generated_title": startup_title,
+        "core_concept": str(payload.get("context") or idea),
+        "market_opportunity": str(
+            payload.get("market_potential")
+            or fallback["idea_understanding"]["market_opportunity"]
+        ),
+        "value_proposition": str(
+            payload.get("value_proposition")
+            or fallback["idea_understanding"]["value_proposition"]
+        ),
+        "target_audience": str(
+            payload.get("target_audience")
+            or fallback["idea_understanding"]["target_audience"]
+        ),
+        "competitive_edge": "AI-driven first mover advantage.",
     }
 
+    business_plan = payload.get("business_plan") or fallback["business_plan"]
     recommended_schemes = payload.get("recommended_schemes") or fallback["recommended_schemes"]
     raw_roadmap = payload.get("execution_roadmap") or payload.get("roadmap") or []
 
@@ -279,28 +399,22 @@ def _normalize_llm_payload(
     if not execution_roadmap:
         execution_roadmap = fallback["execution_roadmap"]
 
-    consultant_recommendations = payload.get("consultant_recommendations") or {
-        "executive_advice": str(
-            payload.get("advice_for_founders")
-            or fallback["consultant_recommendations"]["executive_advice"]
-        ),
-        "risks_to_watch": (
-            payload.get("risk_analysis")
-            or fallback["consultant_recommendations"]["risks_to_watch"]
-        ),
-        "next_best_action": "Apply for DPIIT Recognition and matched seed grants.",
-    }
+    consultant_recommendations = (
+        payload.get("consultant_recommendations") or fallback["consultant_recommendations"]
+    )
 
     return {
+        "generated_title": startup_title,
         "concept": idea,
         "sector": sector,
         "stage": stage,
         "funding_required": funding,
+        "idea_understanding": idea_understanding,
         "business_plan": business_plan,
         "recommended_schemes": recommended_schemes,
         "execution_roadmap": execution_roadmap,
         "consultant_recommendations": consultant_recommendations,
-        "generated_by": "ai-startup-consultant-llm-v2",
+        "generated_by": "ai-startup-consultant-llm-v3",
     }
 
 
@@ -313,8 +427,8 @@ def generate_master_startup_consultant_package(
     profile: StartupProfile | None = None,
 ) -> dict[str, Any]:
     """
-    Generates a full AI Consultant Master Package tailored dynamically to the founder's idea.
-    Attempts LLM provider generation if available, with intelligent context fallback.
+    Generates a full Reasoning AI Consultant Master Package tailored to the founder's idea.
+    Attempts LLM provider generation if available, with intelligent reasoning fallback.
     """
     idea = idea_description.strip()
 
@@ -325,8 +439,10 @@ def generate_master_startup_consultant_package(
             {
                 "role": "system",
                 "content": (
-                    "You are an expert Indian Startup Consultant AI. Analyze the concept "
-                    "and generate a context-aware plan, matched schemes, roadmap, and advice."
+                    "You are an expert Indian Startup Consultant AI reasoning model. "
+                    "Analyze the founder's concept and generate a startup title, "
+                    "general understanding & market opportunity analysis, executive plan, "
+                    "matched Indian government schemes, 12-month execution roadmap, and advice."
                 ),
             },
             {
@@ -342,7 +458,7 @@ def generate_master_startup_consultant_package(
             return _normalize_llm_payload(res.payload, idea, sector, stage, funding_required)
     except (LLMProviderError, Exception) as err:
         logger.info(
-            "LLM Provider unavailable for consultant package, using context engine: %s", err
+            "LLM Provider unavailable for consultant package, using reasoning engine: %s", err
         )
 
     return _generate_sector_context_intelligence(idea, sector, stage, funding_required)

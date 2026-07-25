@@ -32,6 +32,8 @@ class MasterConsultantGeneratorAPITestCase(TestCase):
         }
         res = self.client.post(url, data, format="json")
         self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn("generated_title", res.data)
+        self.assertIn("idea_understanding", res.data)
         self.assertIn("business_plan", res.data)
         self.assertIn("recommended_schemes", res.data)
         self.assertIn("execution_roadmap", res.data)
