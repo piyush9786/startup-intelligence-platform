@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import ApplicationTrackerPage from "./ApplicationTrackerPage";
+import { LanguageProvider } from "./i18n/index.jsx";
 
 vi.mock("./applicationTrackerApi", () => ({
   getTrackerApplications: vi.fn().mockResolvedValue([
@@ -18,7 +19,11 @@ vi.mock("./applicationTrackerApi", () => ({
 
 describe("ApplicationTrackerPage", () => {
   it("renders 4 kanban stage headers and application cards", async () => {
-    render(<ApplicationTrackerPage onNavigate={vi.fn()} />);
+    render(
+      <LanguageProvider>
+        <ApplicationTrackerPage onNavigate={vi.fn()} />
+      </LanguageProvider>
+    );
 
     expect(await screen.findByText("Application Pipeline Tracker")).toBeInTheDocument();
     expect(screen.getByText("Draft")).toBeInTheDocument();
