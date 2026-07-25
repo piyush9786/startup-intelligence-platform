@@ -40,7 +40,7 @@ def build_tfidf_index(scheme_corpus: list[dict]) -> dict:
         max_features=10_000,
         ngram_range=(1, 2),
         sublinear_tf=True,
-        min_df=2,
+        min_df=1,
     )
     tfidf_matrix = vectorizer.fit_transform(texts)
 
