@@ -164,6 +164,17 @@ def test_generation_evaluates_all_and_recommends_actionable_only():
     assert first.ranking_version == RANKING_VERSION
     assert first.generation_id == second.generation_id == generation.generation_id
 
+    # Invariant test: score components sum exactly to the final score
+    for rec in generation.recommendations:
+        bd = rec.score_breakdown
+        comp_sum = (
+            Decimal(bd["eligibility_component"])
+            + Decimal(bd["rule_match_component"])
+            + Decimal(bd["svm_component"])
+            + Decimal(bd["application_status_component"])
+        )
+        assert comp_sum == rec.score == Decimal(bd["score"])
+
 
 def test_equal_scores_use_scheme_name_tie_break():
     user = make_user(username="tie-break-owner")
