@@ -3,6 +3,7 @@ Startup Executive Resume & Pitch One-Pager Generator.
 Generates a structured, context-aware one-page startup executive resume document
 tailored dynamically to the founder's specific idea concept.
 """
+
 from __future__ import annotations
 
 import logging
@@ -61,9 +62,7 @@ def generate_startup_executive_resume(
         "value_proposition",
         f"A proposed lower-friction workflow for customers dealing with '{idea}'.",
     )
-    cust_stmt = bp.get("customer", {}).get(
-        "primary_customer_segment", "Target industry buyers."
-    )
+    cust_stmt = bp.get("customer", {}).get("primary_customer_segment", "Target industry buyers.")
     rev_stmt = bp.get("business_model", {}).get("revenue_model", "Tiered subscription model.")
 
     core_pillars = [
@@ -77,9 +76,7 @@ def generate_startup_executive_resume(
         {
             "scheme_name": scheme.get("name", "Potential government scheme"),
             "authority": "Verify with the official scheme authority",
-            "support": (
-                "Current support terms must be verified on the official scheme page."
-            ),
+            "support": ("Current support terms must be verified on the official scheme page."),
             "match_badge": "Suggested fit — not eligibility assessed",
             "summary": (
                 "This is an unverified scheme idea. Confirm current availability, "

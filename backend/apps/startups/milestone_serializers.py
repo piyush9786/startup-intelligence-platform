@@ -30,11 +30,9 @@ class StartupMilestoneSerializer(serializers.ModelSerializer):
         profile = self.context.get("startup_profile")
 
         if request is not None and profile is not None:
-            self.fields["dependencies"].queryset = (
-                StartupMilestone.objects.filter(
-                    owner=request.user,
-                    startup_profile=profile,
-                )
+            self.fields["dependencies"].queryset = StartupMilestone.objects.filter(
+                owner=request.user,
+                startup_profile=profile,
             )
 
     class Meta:
@@ -96,9 +94,7 @@ class StartupMilestoneSerializer(serializers.ModelSerializer):
                 )
 
             if instance_id is not None and dependency.pk == instance_id:
-                raise serializers.ValidationError(
-                    "A milestone cannot depend on itself."
-                )
+                raise serializers.ValidationError("A milestone cannot depend on itself.")
 
         return dependencies
 

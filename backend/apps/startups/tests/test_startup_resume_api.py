@@ -24,8 +24,7 @@ class StartupResumeGeneratorAPITestCase(TestCase):
         url = "/api/v1/startup-builder/generate-resume/"
         data = {
             "idea_description": (
-                "Farm-to-retail cold chain supply logistics for smallholder "
-                "Indian farmers"
+                "Farm-to-retail cold chain supply logistics for smallholder Indian farmers"
             ),
             "sector": "AgriTech",
             "funding_required": "₹30 Lakhs",

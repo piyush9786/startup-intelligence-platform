@@ -57,13 +57,10 @@ def detect_dependency_cycle(
     if not milestone_id:
         return False
 
-    scoped_milestones = (
-        StartupMilestone.objects.filter(
-            owner_id=owner_id,
-            startup_profile_id=startup_profile_id,
-        )
-        .prefetch_related("dependencies")
-    )
+    scoped_milestones = StartupMilestone.objects.filter(
+        owner_id=owner_id,
+        startup_profile_id=startup_profile_id,
+    ).prefetch_related("dependencies")
 
     dependency_map = {
         str(milestone.id): [
@@ -125,8 +122,7 @@ def complete_milestone(
     if not all_done:
         titles = ", ".join(f"'{title}'" for title in uncompleted)
         raise MilestoneDependencyError(
-            "Cannot complete milestone. "
-            f"Prerequisite milestones are incomplete: {titles}."
+            f"Cannot complete milestone. Prerequisite milestones are incomplete: {titles}."
         )
 
     now = timezone.now()
