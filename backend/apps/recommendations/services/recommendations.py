@@ -40,10 +40,10 @@ _ACTIONABLE_APPLICATION_STATUSES = frozenset(_APPLICATION_STATUS_COMPONENTS)
 
 # Recommendations-v2 ML-blended weights
 # Total score combines eligibility, rule matching, SVM probability,
-# and application status using 40%, 10%, 40%, and 10% weights.
-_ELIGIBILITY_WEIGHT_V2 = Decimal("0.400000")
+# and application status using 70%, 10%, 10%, and 10% weights.
+_ELIGIBILITY_WEIGHT_V2 = Decimal("0.700000")
 _RULE_MATCH_WEIGHT_MAX_V2 = Decimal("0.100000")
-_SVM_WEIGHT_V2 = Decimal("0.400000")
+_SVM_WEIGHT_V2 = Decimal("0.100000")
 _APPLICATION_STATUS_WEIGHT_MAX_V2 = Decimal("0.100000")
 
 _APPLICATION_STATUS_RATIOS_V2 = {
@@ -93,7 +93,15 @@ def _get_svm_score(startup_profile, scheme_version) -> Decimal | None:
 
         prob = predict_scheme_probability(startup_profile, scheme_version)
         return Decimal(str(prob))
-    except Exception:
+    except Exception as exc:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            "SVM prediction failed for startup %s, scheme %s. Fallback reason: %s",
+            startup_profile.id,
+            scheme_version.id,
+            exc
+        )
         return None
 
 
@@ -313,10 +321,9 @@ def generate_recommendations(
             ),
         )
 
-        # Delete previous recommendations for this profile before creating new run output
         Recommendation.objects.filter(
-            startup_profile=startup_profile,
-        ).delete()
+            startup_profile=startup_profile, is_current=True
+        ).update(is_current=False)
 
         recommendations: list[Recommendation] = []
         for rank, candidate in enumerate(candidates, start=1):

@@ -62,7 +62,8 @@ def nightly_anomaly_and_cohort():
             cohort = assign_cohort(profile)
             profile.ml_cohort_id = cohort
             profile.anomaly_score = score
-            profile.save(update_fields=["ml_cohort_id", "anomaly_score"])
+            profile.is_anomalous = is_anomalous
+            profile.save(update_fields=["ml_cohort_id", "anomaly_score", "is_anomalous"])
             if is_anomalous:
                 anomaly_flagged += 1
         except Exception as exc:
