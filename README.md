@@ -47,6 +47,7 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 - Qdrant-backed evidence retrieval;
 - grounded Ollama founder-advisor briefings with robust validation handling
   for LLM hallucination and fallback citations;
+- global multi-language (i18n) support across public and product views (English, Hindi, Marathi);
 - founder and reviewer React workspaces;
 - readiness-first responsive founder dashboard with accessible Motion
   transitions and premium modern UI/UX (glassmorphism, vibrant palettes);
@@ -56,7 +57,7 @@ amounts, deadlines, reviewer decisions, or prerequisite ordering.
 ## System architecture
 
 ```text
-React / Vite
+React / Vite (with i18n context)
       │
       ▼
 Django REST Framework
