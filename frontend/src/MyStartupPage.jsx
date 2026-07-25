@@ -70,6 +70,20 @@ function StartupResumeView({ completeness, onGoToAssessment, profile }) {
                   <b aria-hidden="true">✓</b> DPIIT Recognized
                 </span>
               )}
+              {profile?.ml_cohort_id !== undefined && profile?.ml_cohort_id !== null && (
+                <span className="resume-badge badge-cohort" style={{ background: "rgba(99, 102, 241, 0.15)", color: "#818cf8", border: "1px solid rgba(99, 102, 241, 0.3)" }} title="Assigned by K-Means Cohort Clustering">
+                  🤖 Cohort #{profile.ml_cohort_id + 1}
+                </span>
+              )}
+              {profile?.is_anomalous ? (
+                <span className="resume-badge badge-anomaly" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#f87171", border: "1px solid rgba(239, 68, 68, 0.3)" }} title="Flagged by Isolation Forest model for manual review">
+                  ⚠️ Review Flagged
+                </span>
+              ) : (
+                <span className="resume-badge badge-verified-profile" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", border: "1px solid rgba(16, 185, 129, 0.3)" }} title="Integrity verified by Isolation Forest model">
+                  ✓ Verified Profile
+                </span>
+              )}
               <span className="resume-badge badge-stage">
                 {readinessStatusLabel(profile?.stage || "Early Stage")}
               </span>

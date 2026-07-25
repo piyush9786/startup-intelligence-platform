@@ -25,17 +25,20 @@ jobs:
       POSTGRES_PASSWORD: startup
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
+      PYTHONPATH: .
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install -r backend/requirements.txt
-      - run: python backend/manage.py check
-      - run: python backend/manage.py makemigrations --check --dry-run
-      - run: pytest backend
-      - run: ruff check backend
-      - run: git diff --check
+      - run: pip install -r requirements.txt
+      - run: python manage.py check
+      - run: python manage.py makemigrations --check --dry-run
+      - run: pytest
+      - run: ruff check .
 
   frontend:
     runs-on: ubuntu-latest

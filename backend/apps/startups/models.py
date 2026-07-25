@@ -52,6 +52,19 @@ class StartupProfile(TimeStampedModel):
     funding_purpose = models.TextField(blank=True)
     team_size = models.PositiveIntegerField(null=True, blank=True)
     profile_data = models.JSONField(default=dict, blank=True)
+    # ML Engine fields
+    ml_cohort_id = models.IntegerField(
+        null=True, blank=True,
+        help_text="K-Means cohort assigned by the ML engine.",
+    )
+    anomaly_score = models.FloatField(
+        null=True, blank=True,
+        help_text="Isolation Forest anomaly score. Negative values indicate anomalies.",
+    )
+    is_anomalous = models.BooleanField(
+        default=False,
+        help_text="Flagged as anomalous by the Isolation Forest model.",
+    )
 
     class Meta:
         ordering = ["startup_name"]
