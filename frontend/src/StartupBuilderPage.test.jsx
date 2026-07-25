@@ -70,7 +70,7 @@ describe("StartupBuilderPage", () => {
     await waitFor(() => {
       expect(builderApi.generateMasterStartupPlan).toHaveBeenCalledWith({
         idea_description: "AI-powered automated invoice processing & GST reconciliation for Indian SMBs",
-        sector: "B2B SaaS / FinTech",
+        sector: "B2B SaaS / Software",
         funding_required: "₹25 Lakhs",
       });
     });
