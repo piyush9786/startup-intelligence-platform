@@ -181,6 +181,27 @@ const en = {
   "reviewer.reject": "Reject",
   "reviewer.pending": "Pending review",
 
+  // ── Tracker ───────────────────────────────────────────────────────────────────
+  "tracker.title": "Application Pipeline Tracker",
+  "tracker.subtitle": "Track government grant submissions across 4 stages, generate AI proposals, and run instant sandbox verifications.",
+  "tracker.sandbox_title": "Instant GSTIN & DPIIT Verification",
+  "tracker.sandbox_subtitle": "Bypass 2-day manual queue waiting. Enter format-valid GSTIN or DPIIT numbers for instant verification.",
+  "tracker.verify_instant": "⚡ Verify Instantly",
+  "tracker.generate_proposal": "📄 Generate AI Proposal Draft",
+  "tracker.drafting_proposal": "Drafting AI Proposal…",
+  "tracker.stage.draft": "Draft",
+  "tracker.stage.submitted": "Submitted",
+  "tracker.stage.under_review": "Under Review",
+  "tracker.stage.approved": "Approved / Granted",
+
+  // ── Intelligence Dashboard ───────────────────────────────────────────────────
+  "intelligence.title": "Founder Intelligence Dashboard",
+  "intelligence.subtitle": "Real-time readiness scores, active applications, ML cohort analytics, and compliance alerts.",
+  "intelligence.readiness_score": "Readiness Score",
+  "intelligence.active_applications": "Active Applications",
+  "intelligence.compliance_health": "Compliance Health",
+  "intelligence.capital_runway": "Capital Runway",
+
   // ── Errors ────────────────────────────────────────────────────────────────────
   "error.generic": "Something went wrong. Please try again.",
   "error.session_expired": "Your session has expired. Please sign in again.",

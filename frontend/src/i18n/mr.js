@@ -181,6 +181,27 @@ const mr = {
   "reviewer.reject": "नाकारा",
   "reviewer.pending": "पुनरावलोकन प्रलंबित",
 
+  // ── Tracker ───────────────────────────────────────────────────────────────────
+  "tracker.title": "अर्ज पाइपलाइन ट्रॅकर",
+  "tracker.subtitle": "४ टप्प्यांत शासकीय अनुदान अर्जांचा मागोवा घ्या, AI प्रस्ताव तयार करा आणि त्वरित पडताळणी चालवा.",
+  "tracker.sandbox_title": "त्वरित GSTIN आणि DPIIT पडताळणी",
+  "tracker.sandbox_subtitle": "२ दिवसांचा मॅन्युअल प्रतीक्षा वेळ वगळा. त्वरित पडताळणीसाठी वैध GSTIN किंवा DPIIT प्रविष्ट करा.",
+  "tracker.verify_instant": "⚡ त्वरित पडताळून पहा",
+  "tracker.generate_proposal": "📄 AI प्रस्ताव मसुदा तयार करा",
+  "tracker.drafting_proposal": "AI प्रस्ताव मसुदा तयार होत आहे…",
+  "tracker.stage.draft": "मसुदा",
+  "tracker.stage.submitted": "सदर केले",
+  "tracker.stage.under_review": "पुनरावलोकनाखाली",
+  "tracker.stage.approved": "मंजूर / मंजूर अनुदान",
+
+  // ── Intelligence Dashboard ───────────────────────────────────────────────────
+  "intelligence.title": "फाउंडर इंटेलिजन्स डॅशबोर्ड",
+  "intelligence.subtitle": "वास्तविक वेळेतील सज्जता गुणसंख्या, सक्रिय अर्ज, ML कोहॉर्ट विश्लेषण आणि अनुपालन इशारे.",
+  "intelligence.readiness_score": "सज्जता गुणसंख्या",
+  "intelligence.active_applications": "सक्रिय अर्ज",
+  "intelligence.compliance_health": "अनुपालन आरोग्य",
+  "intelligence.capital_runway": "भांडवल रनवे",
+
   // ── Errors ────────────────────────────────────────────────────────────────────
   "error.generic": "काहीतरी चुकले. कृपया पुन्हा प्रयत्न करा.",
   "error.session_expired": "तुमचे सत्र संपले आहे. कृपया पुन्हा साइन इन करा.",
