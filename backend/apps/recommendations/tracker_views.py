@@ -33,8 +33,15 @@ class SchemeApplicationTrackerSerializer(serializers.ModelSerializer):
 
     def validate_startup_profile(self, value):
         request = self.context.get("request")
-        if request and request.user and not request.user.is_staff and value.owner_id != request.user.id:
-            raise serializers.ValidationError("The specified startup profile does not belong to you.")
+        if (
+            request
+            and request.user
+            and not request.user.is_staff
+            and value.owner_id != request.user.id
+        ):
+            raise serializers.ValidationError(
+                "The specified startup profile does not belong to you."
+            )
         return value
 
     def to_representation(self, instance: SchemeApplicationTracker):

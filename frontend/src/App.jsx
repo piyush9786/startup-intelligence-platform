@@ -3463,6 +3463,7 @@ function Workspace({ onSignOut }) {
     page = (
       <StartupBuilderPage
         onNavigate={handleNavigate}
+        startupProfileId={selectedProfileId}
       />
     );
   } else if (activeView === "tracker") {

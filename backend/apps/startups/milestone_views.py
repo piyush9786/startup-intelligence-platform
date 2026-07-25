@@ -17,6 +17,7 @@ Endpoints:
   POST /api/v1/startup-milestones/{id}/log-update/
        Append a founder update log entry to the milestone.
 """
+
 from __future__ import annotations
 
 import logging
@@ -46,7 +47,6 @@ logger = logging.getLogger(__name__)
 
 def _get_current_profile(user) -> StartupProfile | None:
     return get_current_startup_profile(user)
-
 
 
 class StartupMilestoneListCreateView(APIView):
