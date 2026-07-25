@@ -408,3 +408,50 @@ class Recommendation(TimeStampedModel):
             ),
         ]
 
+
+class SchemeApplicationTracker(TimeStampedModel):
+    class Stage(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        SUBMITTED = "submitted", "Submitted"
+        UNDER_REVIEW = "under_review", "Under Review"
+        APPROVED = "approved", "Approved / Granted"
+        REJECTED = "rejected", "Rejected"
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="scheme_applications",
+    )
+    startup_profile = models.ForeignKey(
+        "startups.StartupProfile",
+        on_delete=models.CASCADE,
+        related_name="scheme_applications",
+    )
+    scheme_version = models.ForeignKey(
+        "schemes.SchemeVersion",
+        on_delete=models.CASCADE,
+        related_name="tracker_applications",
+    )
+    stage = models.CharField(
+        max_length=30,
+        choices=Stage.choices,
+        default=Stage.DRAFT,
+    )
+    submission_reference = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    application_data = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["startup_profile", "scheme_version"],
+                name="unique_startup_scheme_tracker_application",
+            )
+        ]
+
+    def __str__(self) -> str:
+        cname = self.scheme_version.scheme.canonical_name
+        return f"{self.startup_profile.startup_name} -> {cname} ({self.stage})"
+

@@ -38,6 +38,7 @@ import {
   uploadEligibilityVerificationEvidence,
 } from "./api";
 import ActionRoadmapPage from "./ActionRoadmapPage";
+import ApplicationTrackerPage from "./ApplicationTrackerPage";
 import AssessmentWizard from "./AssessmentWizard";
 import CapitalPlannerPage from "./CapitalPlannerPage";
 import ChatbotDrawer from "./ChatbotDrawer";
@@ -468,6 +469,7 @@ function Navigation({
         ["startup", "◉", t("nav.my_startup")],
         ["builder", "🛠", t("nav.builder")],
         ["capital-planner", "📊", t("nav.capital_planner")],
+        ["tracker", "📌", "Application Tracker"],
         ["roadmap", "↗", t("nav.roadmap")],
       ],
     },
@@ -3460,6 +3462,12 @@ function Workspace({ onSignOut }) {
   } else if (activeView === "builder") {
     page = (
       <StartupBuilderPage
+        onNavigate={handleNavigate}
+      />
+    );
+  } else if (activeView === "tracker") {
+    page = (
+      <ApplicationTrackerPage
         onNavigate={handleNavigate}
       />
     );
