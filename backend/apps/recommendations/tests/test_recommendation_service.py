@@ -236,13 +236,13 @@ def test_repeated_generation_replaces_current_recommendations():
         assessment_date=date(2026, 7, 21),
     )
 
-    assert first_generation.generation_id != (second_generation.generation_id)
-    assert Recommendation.objects.count() == 1
-    current = Recommendation.objects.get()
+    assert Recommendation.objects.filter(generation_run__is_current=True).count() == 1
+    current = Recommendation.objects.get(generation_run__is_current=True)
     assert current.scheme_version.scheme == first_scheme
     assert current.generation_id == (second_generation.generation_id)
-    assert not Recommendation.objects.filter(
+    assert Recommendation.objects.filter(
         generation_id=first_generation.generation_id,
+        generation_run__is_current=False,
     ).exists()
     assert EligibilityAssessment.objects.count() == 4
 

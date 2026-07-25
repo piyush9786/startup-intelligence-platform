@@ -7,6 +7,9 @@ export default defineConfig(({ mode }) => {
     env.VITE_DEV_PROXY_TARGET || "http://localhost:8000";
 
   return {
+    build: {
+      outDir: "build",
+    },
     plugins: [react()],
     server: {
       proxy: {
