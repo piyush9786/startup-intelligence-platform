@@ -385,6 +385,15 @@ class Recommendation(TimeStampedModel):
     score = models.DecimalField(max_digits=7, decimal_places=6)
     score_breakdown = models.JSONField(default=dict)
     evidence_snapshot = models.JSONField(default=dict)
+    # ML Engine fields
+    svm_score = models.DecimalField(
+        max_digits=7, decimal_places=6, null=True, blank=True,
+        help_text="SVM-predicted probability of scheme acquisition success (0.0–1.0).",
+    )
+    ml_score_breakdown = models.JSONField(
+        default=dict, blank=True,
+        help_text="Breakdown of the blended ML+heuristic score components.",
+    )
 
     class Meta:
         ordering = ["startup_profile", "rank"]
@@ -398,3 +407,4 @@ class Recommendation(TimeStampedModel):
                 name="unique_recommendation_run_rank",
             ),
         ]
+
