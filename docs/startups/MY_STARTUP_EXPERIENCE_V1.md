@@ -24,6 +24,9 @@ The 9 structured domain sections:
 
 - **Completeness Metric**: Calculated deterministically via `calculateProfileCompleteness()` across required and recommended profile fields.
 - **Source Badges**:
+  - `🤖 Cohort #N`: Assigned startup cohort segment computed by K-Means (`Model 3`).
+  - `✓ Verified Profile`: Profile integrity verified by Isolation Forest anomaly detector (`Model 6`).
+  - `⚠️ Review Flagged`: Flagged by Isolation Forest (`Model 6`) for statistical anomaly review.
   - `✓ Verified`: Reviewer-approved eligibility evidence (green badge).
   - `✦ Extracted`: Auto-filled from pitch deck or uploaded document (blue badge).
   - `Founder Claim`: Self-reported founder profile attribute (neutral badge).
