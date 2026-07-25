@@ -8,7 +8,10 @@ import {
   generateStartupExecutiveResume,
 } from "./startupBuilderApi";
 
-export default function StartupBuilderPage({ onNavigate }) {
+export default function StartupBuilderPage({
+  onNavigate,
+  startupProfileId,
+}) {
   // Input fields (Start 100% empty by default)
   const [customConcept, setCustomConcept] = useState("");
   const [sectorInput, setSectorInput] = useState("");
@@ -59,6 +62,9 @@ export default function StartupBuilderPage({ onNavigate }) {
         idea_description: customConcept,
         sector: sectorInput,
         funding_required: fundingInput,
+        ...(startupProfileId
+          ? { startup_profile_id: startupProfileId }
+          : {}),
       });
       setResumeData(res);
       setFeedback({
@@ -87,11 +93,14 @@ export default function StartupBuilderPage({ onNavigate }) {
         idea_description: customConcept,
         sector: sectorInput,
         funding_required: fundingInput,
+        ...(startupProfileId
+          ? { startup_profile_id: startupProfileId }
+          : {}),
       });
       setMasterPackage(res);
       setFeedback({
         type: "success",
-        message: "🧠 Master Strategy Package generated! Executive Business Plan, Matched Grants, and Printable Pitch Resume unlocked below.",
+        message: "AI-drafted strategy and potential scheme ideas generated for your review. Verify all claims before relying on them.",
       });
     } catch (err) {
       setFeedback({

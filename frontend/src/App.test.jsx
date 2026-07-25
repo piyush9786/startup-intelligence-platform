@@ -863,15 +863,21 @@ describe("founder authentication", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Request password reset" }),
+      screen.getByRole("button", {
+        name: "View recovery instructions",
+      }),
     );
 
     expect(
       screen.getByRole("status"),
-    ).toHaveTextContent("Recovery request received");
+    ).toHaveTextContent(
+      "Self-service password recovery is not available yet",
+    );
     expect(
       screen.getByRole("status"),
-    ).toHaveTextContent("founder@example.com");
+    ).toHaveTextContent(
+      "No password-reset email was sent.",
+    );
 
     await user.click(
       screen.getByRole("button", { name: "Return to sign in" }),

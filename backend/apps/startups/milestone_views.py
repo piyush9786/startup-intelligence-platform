@@ -17,6 +17,7 @@ Endpoints:
   POST /api/v1/startup-milestones/{id}/log-update/
        Append a founder update log entry to the milestone.
 """
+
 from __future__ import annotations
 
 import logging
@@ -46,7 +47,6 @@ logger = logging.getLogger(__name__)
 
 def _get_current_profile(user) -> StartupProfile | None:
     return get_current_startup_profile(user)
-
 
 
 class StartupMilestoneListCreateView(APIView):
@@ -81,13 +81,24 @@ class StartupMilestoneListCreateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        serializer = StartupMilestoneSerializer(data=request.data)
+        serializer = StartupMilestoneSerializer(
+            data=request.data,
+            context={
+                "request": request,
+                "startup_profile": profile,
+            },
+        )
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         deps = serializer.validated_data.get("dependencies", [])
         dep_ids = [str(d.id) for d in deps]
-        if detect_dependency_cycle(None, dep_ids):
+        if detect_dependency_cycle(
+            None,
+            dep_ids,
+            owner_id=request.user.id,
+            startup_profile_id=profile.id,
+        ):
             return Response(
                 {"detail": "Circular milestone dependency detected."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -128,14 +139,28 @@ class StartupMilestoneDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        serializer = StartupMilestoneSerializer(m, data=request.data, partial=True)
+        profile = _get_current_profile(request.user)
+        serializer = StartupMilestoneSerializer(
+            m,
+            data=request.data,
+            partial=True,
+            context={
+                "request": request,
+                "startup_profile": profile,
+            },
+        )
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         if "dependencies" in serializer.validated_data:
             deps = serializer.validated_data["dependencies"]
             dep_ids = [str(d.id) for d in deps]
-            if detect_dependency_cycle(str(m.id), dep_ids):
+            if detect_dependency_cycle(
+                str(m.id),
+                dep_ids,
+                owner_id=request.user.id,
+                startup_profile_id=profile.id,
+            ):
                 return Response(
                     {"detail": "Circular milestone dependency detected."},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -183,10 +208,12 @@ class StartupMilestoneCompleteView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         evidence = serializer.validated_data.get("evidence", {})
-        force = serializer.validated_data.get("force", False)
 
         try:
-            completed = complete_milestone(milestone=m, evidence=evidence, force=force)
+            completed = complete_milestone(
+                milestone=m,
+                evidence=evidence,
+            )
         except MilestoneDependencyError as exc:
             return Response(
                 {"detail": str(exc)},

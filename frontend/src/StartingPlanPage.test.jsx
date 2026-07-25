@@ -185,7 +185,7 @@ describe("starting plan page", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByText(
+      await screen.findAllByText(
         "Dependency ordering: not evaluated",
       ),
     ).toHaveLength(2);

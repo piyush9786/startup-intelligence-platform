@@ -34,8 +34,8 @@ export default function MasterPlanResults({ masterPackage, onGenerateResume, gen
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.6rem" }}>
-            <span className="badge badge-verified" style={{ fontSize: "0.85rem", padding: "0.45rem 0.9rem" }}>
-              ⚡ AI Generated Strategy
+            <span className="badge" style={{ fontSize: "0.85rem", padding: "0.45rem 0.9rem" }}>
+              ⚡ Unverified AI Strategy Draft
             </span>
 
             {/* Unlocked Pitch Resume Button */}
@@ -63,7 +63,7 @@ export default function MasterPlanResults({ masterPackage, onGenerateResume, gen
             Funding Target: <strong>{masterPackage.funding_required}</strong>
           </div>
           <div style={{ background: "rgba(56, 189, 248, 0.1)", padding: "0.5rem 1rem", borderRadius: "8px", border: "1px solid #38bdf8", fontSize: "0.85rem", color: "#38bdf8" }}>
-            Grant Match Score: <strong>96% High Alignment</strong>
+            Scheme Suggestions: <strong>Not eligibility assessed</strong>
           </div>
         </div>
       </section>
@@ -187,7 +187,7 @@ export default function MasterPlanResults({ masterPackage, onGenerateResume, gen
               🏛️ FUNDING OPPORTUNITIES
             </span>
             <h3 style={{ fontSize: "1.35rem", margin: "0.2rem 0 0", fontWeight: 800 }}>
-              Matched Indian Government Seed Grants & Tax Exemptions
+              Potential Government Schemes Requiring Verification
             </h3>
           </div>
 
@@ -209,9 +209,9 @@ export default function MasterPlanResults({ masterPackage, onGenerateResume, gen
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
                     <span style={{ fontSize: "0.75rem", color: "var(--lime)", fontWeight: 800, textTransform: "uppercase", background: "rgba(163, 230, 53, 0.1)", padding: "0.2rem 0.5rem", borderRadius: "4px" }}>
-                      96% Match
+                      Suggested Fit
                     </span>
-                    <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>DPIIT / Nodal Ministry</span>
+                    <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Verify with official source</span>
                   </div>
                   <h4 style={{ fontSize: "1.05rem", margin: "0 0 0.35rem", fontWeight: 800 }}>
                     {sch.name}
