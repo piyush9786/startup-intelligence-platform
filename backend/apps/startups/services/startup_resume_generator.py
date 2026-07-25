@@ -1,7 +1,7 @@
 """
 Startup Executive Resume & Pitch One-Pager Generator.
-Generates a structured, highly aesthetic one-page startup executive resume/teaser document
-from minimal founder inputs (Idea concept + Sector + Stage + Target Funding).
+Generates a structured, context-aware one-page startup executive resume document
+tailored dynamically to the founder's specific idea concept.
 """
 from __future__ import annotations
 
@@ -9,6 +9,9 @@ import logging
 from typing import Any
 
 from apps.startups.models import StartupProfile
+from apps.startups.services.builder_consultant_service import (
+    _generate_sector_context_intelligence,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +30,11 @@ def generate_startup_executive_resume(
     idea = idea_description.strip()
     startup_name = profile.startup_name if (profile and profile.startup_name) else "Startup Entity"
 
-    # Executive Teaser Resume Content
+    # Synthesize context intelligence
+    intel = _generate_sector_context_intelligence(idea, sector, stage, funding_required)
+    bp = intel.get("business_plan", {})
+    schemes_raw = intel.get("recommended_schemes", [])
+
     resume_header = {
         "startup_name": startup_name,
         "tagline": f"An innovative {sector} platform transforming '{idea}'.",
@@ -42,102 +49,38 @@ def generate_startup_executive_resume(
         f"{startup_name} is an early-stage Indian startup operating in the "
         f"{sector} space at the {stage} stage. The venture addresses market "
         f"inefficiencies in '{idea}' by deploying digital infrastructure, "
-        "aiming for self-sustaining unit economics and scaling revenue."
+        f"aiming for self-sustaining unit economics and scaling to target revenues."
     )
 
+    prob_stmt = bp.get("problem", {}).get("problem_statement", f"High friction in '{idea}'.")
+    sol_stmt = bp.get("business_model", {}).get(
+        "value_proposition", f"10x faster execution for '{idea}'."
+    )
+    cust_stmt = bp.get("customer", {}).get(
+        "primary_customer_segment", "Target industry buyers."
+    )
+    rev_stmt = bp.get("business_model", {}).get("revenue_model", "Tiered subscription model.")
+
     core_pillars = [
-        {
-            "title": "Problem Statement",
-            "icon": "🎯",
-            "content": (
-                f"Existing workflows in the {sector} market suffer from heavy "
-                f"manual friction, high cost, and delays regarding '{idea}'."
-            ),
-        },
-        {
-            "title": "Proposed Solution",
-            "icon": "🚀",
-            "content": (
-                "A streamlined, technology-enabled platform delivering 10x "
-                f"faster execution and 50% cost savings for '{idea}'."
-            ),
-        },
-        {
-            "title": "Target Customer Persona",
-            "icon": "👥",
-            "content": (
-                f"Primary decision-makers, operations heads, and businesses in "
-                f"the {sector} space seeking friction-free operations."
-            ),
-        },
-        {
-            "title": "Business & Monetization Model",
-            "icon": "💎",
-            "content": (
-                "Tiered SaaS subscription and transaction-based pricing, "
-                "targeting 80% gross margin with 4:1 LTV/CAC ratio."
-            ),
-        },
+        {"title": "Problem Statement", "icon": "🎯", "content": prob_stmt},
+        {"title": "Proposed Solution", "icon": "🚀", "content": sol_stmt},
+        {"title": "Target Customer Persona", "icon": "👥", "content": cust_stmt},
+        {"title": "Business & Monetization Model", "icon": "💎", "content": rev_stmt},
     ]
 
     matched_schemes = [
         {
-            "scheme_name": "Startup India Seed Fund Scheme (SISFS)",
-            "authority": "DPIIT, Ministry of Commerce",
-            "support": "Up to ₹20 Lakhs Grant / ₹50 Lakhs Debt",
+            "scheme_name": sch.get("name", "Government Grant"),
+            "authority": "DPIIT / Nodal Ministry",
+            "support": sch.get("support", "Grant Support"),
             "match_badge": "High Match (96%)",
-            "summary": "Proof of Concept & Prototype development grant.",
-        },
-        {
-            "scheme_name": "DPIIT 80-IAC Tax Exemption Programme",
-            "authority": "CBDT / Inter-Ministerial Board",
-            "support": "3-Year Income Tax Holiday",
-            "match_badge": "Verified Eligible",
-            "summary": "100% tax exemption for 3 consecutive financial years.",
-        },
-        {
-            "scheme_name": "Credit Guarantee Scheme for Startups (CGSS)",
-            "authority": "NCGTC / SIDBI",
-            "support": "Up to ₹10 Crore Collateral-Free Loans",
-            "match_badge": "Likely Eligible",
-            "summary": "Government-backed bank loan guarantee without personal collateral.",
-        },
+            "summary": sch.get("reason", "Proof of Concept & Prototype development grant."),
+        }
+        for sch in schemes_raw
     ]
 
-    execution_roadmap = [
-        {
-            "quarter": "Q1",
-            "milestone": "Customer Problem Validation & 15 Founder Interviews",
-            "status": "In Progress",
-        },
-        {
-            "quarter": "Q2",
-            "milestone": "MVP Prototype Launch & 3 Paid Pilot Deployments",
-            "status": "Upcoming",
-        },
-        {
-            "quarter": "Q3",
-            "milestone": "DPIIT Recognition & SISFS Seed Fund Grant Application",
-            "status": "Upcoming",
-        },
-        {
-            "quarter": "Q4",
-            "milestone": "Commercial Scale & ₹10L Monthly Recurring Revenue",
-            "status": "Upcoming",
-        },
-    ]
-
-    consultant_insights = {
-        "strategic_advice": (
-            "Focus initially on securing 3 pilot clients to validate "
-            "willingness-to-pay before writing heavy custom code."
-        ),
-        "top_risks": [
-            "Customer inertia preferring comfortable manual workarounds.",
-            "Premature scaling before proving unit economics.",
-            "Delayed GSTIN or DPIIT registration blocking seed grant applications.",
-        ],
-    }
+    execution_roadmap = intel.get("execution_roadmap", [])
+    consultant_insights = intel.get("consultant_recommendations", {})
 
     return {
         "resume_header": resume_header,
