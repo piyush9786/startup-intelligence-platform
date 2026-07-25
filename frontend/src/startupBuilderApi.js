@@ -27,3 +27,8 @@ export async function generateMasterStartupPlan(payload) {
   const response = await authenticatedApiClient.post("/startup-builder/generate-master-plan/", payload);
   return response.data;
 }
+
+export async function generateStartupExecutiveResume(payload) {
+  const response = await authenticatedApiClient.post("/startup-builder/generate-resume/", payload);
+  return response.data;
+}

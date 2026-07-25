@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
+import StartupResumeView from "./StartupResumeView";
 import {
   generateMasterStartupPlan,
+  generateStartupExecutiveResume,
   getBuilderSection,
   listBuilderSections,
   requestBuilderSectionDraft,
@@ -117,6 +119,8 @@ export default function StartupBuilderPage({ onNavigate }) {
   const [fundingInput, setFundingInput] = useState("₹25 Lakhs");
   const [consulting, setConsulting] = useState(false);
   const [masterPackage, setMasterPackage] = useState(null);
+  const [resumeData, setResumeData] = useState(null);
+  const [generatingResume, setGeneratingResume] = useState(false);
 
   const activeConfig = SECTION_CONFIGS.find((c) => c.id === activeSectionId) || SECTION_CONFIGS[0];
 
@@ -155,6 +159,31 @@ export default function StartupBuilderPage({ onNavigate }) {
 
   function handleApplySampleIdea(concept) {
     setCustomConcept(concept);
+  }
+
+  async function handleGenerateResume() {
+    if (!customConcept.trim()) return;
+    setGeneratingResume(true);
+    setFeedback(null);
+    try {
+      const res = await generateStartupExecutiveResume({
+        idea_description: customConcept,
+        sector: sectorInput,
+        funding_required: fundingInput,
+      });
+      setResumeData(res);
+      setFeedback({
+        type: "success",
+        message: "📄 One-Page Startup Executive Resume generated! Review or print your document below.",
+      });
+    } catch (err) {
+      setFeedback({
+        type: "danger",
+        message: err.message || "Failed to generate Startup Resume.",
+      });
+    } finally {
+      setGeneratingResume(false);
+    }
   }
 
   async function handleLaunchMasterConsultant(e) {
@@ -319,16 +348,36 @@ export default function StartupBuilderPage({ onNavigate }) {
             />
           </div>
 
-          <button
-            type="submit"
-            className="button button-primary"
-            disabled={consulting || !customConcept.trim()}
-            style={{ width: "fit-content", padding: "0.7rem 1.4rem", fontSize: "0.92rem", fontWeight: 700 }}
-          >
-            {consulting ? "🧠 AI Consultant Synthesizing Master Package…" : "🚀 Launch AI Consultant & Auto-Generate Master Plan"}
-          </button>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
+            <button
+              type="submit"
+              className="button button-primary"
+              disabled={consulting || !customConcept.trim()}
+              style={{ padding: "0.7rem 1.4rem", fontSize: "0.92rem", fontWeight: 700 }}
+            >
+              {consulting ? "🧠 AI Consultant Synthesizing Master Package…" : "🚀 Launch AI Consultant & Auto-Generate Master Plan"}
+            </button>
+
+            <button
+              type="button"
+              className="button button-secondary"
+              disabled={generatingResume || !customConcept.trim()}
+              onClick={handleGenerateResume}
+              style={{ padding: "0.7rem 1.4rem", fontSize: "0.92rem", fontWeight: 700 }}
+            >
+              {generatingResume ? "📄 Drafting Executive Resume…" : "📄 Generate Printable Startup Executive Resume"}
+            </button>
+          </div>
         </form>
       </section>
+
+      {/* STARTUP RESUME MODAL / VIEW DRAWER */}
+      {resumeData && (
+        <StartupResumeView
+          resumeData={resumeData}
+          onClose={() => setResumeData(null)}
+        />
+      )}
 
       {/* MASTER CONSULTANT PACKAGE RESULTS (If Generated) */}
       {masterPackage && (
