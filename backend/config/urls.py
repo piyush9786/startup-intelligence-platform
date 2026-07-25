@@ -92,6 +92,7 @@ from apps.startups.onboarding_views import (
     StartupOnboardingCurrentView,
 )
 from apps.startups.startup_intelligence_views import StartupIntelligenceView
+from apps.startups.startup_resume_views import StartupResumeGeneratorView
 from apps.startups.verification_sandbox_views import InstantVerificationSandboxView
 from apps.startups.views import (
     StartupFundingPlanCurrentView,
@@ -412,6 +413,11 @@ urlpatterns = [
         "api/v1/startup-builder/generate-master-plan/",
         MasterConsultantGeneratorView.as_view(),
         name="startup-builder-generate-master-plan",
+    ),
+    path(
+        "api/v1/startup-builder/generate-resume/",
+        StartupResumeGeneratorView.as_view(),
+        name="startup-builder-generate-resume",
     ),
     path(
         "api/v1/startups/verify-instant/",
