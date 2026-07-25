@@ -65,10 +65,10 @@ Stage 3: LLM GROUNDED EXPLANATION
 ## 🏛️ System Architecture
 
 ```text
-React / Vite (with i18n context)
+React 19 / Vite (React Router v7, TanStack Query v5, i18n context)
       │
-      ▼
-Django REST Framework (Python 3.13)
+      ▼ (HTTP / REST API — Default-Deny IsAuthenticated Permission Policy)
+Django REST Framework 5.2 (Modular app-level urls.py routing)
       │
       ├── PostgreSQL — Authoritative business data, MLFeatureStore & MLModelRegistry
       ├── Redis / Celery — Asynchronous tasks & scheduled ML retraining
@@ -92,28 +92,33 @@ startup-intelligence-platform/
 ├── README.md                 # Primary project overview
 ├── backend/                  # Django REST Framework Backend
 │   ├── apps/
-│   │   ├── accounts/         # Authentication, user management & JWT
-│   │   ├── assistant/        # Site-wide chatbot & AI sessions
-│   │   ├── core/             # Shared base models & utilities
-│   │   ├── discovery/        # Web crawler & URL frontier
-│   │   ├── documents/        # Document extraction & chunking
-│   │   ├── knowledge/        # RAG embeddings, vector search, & datasets
-│   │   ├── ml_engine/        # 🆕 9-Model ML Engine, Feature Store, & Celery Tasks
-│   │   ├── recommendations/  # Eligibility engine & SVM-blended scheme ranking
-│   │   ├── schemes/          # Canonical scheme catalog & dependency graph
-│   │   ├── sources/          # Data source registry
-│   │   └── startups/         # Startup profiles, readiness, & AI Capital Planner
+│   │   ├── accounts/         # Auth & JWT management (urls.py)
+│   │   ├── assistant/        # Chatbot & AI sessions (urls.py)
+│   │   ├── core/             # Shared base models & health views (urls.py)
+│   │   ├── discovery/        # Web crawler & URL frontier (urls.py)
+│   │   ├── documents/        # Document extraction & chunking (urls.py)
+│   │   ├── knowledge/        # RAG embeddings & vector search (urls.py)
+│   │   ├── ml_engine/        # 9-Model ML Engine, Feature Store, & Celery Tasks
+│   │   ├── recommendations/  # Eligibility engine & SVM scheme ranking (urls.py)
+│   │   ├── schemes/          # Scheme catalog & dependency graph (urls.py)
+│   │   ├── sources/          # Data source registry (urls.py)
+│   │   └── startups/         # Startup profiles, readiness, & AI Capital Planner (urls.py)
 │   ├── catalog/              # Data source discovery catalog
-│   ├── config/               # Django settings, URLs, & Celery config
+│   ├── config/               # Django config, Celery, & modular settings/ package
+│   │   ├── settings/         # Base, Development, & Production settings (base.py, development.py, production.py)
+│   │   └── urls.py           # Clean root URL routing featuring modular app includes
 │   ├── ml_models/            # Trained .joblib model artifacts (gitignored)
 │   ├── scripts/              # Startup scripts (`start-web.sh`)
 │   ├── manage.py             # Django CLI
 │   ├── pyproject.toml        # Ruff linter config
-│   └── requirements.txt      # Python dependencies (scikit-learn, pandas, numpy, joblib, scipy)
-├── frontend/                 # React + Vite Frontend
-│   ├── src/                  # React components, i18n translations, API clients, & styles
-│   ├── package.json          # Frontend dependencies
-│   └── vite.config.js        # Vite configuration
+│   └── requirements.txt      # Python dependencies
+├── frontend/                 # React 19 + Vite Frontend
+│   ├── src/                  # React components, AppShell router, i18n, API clients, & styles
+│   │   ├── AppShell.jsx      # URL-based route container (React Router v7)
+│   │   ├── main.jsx          # Root entry wrapping AppShell in BrowserRouter & QueryClientProvider
+│   │   └── components/ui.jsx # Shared UI primitives
+│   ├── package.json          # Frontend dependencies (react-router-dom, @tanstack/react-query)
+│   └── vite.config.js        # Vite configuration (outDir: "build")
 ├── docs/                     # Comprehensive architecture and domain documentation
 └── infrastructure/           # Deployment scripts
 ```
