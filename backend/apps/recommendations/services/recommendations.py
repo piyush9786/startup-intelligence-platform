@@ -321,10 +321,6 @@ def generate_recommendations(
             ),
         )
 
-        Recommendation.objects.filter(
-            startup_profile=startup_profile, is_current=True
-        ).update(is_current=False)
-
         recommendations: list[Recommendation] = []
         for rank, candidate in enumerate(candidates, start=1):
             rec = Recommendation.objects.create(

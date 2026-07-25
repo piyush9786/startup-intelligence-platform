@@ -3,11 +3,12 @@ from django.db import connection
 from redis import Redis
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 
 
 class HealthView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
         with connection.cursor() as cursor:
@@ -18,7 +19,7 @@ class HealthView(APIView):
 
 class PlatformStatusView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
         redis_ok = False
