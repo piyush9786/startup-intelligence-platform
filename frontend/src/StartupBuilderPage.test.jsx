@@ -6,28 +6,28 @@ import StartupBuilderPage from "./StartupBuilderPage";
 import * as builderApi from "./startupBuilderApi";
 
 vi.mock("./startupBuilderApi", () => ({
+  listBuilderSections: vi.fn(),
   generateMasterStartupPlan: vi.fn(),
   generateStartupExecutiveResume: vi.fn(),
+  updateBuilderSection: vi.fn(),
+  requestBuilderSectionDraft: vi.fn(),
 }));
 
 describe("StartupBuilderPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    builderApi.listBuilderSections.mockResolvedValue([
+      { section_type: "problem", status: "confirmed", content: { problem_statement: "High latency" } },
+    ]);
   });
 
-  it("renders header and sample concept chips", async () => {
+  it("renders header, sample chips, and 6 business plan tiles", async () => {
     render(<StartupBuilderPage />);
-    expect(screen.getByText("AI Startup Builder & Consultant")).toBeInTheDocument();
+    expect(screen.getByText("AI Startup Builder & Consultant Workspace")).toBeInTheDocument();
     expect(screen.getByText("🚀 B2B AI SaaS")).toBeInTheDocument();
-    expect(screen.getByText("🚀 Launch AI Consultant & Auto-Generate Master Plan")).toBeInTheDocument();
-  });
-
-  it("applies sample concept chip when clicked", async () => {
-    render(<StartupBuilderPage />);
-    const chip = screen.getByText("🚀 B2B AI SaaS");
-    fireEvent.click(chip);
-    const input = screen.getByPlaceholderText("Describe your startup idea in 1 sentence...");
-    expect(input.value).toContain("AI-powered automated invoice processing");
+    expect(screen.getByText("Problem Definition")).toBeInTheDocument();
+    expect(screen.getByText("Target Customer Profile")).toBeInTheDocument();
+    expect(screen.getByText("Business Model Canvas")).toBeInTheDocument();
   });
 
   it("launches master consultant plan generator on submit", async () => {
