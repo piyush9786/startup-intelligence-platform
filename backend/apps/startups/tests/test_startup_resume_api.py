@@ -24,8 +24,7 @@ class StartupResumeGeneratorAPITestCase(TestCase):
         url = "/api/v1/startup-builder/generate-resume/"
         data = {
             "idea_description": (
-                "Farm-to-retail cold chain supply logistics for smallholder "
-                "Indian farmers"
+                "Farm-to-retail cold chain supply logistics for smallholder Indian farmers"
             ),
             "sector": "AgriTech",
             "funding_required": "₹30 Lakhs",
@@ -38,4 +37,4 @@ class StartupResumeGeneratorAPITestCase(TestCase):
         self.assertIn("matched_schemes", res.data)
         self.assertIn("execution_roadmap", res.data)
         self.assertIn("consultant_insights", res.data)
-        self.assertEqual(res.data["generator_version"], "startup-executive-resume-v1")
+        self.assertEqual(res.data["generator_version"], "startup-executive-resume-v2")

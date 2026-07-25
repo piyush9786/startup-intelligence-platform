@@ -446,7 +446,12 @@ class SchemeApplicationTracker(TimeStampedModel):
             and self.startup_profile.owner_id != self.owner_id
         ):
             raise ValidationError(
-                {"startup_profile": "The startup profile must belong to the application tracker owner."}
+                {
+                    "startup_profile": (
+                        "The startup profile must belong to the "
+                        "application tracker owner."
+                    )
+                }
             )
 
     def save(self, *args, **kwargs):

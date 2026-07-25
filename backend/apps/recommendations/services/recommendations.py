@@ -39,7 +39,8 @@ _APPLICATION_STATUS_COMPONENTS = {
 _ACTIONABLE_APPLICATION_STATUSES = frozenset(_APPLICATION_STATUS_COMPONENTS)
 
 # Recommendations-v2 ML-blended weights
-# Total Score = Eligibility (40%) + Rule Match (10%) + SVM Probability (40%) + Application Status (10%)
+# Total score combines eligibility, rule matching, SVM probability,
+# and application status using 40%, 10%, 40%, and 10% weights.
 _ELIGIBILITY_WEIGHT_V2 = Decimal("0.400000")
 _RULE_MATCH_WEIGHT_MAX_V2 = Decimal("0.100000")
 _SVM_WEIGHT_V2 = Decimal("0.400000")
@@ -120,7 +121,7 @@ def _score_assessment(
         eligibility_component = _ELIGIBILITY_WEIGHT_V2
         rule_match_component = _quantize(match_ratio * _RULE_MATCH_WEIGHT_MAX_V2)
         svm_component = _quantize(svm_score * _SVM_WEIGHT_V2)
-        
+
         app_ratio = _APPLICATION_STATUS_RATIOS_V2.get(
             scheme_version.application_status, Decimal("0.500000")
         )
@@ -134,14 +135,17 @@ def _score_assessment(
         )
         ml_mode = "svm_blended"
     else:
-        # Fallback: original heuristic scoring (70% eligibility + up to 20% rules + up to 10% app status)
+        # Fallback heuristic: 70% eligibility, up to 20% rule match,
+        # and up to 10% application status.
         eligibility_component = _ELIGIBILITY_COMPONENT
         rule_match_component = _quantize(match_ratio * _RULE_MATCH_COMPONENT_MAX)
         application_status_component = _APPLICATION_STATUS_COMPONENTS.get(
             scheme_version.application_status, Decimal("0.050000")
         )
         svm_component = Decimal("0.000000")
-        score = _quantize(eligibility_component + rule_match_component + application_status_component)
+        score = _quantize(
+            eligibility_component + rule_match_component + application_status_component
+        )
         ml_mode = "heuristic_fallback"
 
     return score, {
@@ -183,9 +187,7 @@ def _evidence_snapshot(
         "source_document_id": str(
             scheme_version.source_document_id,
         ),
-        "source_content_hash": (
-            scheme_version.source_document.content_hash
-        ),
+        "source_content_hash": (scheme_version.source_document.content_hash),
         "verification_provenance": build_verification_provenance(
             assessment,
         ),
@@ -254,35 +256,34 @@ def generate_recommendations(
             assessments.append(assessment)
 
             if assessment.result != eligible_result:
-                excluded_schemes.append({
-                    "scheme_id": str(scheme.id),
-                    "scheme_name": scheme.canonical_name,
-                    "reason": f"eligibility_result:{assessment.result}",
-                    "result": assessment.result,
-                    "failed_rules": [
-                        item.get("field_path") for item in assessment.failed_rules
-                    ],
-                    "eligibility_explanation": build_eligibility_explanation(
-                        assessment,
-                    ),
-                })
+                excluded_schemes.append(
+                    {
+                        "scheme_id": str(scheme.id),
+                        "scheme_name": scheme.canonical_name,
+                        "reason": f"eligibility_result:{assessment.result}",
+                        "result": assessment.result,
+                        "failed_rules": [
+                            item.get("field_path") for item in assessment.failed_rules
+                        ],
+                        "eligibility_explanation": build_eligibility_explanation(
+                            assessment,
+                        ),
+                    }
+                )
                 continue
 
-            if (
-                scheme_version.application_status
-                not in _ACTIONABLE_APPLICATION_STATUSES
-            ):
-                excluded_schemes.append({
-                    "scheme_id": str(scheme.id),
-                    "scheme_name": scheme.canonical_name,
-                    "reason": f"application_status:{scheme_version.application_status}",
-                    "application_status": (
-                        scheme_version.application_status
-                    ),
-                    "eligibility_explanation": build_eligibility_explanation(
-                        assessment,
-                    ),
-                })
+            if scheme_version.application_status not in _ACTIONABLE_APPLICATION_STATUSES:
+                excluded_schemes.append(
+                    {
+                        "scheme_id": str(scheme.id),
+                        "scheme_name": scheme.canonical_name,
+                        "reason": f"application_status:{scheme_version.application_status}",
+                        "application_status": (scheme_version.application_status),
+                        "eligibility_explanation": build_eligibility_explanation(
+                            assessment,
+                        ),
+                    }
+                )
                 continue
 
             score, breakdown = _score_assessment(
@@ -319,13 +320,6 @@ def generate_recommendations(
 
         recommendations: list[Recommendation] = []
         for rank, candidate in enumerate(candidates, start=1):
-            explanation = build_eligibility_explanation(
-                candidate.assessment,
-            )
-            provenance = build_verification_provenance(
-                candidate.scheme_version,
-            )
-
             rec = Recommendation.objects.create(
                 generation_run=generation_run,
                 generation_id=generation_run.id,
