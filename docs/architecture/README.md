@@ -3,7 +3,7 @@
 ## Architectural style
 
 The Startup Intelligence Platform is a modular Django monolith with a React
-frontend and asynchronous Celery workers.
+frontend, asynchronous Celery workers, and a **dedicated 9-model Machine Learning & Data Engineering engine**.
 
 The modular monolith keeps transactions, permissions, and audit trails simple
 while preserving service boundaries that may later be extracted if scale
@@ -15,21 +15,16 @@ requires it.
 Founder / Reviewer / Administrator
                 │
                 ▼
-          React + Vite
+          React + Vite (with i18n)
                 │
                 ▼
       Django REST Framework
                 │
-   ┌────────────┼─────────────┐
-   ▼            ▼             ▼
-PostgreSQL   Celery/Redis   Object and graph services
-                               │
-                 ┌─────────────┼──────────────┐
-                 ▼             ▼              ▼
-               MinIO         Qdrant         Neo4j
-
-                         Ollama
-                 embeddings + generation
+   ┌────────────┼────────────────┬────────────────┐
+   ▼            ▼                ▼                ▼
+PostgreSQL   Celery/Redis   scikit-learn     Derived stores
+(Auth, DB,   (Async & ML    (ML Models:      (Qdrant, Neo4j,
+ FeatureStore) Retraining)   SVM, KMeans, RF)  MinIO, Ollama)
 ```
 
 ## Source of truth
@@ -45,189 +40,59 @@ PostgreSQL is authoritative for:
 - eligibility assessments;
 - recommendation runs and snapshots;
 - verification submissions, evidence metadata, and immutable decisions;
-- advisor jobs and briefing snapshots.
+- advisor jobs and briefing snapshots;
+- **`MLFeatureStore` pre-computed feature vectors and cohort assignments**;
+- **`MLModelRegistry` trained model artifact versions and performance metrics**.
 
-MinIO stores object bytes.
-
+MinIO stores raw object bytes.
 PostgreSQL stores their metadata and access relationships.
+Qdrant and Neo4j are derived vector and graph projections.
 
-Qdrant and Neo4j are derived stores.
+---
 
-They must be rebuildable from authoritative records and must not silently become
-the source of truth for eligibility or permissions.
+## 🤖 Integrated 9-Model ML Engine & Data Engineering (`apps.ml_engine`)
+
+The platform integrates **9 Machine Learning models** to upgrade every decision boundary from static heuristics to data-driven learning:
+
+### 1. Data Engineering Pipeline
+- **`MLFeatureStore`**: Computes a 29-dimensional normalized feature vector for every `StartupProfile` (stage ordinal, log-scaled turnover/team size/funding, DPIIT/Udyam status, readiness score, and 18-sector one-hot encoding).
+- **`MLModelRegistry`**: Version control for trained `.joblib` model binaries, tracking training sample sizes, accuracy, silhouette scores, MAE, and ROC-AUC metrics.
+- **Celery Beat Pipelines**: Nightly feature ETL, nightly Isolation Forest anomaly scanning, and weekly automatic model retraining.
+
+### 2. The 9-Model Ensemble
+
+| # | Model | Algorithm | Engine | Function |
+|---|-------|-----------|--------|----------|
+| **1** | Transformer Embeddings | `embeddinggemma` | Ollama | Encodes scheme text chunks into 768-dim vectors in Qdrant |
+| **2** | Generative AI / LLM | `qwen3.5:9b` | Ollama | Site-wide chatbot, document auto-fill, grounded briefings |
+| **3** | K-Means Clustering | `KMeans(n_clusters=8)` | `scikit-learn` | Groups startups into cohorts by stage, sector, and turnover |
+| **4** | SVM Classifier | `CalibratedClassifierCV(SVC)` | `scikit-learn` | Predicts probability (0.0–1.0) of scheme acquisition success |
+| **5** | AdaBoost Classifier | `AdaBoostClassifier` | `scikit-learn` | Predicts probability of startup becoming READY in 30 days |
+| **6** | Isolation Forest | `IsolationForest` | `scikit-learn` | Detects statistically anomalous or fraudulent startup profiles |
+| **7** | TF-IDF + RRF | `TfidfVectorizer` | `scikit-learn` | Sparse keyword retrieval merged with Qdrant via Reciprocal Rank Fusion |
+| **8** | Random Forest | `RandomForestRegressor` | `scikit-learn` | ML-adjusted capital runway prediction for AI Capital Planner |
+| **9** | DBSCAN | `DBSCAN` | `scikit-learn` | Identifies near-duplicate scheme versions using vector distance |
+
+### 3. Enhanced 3-Stage RAG Pipeline
+1. **Hybrid Retrieval**: Parallel search across Qdrant (dense vectors) + TF-IDF (sparse keywords), merged using Reciprocal Rank Fusion ($K=60$).
+2. **ML Re-Ranking**: Top candidates re-ranked by Calibrated SVM success probability ($0.40 \times \text{eligibility} + 0.40 \times \text{SVM} + 0.10 \times \text{rules} + 0.10 \times \text{status}$).
+3. **LLM Explanation**: Top 6 candidates passed to `qwen3.5:9b` with strict citation bounds.
+
+---
 
 ## Domain boundaries
 
 ### Frontend
-
-The frontend domain is built on React and Vite and implements:
-
-- global multi-language (i18n) support across public and authenticated views;
-- responsive user interfaces adopting modern web design paradigms (glassmorphism, vibrant palettes, modern typography, semantic layouts);
-- deterministic AI Capital Planner UI for burn-rate and scenario modeling;
-- accessible routing, page transitions, and authenticated dashboard layouts.
-
-### Sources, documents, discovery, and knowledge
-
-This path collects external material and creates reviewable knowledge
-candidates.
-
-```text
-Source
-→ SourceDocument
-→ extraction and chunks
-→ discovery and quality assessment
-→ knowledge candidate
-→ human review
-→ canonical publication
-```
-
-Extracted content remains non-authoritative until reviewed and published.
+Built on React + Vite: i18n localization (English, Hindi, Marathi), modern glassmorphism UI/UX, responsive routing, AI Capital Planner UI, site-wide copilot drawer.
 
 ### Schemes
-
-The schemes domain owns canonical programmes, immutable versions, benefits,
-requirements, application information, and executable rules.
-
-Eligibility is always evaluated against a specific `SchemeVersion`.
-
-### Startups
-
-The startups domain owns:
-
-- founder startup profiles;
-- assessment drafts;
-- submitted profile updates;
-- readiness evaluation and persistence;
-- readiness action plans;
-- founder-advisor source snapshots, jobs, and briefings.
+Canonical programmes, immutable `SchemeVersion` records, eligibility requirements, and executable rules.
 
 ### Recommendations
+Combines executable rules with the **SVM Scheme Ranker (Model 4)** to compute multi-factor recommendation scores and persist immutable recommendation runs.
 
-The recommendations domain owns:
+### Startups
+Owns startup profiles, assessment drafts, readiness plans, capital plans (integrated with **Random Forest Model 8**), and advisor snapshots.
 
-- deterministic rule evaluation;
-- persisted eligibility assessments;
-- recommendation scoring and ranking;
-- recommendation generation history;
-- evidence snapshots;
-- manual verification submissions;
-- evidence metadata;
-- immutable reviewer decisions;
-- verified-decision provenance.
-
-## Deterministic decision flow
-
-```text
-StartupProfile
-      │
-      ├── readiness engine
-      │       └── readiness assessment and action plan
-      │
-      └── eligibility engine + verified SchemeVersion
-              │
-              ├── profile values
-              ├── effective reviewer-approved values
-              └── verified executable rules
-                      │
-                      ▼
-              EligibilityAssessment
-                      │
-                      ▼
-              deterministic ranking
-                      │
-                      ▼
-              RecommendationGenerationRun
-```
-
-## Verification boundary
-
-Founder submissions and uploaded evidence are claims, not authoritative facts.
-
-Only a current and effective reviewer approval may provide a manual rule value
-to the eligibility engine.
-
-Reviewer decisions are immutable.
-
-New decisions supersede old effective state without rewriting history.
-
-Concurrent first submissions are serialized by locking the stable startup
-profile before current-submission replacement.
-
-## AI and retrieval boundary
-
-The current LLM path is controlled rather than autonomous.
-
-```text
-Persisted deterministic snapshots
-        +
-Qdrant evidence retrieval
-        +
-versioned prompt and output schema
-        ▼
-local Ollama generation
-        ▼
-validated and persisted advisor briefing
-```
-
-The LLM explains and synthesizes.
-
-It does not determine eligibility, reviewer approval, ranking, verified
-deadlines, or funding-plan ordering.
-
-Qdrant retrieval should fail open for optional guidance without breaking the
-authoritative founder workspace.
-
-## Assistant layer
-
-The `apps/assistant` application provides:
-
-- persisted agent sessions and messages;
-- immutable tool-call logs;
-- a whitelisted read-mostly tool registry;
-- a site chatbot;
-- a bounded concierge state machine;
-- narration for deterministic funding plans.
-
-The assistant layer must call existing domain services.
-
-It must not receive unrestricted ORM or database access.
-
-## Security model
-
-- Backend permissions are authoritative.
-- Startup resources are owner-scoped.
-- Reviewer APIs require explicit eligibility-review capability.
-- Private evidence is downloaded through authenticated endpoints.
-- Storage keys are not public API fields.
-- Internal verification identifiers may be retained in snapshots but are not
-  rendered as founder-facing content.
-- Generated regulatory and scheme claims require verified or grounded sources.
-
-## Concurrency and immutability
-
-Use database transactions and stable-parent locks for workflows where the
-absence of a child row would otherwise create a first-write race.
-
-Historical assessments, recommendation runs, reviewer decisions, source
-snapshots, and briefing outputs should remain immutable.
-
-New state should supersede or reference historical state instead of overwriting
-it.
-
-## Evolution strategy
-
-Keep the modular monolith until observed load or team boundaries justify
-extraction.
-
-Likely future extraction candidates are:
-
-- collection and document processing;
-- embedding and retrieval;
-- notifications;
-- conversational orchestration.
-
-Public APIs and versioned contracts should remain stable if an internal module
-is extracted.
-
-- [Site-wide founder chatbot](SITE_WIDE_CHATBOT_V1.md)
+### ML Engine (`apps.ml_engine`)
+Owns feature engineering, model registry, model persistence (`.joblib`), batch training tasks, synthetic data generation, and inference endpoints for all 7 scikit-learn models.

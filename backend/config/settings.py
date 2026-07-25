@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.schemes",
     "apps.startups",
     "apps.recommendations",
+    "apps.ml_engine",
 ]
 
 MIDDLEWARE = [
@@ -147,6 +148,23 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_BEAT_SCHEDULE = {
+    "ml-nightly-feature-extraction": {
+        "task": "ml_engine.nightly_feature_extraction",
+        "schedule": 86400,  # every 24 hours
+    },
+    "ml-nightly-anomaly-and-cohort": {
+        "task": "ml_engine.nightly_anomaly_and_cohort",
+        "schedule": 86400,
+    },
+    "ml-weekly-model-retraining": {
+        "task": "ml_engine.weekly_model_retraining",
+        "schedule": 604800,  # every 7 days
+    },
+}
+
+# ML Engine configuration
+ML_MODELS_DIR = os.environ.get("ML_MODELS_DIR", str(BASE_DIR / "ml_models"))
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "mailpit")

@@ -1,10 +1,8 @@
 # Documentation
 
-Start with the repository-level
-[Project Context](../PROJECT_CONTEXT.md).
+Start with the repository-level [README](../README.md).
 
-It describes the current product state, architecture, invariants, validation
-workflow, and immediate next milestone.
+It describes the current product state, system architecture, 9-model ML ensemble, data engineering pipelines, validation workflow, and completed milestones.
 
 ## Product direction
 
@@ -12,14 +10,14 @@ workflow, and immediate next milestone.
 - [Product Vision v2](PRODUCT_VISION_V2.md)
 - [Infrastructure roadmap](../infrastructure/README.md)
 
-## Architecture
+## Architecture & Machine Learning
 
 - [System architecture](architecture/README.md)
 - [Shared agent orchestration](architecture/SHARED_AGENT_ORCHESTRATION_V1.md)
 - [Site-wide founder chatbot](architecture/SITE_WIDE_CHATBOT_V1.md)
 - [Verified scheme prerequisite graph](architecture/SCHEME_PREREQUISITE_GRAPH_V1.md)
 
-## Eligibility and recommendations
+## Eligibility, Machine Learning & Recommendations
 
 - [Deterministic eligibility engine](eligibility/ENGINE_V1.md)
 - [Eligibility assessment API](eligibility/ASSESSMENT_API.md)
@@ -47,9 +45,7 @@ workflow, and immediate next milestone.
 
 After each major milestone:
 
-1. update `PROJECT_CONTEXT.md`;
-2. update the affected domain document;
-3. update `docs/ROADMAP.md`;
-4. update the root README when setup, architecture, or headline capabilities
-   change;
-5. verify all relative Markdown links.
+1. update affected domain documents;
+2. update `docs/ROADMAP.md`;
+3. update the root `README.md` when setup, architecture, ML models, or headline capabilities change;
+4. verify all relative Markdown links.
