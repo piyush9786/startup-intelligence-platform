@@ -1,76 +1,60 @@
-# Deterministic Recommendations v1
+# Recommendations Engine (`v1` + ML Blend)
 
 ## Scope
 
 The recommendation generator evaluates every active scheme whose current
-version is verified. Each evaluation is persisted as an
-`EligibilityAssessment`.
+version is verified. Each evaluation is persisted as an `EligibilityAssessment`.
 
 Only assessments with the `eligible` result are candidates. The current
-application status must be one of:
+application status must be one of: `open`, `rolling`, or `unknown`.
 
-- `open`
-- `rolling`
-- `unknown`
+---
 
-`unknown` remains recommendable because it does not prove closure, but it
-receives a lower application-status component. `upcoming` and `closed`
-versions are not included in the current actionable recommendation set.
+## Scoring Architecture (SVM-Blended ML Ranking)
 
-## Score
-
-Scores are deterministic decimals with six places:
+Recommendation scores blend deterministic rule evaluations with **Calibrated SVM Scheme Success Probability (Model 4)**:
 
 ```text
-eligibility_component
-+ rule_match_component
-+ application_status_component
+Score = eligibility_component (0.40)
+      + rule_match_component (0.10)
+      + svm_component (0.40)
+      + application_status_component (0.10)
 ```
 
-Components:
+### Components:
+1. **Eligibility Component**: Base value `0.400000` for eligible assessments.
+2. **Rule Match Component**: Up to `0.100000` proportional to matched rule ratio.
+3. **SVM Component**: `0.400000` × Calibrated SVM probability score ($0.0-1.0$) output by `apps.ml_engine.services.models.svm_ranker`.
+4. **Application Status Component**: Up to `0.100000` based on status (`open` = `0.10`, `rolling` = `0.09`, `unknown` = `0.05`).
 
-- eligible result: `0.700000`
-- matched-rule ratio: up to `0.200000`
-- application status:
-  - open: `0.100000`
-  - rolling: `0.090000`
-  - unknown: `0.050000`
+### Heuristic Fallback
+If the SVM model artifact is not yet trained or unavailable, the system automatically falls back to the original deterministic score formula (`0.70` base + `0.20` rule match + `0.10` status).
 
-An eligible scheme with all rules matched and unknown application status
-therefore scores `0.950000`.
+---
 
 ## Ranking
 
 Recommendations are ordered by:
+1. `score` descending;
+2. `canonical_name` case-insensitive;
+3. `scheme_version_id` UUID.
 
-1. score descending;
-2. canonical scheme name, case-insensitive;
-3. scheme-version UUID.
+Ranks start at 1 and are unique inside a recommendation generation run.
 
-Ranks start at one and are unique inside a generation.
+---
 
-## Replacement and audit behavior
+## Data Model & Audit Trail
 
-Generation locks the selected startup profile and runs inside one database
-transaction. Assessments are created for all in-scope schemes. The existing
-current recommendation rows for that profile are then replaced atomically.
+Recommendation rows carry:
+- `generation_id` & `ranking_version`
+- `svm_score` (Calibrated SVM probability float)
+- `ml_score_breakdown` (JSON breakdown of all 4 formula components)
+- `evidence_snapshot` (Evidence rules metadata)
 
-Historical assessments remain stored. Recommendation rows carry a shared
-`generation_id`, `ranking_version`, score breakdown, and evidence snapshot.
+---
 
 ## API
 
 `POST /api/v1/recommendations/generate/`
 
-Authentication is required.
-
-```json
-{
-  "startup_profile_id": "profile-uuid",
-  "assessment_date": "2026-07-20"
-}
-```
-
-`assessment_date` is optional. Raw client-provided `profile` JSON is
-rejected. Non-staff users may generate recommendations only for profiles
-they own; staff users may generate for any stored profile.
+Authentication required. Returns ranked recommendations with `svm_score` and `ml_score_breakdown`.
