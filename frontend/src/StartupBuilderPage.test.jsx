@@ -23,14 +23,14 @@ describe("StartupBuilderPage", () => {
 
   it("renders header and tab navigation", async () => {
     render(<StartupBuilderPage />);
-    expect(await screen.findByText("AI Startup Builder")).toBeInTheDocument();
+    expect(await screen.findByText("AI Startup Builder & Consultant")).toBeInTheDocument();
     expect(screen.getByText("Target Customer Profile")).toBeInTheDocument();
     expect(screen.getByText("1 of 6 sections confirmed")).toBeInTheDocument();
   });
 
   it("switches section tab and displays fields", async () => {
     render(<StartupBuilderPage />);
-    await screen.findByText("AI Startup Builder");
+    await screen.findByText("AI Startup Builder & Consultant");
     await waitFor(() => expect(builderApi.listBuilderSections).toHaveBeenCalled());
 
     const tabBtn = screen.getByRole("button", { name: /Target Customer Profile/i });
@@ -47,7 +47,7 @@ describe("StartupBuilderPage", () => {
     });
 
     render(<StartupBuilderPage />);
-    await screen.findByText("AI Startup Builder");
+    await screen.findByText("AI Startup Builder & Consultant");
     await waitFor(() => expect(builderApi.listBuilderSections).toHaveBeenCalled());
 
     const input = screen.getByLabelText("Problem Statement");
@@ -59,7 +59,7 @@ describe("StartupBuilderPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save Draft" }));
     await waitFor(() => {
       expect(builderApi.updateBuilderSection).toHaveBeenCalledWith("problem", {
-        content: expect.objectContaining({ problem_statement: "Updated problem" }),
+        content: { problem_statement: "Updated problem" },
         confirm: false,
       });
     });
