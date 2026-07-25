@@ -352,6 +352,9 @@ def _generate_sector_context_intelligence(
         "recommended_schemes": schemes,
         "execution_roadmap": execution_roadmap,
         "consultant_recommendations": consultant_recommendations,
+        "is_suggestion": True,
+        "trust_level": "suggested_hypothesis",
+        "trust_notice": "AI-Drafted Proposal. Verify all market statistics, grant matches, and regulatory claims with authoritative records before submitting.",
         "generated_by": "ai-startup-consultant-reasoning-v3",
     }
 
@@ -414,6 +417,9 @@ def _normalize_llm_payload(
         "recommended_schemes": recommended_schemes,
         "execution_roadmap": execution_roadmap,
         "consultant_recommendations": consultant_recommendations,
+        "is_suggestion": True,
+        "trust_level": "suggested_hypothesis",
+        "trust_notice": "AI-Drafted Proposal. Verify all market statistics, grant matches, and regulatory claims with authoritative records before submitting.",
         "generated_by": "ai-startup-consultant-llm-v3",
     }
 

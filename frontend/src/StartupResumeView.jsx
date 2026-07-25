@@ -17,7 +17,7 @@ export default function StartupResumeView({ resumeData, onClose }) {
     <div className="startup-resume-wrapper" style={{ background: "#0a0d14", color: "#f0f4f8", padding: "1.5rem", borderRadius: "12px", border: "1px solid var(--lime)", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
       {/* Action Header */}
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", paddingBottom: "0.75rem", borderBottom: "1px solid var(--line)" }}>
-        <span className="section-kicker">✨ GENERATED STARTUP EXECUTIVE RESUME</span>
+        <span className="section-kicker">✨ AI-DRAFTED STARTUP EXECUTIVE ONE-PAGER</span>
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button type="button" className="button button-primary button-small" onClick={handlePrint}>
             🖨️ Print / Save PDF Resume
@@ -31,12 +31,17 @@ export default function StartupResumeView({ resumeData, onClose }) {
       {/* 📄 PRINTABLE ONE-PAGE STARTUP RESUME DOCUMENT */}
       <article className="printable-resume-document" style={{ background: "#0e131f", padding: "2rem", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
         
+        {/* Trust Disclosure Banner */}
+        <div style={{ fontSize: "0.8rem", color: "#fbbf24", background: "rgba(251, 191, 36, 0.1)", padding: "0.5rem 0.85rem", borderRadius: "6px", border: "1px solid rgba(251, 191, 36, 0.25)" }}>
+          ⚠️ <strong>AI-Generated Hypothesis</strong> — This document contains AI-drafted strategic proposals. Verify all market statistics, grant matches, and regulatory claims with authoritative records before sharing.
+        </div>
+
         {/* Header Block */}
         <header style={{ borderBottom: "2px solid var(--lime)", paddingBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap" }}>
             <div>
               <span style={{ fontSize: "0.75rem", letterSpacing: "1px", color: "var(--lime)", fontWeight: 700, textTransform: "uppercase" }}>
-                {header.document_type || "STARTUP EXECUTIVE RESUME"}
+                {header.document_type || "AI-DRAFTED STARTUP EXECUTIVE ONE-PAGER"}
               </span>
               <h1 style={{ fontSize: "2rem", margin: "0.2rem 0", color: "#fff", fontWeight: 800 }}>
                 {header.startup_name || "Startup Entity"}

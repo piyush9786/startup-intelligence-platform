@@ -39,6 +39,9 @@ class StartupProfileSerializer(serializers.ModelSerializer):
         read_only_fields = (
             "id",
             "owner",
+            "ml_cohort_id",
+            "anomaly_score",
+            "is_anomalous",
             "created_at",
             "updated_at",
         )

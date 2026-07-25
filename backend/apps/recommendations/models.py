@@ -437,6 +437,21 @@ class SchemeApplicationTracker(TimeStampedModel):
         choices=Stage.choices,
         default=Stage.DRAFT,
     )
+
+    def clean(self):
+        super().clean()
+        if (
+            self.startup_profile_id
+            and self.owner_id
+            and self.startup_profile.owner_id != self.owner_id
+        ):
+            raise ValidationError(
+                {"startup_profile": "The startup profile must belong to the application tracker owner."}
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
     submission_reference = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)

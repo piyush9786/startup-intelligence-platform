@@ -16,6 +16,10 @@ export default function MasterPlanResults({ masterPackage, onGenerateResume, gen
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginTop: "0.5rem" }}>
       {/* 🏆 1. BRAND HEADER & METRICS BAR WITH DIRECT RESUME UNLOCK BUTTON */}
       <section className="card" style={{ padding: "1.75rem", borderLeft: "4px solid var(--lime)", borderRadius: "10px" }}>
+        {/* Trust Notice Banner */}
+        <div style={{ fontSize: "0.82rem", color: "#fbbf24", background: "rgba(251, 191, 36, 0.08)", padding: "0.55rem 0.85rem", borderRadius: "6px", border: "1px solid rgba(251, 191, 36, 0.2)", marginBottom: "1rem" }}>
+          💡 <strong>Suggested Hypothesis</strong> — {masterPackage.trust_notice || "AI-Drafted Proposal. Verify all market statistics, grant matches, and regulatory claims with authoritative records before submitting."}
+        </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
           <div>
             <span className="section-kicker" style={{ color: "var(--lime)", fontWeight: 700 }}>
@@ -31,7 +35,7 @@ export default function MasterPlanResults({ masterPackage, onGenerateResume, gen
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.6rem" }}>
             <span className="badge badge-verified" style={{ fontSize: "0.85rem", padding: "0.45rem 0.9rem" }}>
-              ⚡ Reasoning LLM Verified
+              ⚡ AI Generated Strategy
             </span>
 
             {/* Unlocked Pitch Resume Button */}
