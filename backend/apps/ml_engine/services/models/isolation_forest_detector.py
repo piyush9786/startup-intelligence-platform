@@ -15,7 +15,7 @@ import numpy as np
 from sklearn.ensemble import IsolationForest
 
 from apps.ml_engine.services.feature_pipeline import batch_extract_features, extract_features
-from apps.ml_engine.services.model_store import load_model, next_version, save_model
+from apps.ml_engine.services.model_store import load_production_model, save_model
 
 MODEL_TYPE = "isolation_forest"
 MODEL_NAME = "isolation_forest_anomaly"
@@ -57,7 +57,6 @@ def train_isolation_forest(
     )
     model.fit(X)
 
-    version = next_version(MODEL_TYPE)
     meta = {"contamination": contamination, "random_state": random_state}
     if metadata:
         meta.update(metadata)
@@ -65,7 +64,6 @@ def train_isolation_forest(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
         model_obj=model,
-        version=version,
         training_sample_count=len(X),
         primary_metric_name="contamination",
         primary_metric_value=contamination,
@@ -83,7 +81,11 @@ def score_anomaly(startup) -> tuple[float, bool]:
         Negative scores indicate anomalies. is_anomalous is True if
         the score is below ANOMALY_THRESHOLD.
     """
-    model = load_model(MODEL_TYPE)
+    try:
+        model = load_production_model(MODEL_TYPE)
+    except FileNotFoundError:
+        return 0.0, False  # Fallback if no production model exists
+
     vec = extract_features(startup).reshape(1, -1)
     score = float(model.decision_function(vec)[0])
     is_anomalous = score < ANOMALY_THRESHOLD

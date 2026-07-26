@@ -36,7 +36,7 @@ describe("SchemeDetailPage component", () => {
       screen.getByRole("heading", { name: "Startup India Seed Fund Scheme" }),
     ).toBeInTheDocument();
 
-    const portalLink = screen.getByRole("link", { name: "Launch Official Application Portal ↗" });
+    const portalLink = screen.getByRole("link", { name: "Open application" });
     expect(portalLink).toHaveAttribute("href", "https://seedfund.startupindia.gov.in/");
     expect(screen.getByText(/DPIIT Recognition Certificate/)).toBeInTheDocument();
   });

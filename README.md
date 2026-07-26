@@ -198,7 +198,8 @@ docker compose exec -T backend pytest -q
 docker compose exec -T backend ruff check .
 docker compose exec -T backend python manage.py check --deploy --settings=config.settings.production
 
-# Frontend test suite & production build validation
+# Frontend test suite, linting & production build validation
 docker compose exec -T frontend npm test
+docker compose exec -T frontend npm run lint
 docker compose exec -T frontend npm run build
 ```

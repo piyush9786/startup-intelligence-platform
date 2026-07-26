@@ -12,7 +12,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 
 from apps.ml_engine.services.feature_pipeline import batch_extract_features, extract_features
-from apps.ml_engine.services.model_store import load_model, next_version, save_model
+from apps.ml_engine.services.model_store import load_production_model, save_model
 
 MODEL_TYPE = "kmeans"
 MODEL_NAME = "kmeans_startup_cohorts"
@@ -56,7 +56,6 @@ def train_kmeans(
 
     silhouette = float(silhouette_score(X, model.labels_)) if len(X) > n_clusters else 0.0
 
-    version = next_version(MODEL_TYPE)
     meta = {"n_clusters": n_clusters, "random_state": random_state}
     if metadata:
         meta.update(metadata)
@@ -64,15 +63,15 @@ def train_kmeans(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
         model_obj=model,
-        version=version,
         training_sample_count=len(X),
         primary_metric_name="silhouette_score",
         primary_metric_value=silhouette,
         metadata=meta,
     )
 
-    # Persist cohort IDs back to feature store if real IDs provided
-    if ids:
+    # Persist cohort IDs back to feature store only if training on real DB ids
+    is_synthetic = meta.get("training_data_source") == "synthetic"
+    if ids and not is_synthetic:
         _persist_cohort_assignments(model, X, ids)
 
     return {"registry": registry_entry, "silhouette_score": silhouette, "n_clusters": n_clusters}
@@ -96,7 +95,11 @@ def assign_cohort(startup) -> int:
     Returns:
         int: Cohort / cluster ID (0 to N_CLUSTERS-1).
     """
-    model = load_model(MODEL_TYPE)
+    try:
+        model = load_production_model(MODEL_TYPE)
+    except FileNotFoundError:
+        return 0  # Fallback cohort if no production model exists
+
     vec = extract_features(startup).reshape(1, -1)
     cohort = int(model.predict(vec)[0])
     return cohort

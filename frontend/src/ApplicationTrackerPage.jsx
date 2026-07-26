@@ -27,10 +27,6 @@ export default function ApplicationTrackerPage({ onNavigate }) {
   const [dpiitInput, setDpiitInput] = useState("");
   const [verifying, setVerifying] = useState(false);
 
-  useEffect(() => {
-    loadPipeline();
-  }, []);
-
   async function loadPipeline() {
     setLoading(true);
     try {
@@ -42,6 +38,10 @@ export default function ApplicationTrackerPage({ onNavigate }) {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    loadPipeline();
+  }, []);
 
   async function handleMoveStage(id, newStage) {
     try {

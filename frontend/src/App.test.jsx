@@ -1,4 +1,5 @@
 import React from "react";
+import { MemoryRouter } from "react-router-dom";
 import {
   act,
   fireEvent,
@@ -753,14 +754,14 @@ describe("founder authentication", () => {
   test("signs in and opens the functional founder dashboard", async () => {
     api.getSession.mockReturnValue(null);
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
       screen.getAllByRole("button", { name: "Sign in" })[0],
     );
     await user.type(screen.getByLabelText("Username"), "founder");
     await user.type(screen.getByLabelText("Password"), "safe-password");
-    await user.click(screen.getByRole("button", { name: "Open founder dashboard" }));
+    await user.click(await screen.findByRole("button", { name: "Open founder dashboard" }));
 
     expect(api.login).toHaveBeenCalledWith({ username: "founder", password: "safe-password" });
     expect(
@@ -774,16 +775,14 @@ describe("founder authentication", () => {
   test("registers a founder and opens the workspace", async () => {
     api.getSession.mockReturnValue(null);
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: /Build your startup with verified government support/,
       }),
     ).toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "Start for free",
       }),
     );
@@ -813,8 +812,7 @@ describe("founder authentication", () => {
       "Safe-founder-password-2026!",
     );
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "Create founder account",
       }),
     );
@@ -843,18 +841,16 @@ describe("founder authentication", () => {
   test("renders password recovery flow with instructions", async () => {
     api.getSession.mockReturnValue(null);
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
       screen.getAllByRole("button", { name: "Sign in" })[0],
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Forgot password?" }),
+    await user.click(await screen.findByRole("button", { name: "Forgot password?" }),
     );
 
-    expect(
-      screen.getByRole("heading", { name: "Reset password" }),
+    expect(await screen.findByRole("heading", { name: "Reset password" }),
     ).toBeInTheDocument();
 
     await user.type(
@@ -862,29 +858,24 @@ describe("founder authentication", () => {
       "founder@example.com",
     );
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "View recovery instructions",
       }),
     );
 
-    expect(
-      screen.getByRole("status"),
+    expect(await screen.findByRole("status"),
     ).toHaveTextContent(
       "Self-service password recovery is not available yet",
     );
-    expect(
-      screen.getByRole("status"),
+    expect(await screen.findByRole("status"),
     ).toHaveTextContent(
       "No password-reset email was sent.",
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Return to sign in" }),
+    await user.click(await screen.findByRole("button", { name: "Return to sign in" }),
     );
 
-    expect(
-      screen.getByRole("heading", { name: "Sign in" }),
+    expect(await screen.findByRole("heading", { name: "Sign in" }),
     ).toBeInTheDocument();
   });
 
@@ -894,14 +885,14 @@ describe("founder authentication", () => {
       response: { data: { detail: "No active account found with the given credentials" } },
     });
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
       screen.getAllByRole("button", { name: "Sign in" })[0],
     );
     await user.type(screen.getByLabelText("Username"), "founder");
     await user.type(screen.getByLabelText("Password"), "wrong-password");
-    await user.click(screen.getByRole("button", { name: "Open founder dashboard" }));
+    await user.click(await screen.findByRole("button", { name: "Open founder dashboard" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "No active account found with the given credentials",
@@ -911,49 +902,41 @@ describe("founder authentication", () => {
 
 describe("functional user dashboard", () => {
   test("prioritizes the persisted next action before discovery tools", async () => {
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     expect(
       await screen.findByRole("heading", {
         name: "Complete company registration evidence",
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Open starting plan" }),
+    expect(await screen.findByRole("button", { name: "Open starting plan" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Progress at a glance" }),
+    expect(await screen.findByRole("heading", { name: "Progress at a glance" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Your next decisions" }),
+    expect(await screen.findByRole("heading", { name: "Your next decisions" }),
     ).toBeInTheDocument();
   });
 
   test("loads schemes and opens the explorer from a dashboard action", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
+    await new Promise(r => setTimeout(r, 1000)); screen.debug(undefined, 100000);
     await user.click(await screen.findByRole("button", { name: /View all schemes/ }));
 
     expect(api.listSchemes).toHaveBeenCalledTimes(1);
     expect(api.listExternalSchemes).toHaveBeenCalledTimes(1);
-    expect(
-      screen.getByRole("heading", {
-        name: "Explore schemes",
-      }),
+    expect(await screen.findByRole("heading", { name: "Explore schemes" }, { timeout: 5000 }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", {
+    expect(await screen.findByRole("button", {
         name: /Startup India Seed Fund Scheme/,
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", {
+    expect(await screen.findByRole("button", {
         name: /Startup Working Capital Loan/,
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: "Women Founder Innovation Grant",
       }),
     ).toBeInTheDocument();
@@ -969,13 +952,11 @@ describe("functional user dashboard", () => {
         }),
       ).getByText("total catalog records"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: "Merged source records",
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: "Unavailable or superseded records",
       }),
     ).toBeInTheDocument();
@@ -984,7 +965,7 @@ describe("functional user dashboard", () => {
 
   test("separates verified and needs-review scheme filters", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
       await screen.findByRole("button", {
@@ -992,8 +973,7 @@ describe("functional user dashboard", () => {
       }),
     );
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "Available & reviewed",
       }),
     );
@@ -1004,13 +984,11 @@ describe("functional user dashboard", () => {
       }),
     ).not.toBeInTheDocument();
 
-    expect(
-      screen.getByRole("button", {
+    expect(await screen.findByRole("button", {
         name: /Startup India Seed Fund Scheme/,
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: "Reviewed Climate Innovation Grant",
       }),
     ).toBeInTheDocument();
@@ -1040,14 +1018,12 @@ describe("functional user dashboard", () => {
       ),
     ).toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "Needs review",
       }),
     );
 
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: "Women Founder Innovation Grant",
       }),
     ).toBeInTheDocument();
@@ -1066,7 +1042,7 @@ describe("functional user dashboard", () => {
 
   test("keeps merged and unavailable records visible in the complete catalog", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
       await screen.findByRole("button", {
@@ -1074,19 +1050,16 @@ describe("functional user dashboard", () => {
       }),
     );
 
-    expect(
-      screen.getByRole("button", {
+    expect(await screen.findByRole("button", {
         name: "All catalog (6)",
       }),
     ).toHaveAttribute("aria-pressed", "true");
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "Merged (1)",
       }),
     );
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: "Seed Fund Scheme Source Record",
       }),
     ).toBeInTheDocument();
@@ -1096,68 +1069,57 @@ describe("functional user dashboard", () => {
       }),
     ).not.toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "Unavailable (1)",
       }),
     );
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: "Superseded Startup Grant",
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Unavailable / not verified"),
+    expect(await screen.findByText("Unavailable / not verified"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Official link unavailable"),
+    expect(await screen.findByText("Official link unavailable"),
     ).toBeInTheDocument();
   });
 
   test("shows reviewed external scheme facts and official application guidance", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
       await screen.findByRole("button", {
         name: /View all schemes/,
       }),
     );
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "View details for Reviewed Climate Innovation Grant",
       }),
     );
 
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: "Reviewed Climate Innovation Grant",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getAllByText("Official source reviewed"),
     ).toHaveLength(2);
-    expect(
-      screen.getByText("Up to 10 years from incorporation"),
+    expect(await screen.findByText("Up to 10 years from incorporation"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/DPIIT recognition certificate/),
+    expect(await screen.findByText(/DPIIT recognition certificate/),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(
+    expect(await screen.findByText(
         "Apply through the authority portal during an active call.",
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", {
+    expect(await screen.findByRole("link", {
         name: "Open official source",
       }),
     ).toHaveAttribute(
       "href",
       "https://authority.gov.in/climate-grant",
     );
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: "Programme details",
       }),
     ).toBeInTheDocument();
@@ -1167,25 +1129,21 @@ describe("functional user dashboard", () => {
       }),
     ).not.toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "← Back to schemes",
       }),
     );
-    expect(
-      screen.getByRole("heading", {
-        name: "Explore schemes",
-      }),
+    expect(await screen.findByRole("heading", { name: "Explore schemes" }, { timeout: 5000 }),
     ).toBeInTheDocument();
   });
 
   test("keeps external schemes out of canonical requirements and funding pages", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
-      await screen.findByRole("button", {
-        name: "Requirements",
+      await screen.findByRole("link", {
+        name: /Requirements/i,
       }),
     );
 
@@ -1195,8 +1153,7 @@ describe("functional user dashboard", () => {
       }),
     ).not.toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("link", {
         name: "Funding & loans",
       }),
     );
@@ -1214,19 +1171,19 @@ describe("functional user dashboard", () => {
     ]);
 
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
-      await screen.findByRole("button", {
-        name: "Requirements",
+      await screen.findByRole("link", {
+        name: /Requirements/i,
       }),
     );
 
-    const externalCard = screen
-      .getByRole("heading", {
+    const externalCard = (
+      await screen.findByRole("heading", {
         name: "Environmental Compliance Registration",
       })
-      .closest("article");
+    ).closest("article");
 
     expect(externalCard).not.toBeNull();
     expect(
@@ -1258,10 +1215,10 @@ describe("functional user dashboard", () => {
     ]);
 
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("link", {
         name: "Funding & loans",
       }),
     );
@@ -1298,11 +1255,11 @@ describe("functional user dashboard", () => {
 
   test("opens explicit document and certification requirements", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
-    await user.click(await screen.findByRole("button", { name: "Requirements" }));
+    await user.click(await screen.findByRole("link", { name: /Requirements/i }));
 
-    expect(screen.getByRole("heading", { name: "Requirements and certifications" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Requirements and certifications" })).toBeInTheDocument();
     expect(screen.getAllByText("Certificate of incorporation").length).toBeGreaterThan(0);
     expect(
       screen.getAllByText("Valid DPIIT recognition certificate is required.").length,
@@ -1311,11 +1268,11 @@ describe("functional user dashboard", () => {
 
   test("shows funding and loan terms and opens scheme detail", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
-    await user.click(await screen.findByRole("button", { name: "Funding & loans" }));
-    expect(screen.getByRole("heading", { name: "Funding and loans" })).toBeInTheDocument();
-    expect(screen.getByText("8.5% – 11%")).toBeInTheDocument();
+    await user.click(await screen.findByRole("link", { name: "Funding & loans" }));
+    expect(await screen.findByRole("heading", { name: "Funding and loans" })).toBeInTheDocument();
+    expect(await screen.findByText("8.5% – 11%")).toBeInTheDocument();
 
     const loanCard = screen
       .getByRole("heading", { name: "Startup Working Capital Loan" })
@@ -1325,12 +1282,12 @@ describe("functional user dashboard", () => {
         name: "Review eligibility and apply",
       }),
     );
-    expect(screen.getByRole("heading", { name: "Startup Working Capital Loan" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Official source" })).toHaveAttribute(
+    expect(await screen.findByRole("heading", { name: "Startup Working Capital Loan" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Official source" })).toHaveAttribute(
       "href",
       "https://authority.example/loan",
     );
-    expect(screen.getByRole("link", { name: "Open application" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Open application" })).toHaveAttribute(
       "href",
       "https://authority.example/loan/apply",
     );
@@ -1398,10 +1355,10 @@ describe("functional user dashboard", () => {
     });
 
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("link", {
         name: "Funding & loans",
       }),
     );
@@ -1424,8 +1381,7 @@ describe("functional user dashboard", () => {
       }),
     ).toBeInTheDocument();
 
-    expect(
-      screen.getByText("Evidence required"),
+    expect(await screen.findByText("Evidence required"),
     ).toBeInTheDocument();
 
     await user.type(
@@ -1435,8 +1391,7 @@ describe("functional user dashboard", () => {
       "Endorsement obtained.",
     );
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "Submit claim",
       }),
     );
@@ -1538,14 +1493,13 @@ describe("functional user dashboard", () => {
     configureAuthenticatedWorkspace({ dashboard });
 
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     expect(
       await screen.findByText("No eligible scheme matches yet"),
     ).toBeInTheDocument();
 
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: "Evaluated but not matched",
       }),
     ).toBeInTheDocument();
@@ -1558,15 +1512,14 @@ describe("functional user dashboard", () => {
 
     await user.click(evaluatedScheme);
 
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", {
         name: "Startup India Seed Fund Scheme",
       }),
     ).toBeInTheDocument();
   });
 
   test("shows reviewer-approved evidence provenance on a recommendation", async () => {
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     const recommendation = await screen.findByRole(
       "button",
@@ -1598,7 +1551,7 @@ describe("functional user dashboard", () => {
 
   test("opens a recommended scheme as a real detail page", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
       await screen.findByRole("button", {
@@ -1606,7 +1559,9 @@ describe("functional user dashboard", () => {
       }),
     );
 
-    expect(screen.getByRole("heading", { name: "Startup India Seed Fund Scheme" })).toBeInTheDocument();
+    screen.debug();
+
+    expect(await screen.findByRole("heading", { name: "Startup India Seed Fund Scheme" })).toBeInTheDocument();
     const requirementsSection = screen
       .getByRole("heading", {
         name: "Required documents and certificates",
@@ -1616,31 +1571,30 @@ describe("functional user dashboard", () => {
     expect(requirementsSection).toHaveTextContent(
       "DPIIT recognition certificate",
     );
-    expect(screen.getByRole("button", { name: "← Back to dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "← Back to dashboard" })).toBeInTheDocument();
   });
 
   test("opens the startup readiness and roadmap pages", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
-    await user.click(await screen.findByRole("button", { name: "My startup" }));
+    await user.click(await screen.findByRole("link", { name: "My startup" }));
     expect(screen.getAllByRole("heading", { name: "Acme Climate" })[0]).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: /Company overview/i })[0]).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Action roadmap" }));
+    await user.click(await screen.findByRole("link", { name: "Action roadmap" }));
     expect(await screen.findByRole("heading", { name: "Readiness Score Breakdown & Action Roadmap" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Domain readiness breakdown" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Domain readiness breakdown" })).toBeInTheDocument();
   });
 
   test("opens the persisted founder advisor", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
-    await user.click(await screen.findByRole("button", { name: "Founder advisor" }));
+    await user.click(await screen.findByRole("link", { name: "Founder advisor" }));
 
-    expect(screen.getByRole("heading", { name: "Founder advisor" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", {
+    expect(await screen.findByRole("heading", { name: "Founder advisor" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", {
         name: "Prioritise regulatory readiness and customer proof.",
       }),
     ).toBeInTheDocument();
@@ -1679,7 +1633,7 @@ describe("functional user dashboard", () => {
       });
 
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
       await screen.findByRole("button", {
@@ -1723,7 +1677,7 @@ describe("functional user dashboard", () => {
     );
 
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
       await screen.findByRole("button", {
@@ -1782,7 +1736,7 @@ describe("functional user dashboard", () => {
         briefings: [generated],
       });
 
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     expect(
       await screen.findByRole("heading", {
@@ -1800,7 +1754,7 @@ describe("functional user dashboard", () => {
   test("shows journey dialog when no startup profile exists", async () => {
     configureAuthenticatedWorkspace({ profiles: [] });
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     expect(
       await screen.findByRole("heading", {
@@ -1831,14 +1785,14 @@ describe("functional user dashboard", () => {
 
 
   test("does not expose reviewer navigation to founders", async () => {
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
-    await screen.findByRole("button", {
-      name: "Dashboard",
+    await screen.findByRole("link", {
+        name: "Dashboard",
     });
 
     expect(
-      screen.queryByRole("button", {
+      screen.queryByRole("link", {
         name: "Reviewer verification",
       }),
     ).not.toBeInTheDocument();
@@ -1863,7 +1817,7 @@ describe("functional user dashboard", () => {
       can_review_eligibility: true,
     });
 
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     expect(
       await screen.findByRole("heading", {
@@ -1871,8 +1825,7 @@ describe("functional user dashboard", () => {
       }),
     ).toBeInTheDocument();
 
-    expect(
-      screen.getByRole("button", {
+    expect(await screen.findByRole("link", {
         name: "Reviewer verification",
       }),
     ).toHaveAttribute(
@@ -1899,8 +1852,7 @@ describe("functional user dashboard", () => {
       }),
     ).toBeInTheDocument();
 
-    expect(
-      screen.getByText(
+    expect(await screen.findByText(
         "manual.incubator_endorsement · equals",
       ),
     ).toBeInTheDocument();
@@ -1952,7 +1904,7 @@ describe("functional user dashboard", () => {
         ],
       });
 
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(
       await screen.findByRole("button", {
@@ -1979,8 +1931,7 @@ describe("functional user dashboard", () => {
       "Evidence verified.",
     );
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "Approve submission",
       }),
     );
@@ -2008,14 +1959,13 @@ describe("functional user dashboard", () => {
 
   test("opens the persisted site-wide founder assistant", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await screen.findByRole("heading", {
       name: /Keep Acme Climate moving with one clear next step/,
     });
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "Open founder assistant",
       }),
     );
@@ -2032,8 +1982,7 @@ describe("functional user dashboard", () => {
       startupProfileId: profile.id,
     });
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.click(await screen.findByRole("button", {
         name: "Close founder assistant",
       }),
     );
@@ -2062,7 +2011,7 @@ describe("functional user dashboard", () => {
       can_review_eligibility: true,
     });
 
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     expect(
       await screen.findByRole("heading", {
@@ -2082,7 +2031,7 @@ describe("functional user dashboard", () => {
   });
 
   test("returns to sign-in when the session expires", async () => {
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
     expect(
       await screen.findByRole("heading", {
         name: /Keep Acme Climate moving with one clear next step/,
@@ -2150,7 +2099,7 @@ describe("persisted founder onboarding tour", () => {
       can_review_eligibility: true,
     });
 
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     expect(
       await screen.findByRole("heading", {
@@ -2173,7 +2122,7 @@ describe("founder tools application integration", () => {
   test("opens requirements from dashboard tools", async () => {
     const user = userEvent.setup();
 
-    render(<App />);
+    render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     const founderToolsHeading = await screen.findByRole("heading", {
       name: "Founder tools",

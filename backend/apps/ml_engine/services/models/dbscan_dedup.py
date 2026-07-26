@@ -14,7 +14,7 @@ from __future__ import annotations
 import numpy as np
 from sklearn.cluster import DBSCAN
 
-from apps.ml_engine.services.model_store import next_version, save_model
+from apps.ml_engine.services.model_store import save_model
 
 MODEL_TYPE = "dbscan"
 MODEL_NAME = "dbscan_scheme_dedup"
@@ -66,12 +66,10 @@ def find_duplicate_schemes(
     duplicate_groups = [group for group in clusters.values() if len(group) >= 2]
     unique_count = int(np.sum(labels == -1))
 
-    version = next_version(MODEL_TYPE)
     registry_entry = save_model(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
         model_obj=model,
-        version=version,
         training_sample_count=len(ids),
         primary_metric_name="duplicate_group_count",
         primary_metric_value=float(len(duplicate_groups)),
