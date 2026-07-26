@@ -32,9 +32,12 @@ import {
   Route,
   Routes,
   useInRouterContext,
+  useLocation,
   useNavigate,
   useOutletContext,
+  useParams,
 } from "react-router-dom";
+import ExternalSchemeDetailPage from "./ExternalSchemeDetailPage.jsx";
 import * as m from "motion/react-m";
 
 import { useT } from "./i18n/index.jsx";
@@ -45,6 +48,8 @@ import {
   apiDocsUrl,
   clearSession,
   generateGroundedBriefing,
+  getStartupAdvisorBriefing,
+  getStartupAdvisorBriefingJob,
   getCurrentBriefing,
   getCurrentStartupAdvisorBriefingJob,
   getCurrentUser,
@@ -61,32 +66,46 @@ import {
 } from "./api";
 import PublicEntry from "./PublicEntry";
 import { canAccessReviewerWorkspace, normalizeCurrentUser } from "./identity";
-import { humanizeApiError, advisorJobProgress, advisorJobButtonLabel, isActiveAdvisorJob, briefingCounts, buildEvidenceById, evidenceExcerpt, evidenceTitle, formatDateTime, formatEvidenceScore, sourceReferenceLabel, formatDateTime as formatDT } from "./advisor";
+import {
+  humanizeApiError,
+  advisorJobProgress,
+  advisorJobButtonLabel,
+  isActiveAdvisorJob,
+  briefingCounts,
+  buildEvidenceById,
+  evidenceExcerpt,
+  evidenceTitle,
+  formatDateTime,
+  formatEvidenceScore,
+  sourceReferenceLabel,
+  formatDateTime as formatDT,
+} from "./advisor";
+import { AdvisorWorkspace } from "./App.jsx";
 import { loadCatalogData, loadFounderWorkspaceData, partialLoadWarning } from "./workspaceLoad";
 import { dashboardMetrics } from "./dashboard";
 
 import DashboardHome from "./DashboardHome.jsx";
 
-// Lazy-loaded page components for optimal bundle splitting
-const ActionRoadmapPage = React.lazy(() => import("./ActionRoadmapPage"));
-const ApplicationTrackerPage = React.lazy(() => import("./ApplicationTrackerPage"));
-const AssessmentWizard = React.lazy(() => import("./AssessmentWizard"));
-const CapitalPlannerPage = React.lazy(() => import("./CapitalPlannerPage"));
-const DocumentIntakeWorkspace = React.lazy(() => import("./DocumentIntakeWorkspace"));
-const ExecutionMilestonesPage = React.lazy(() => import("./ExecutionMilestonesPage"));
-const FounderConcierge = React.lazy(() => import("./FounderConcierge"));
-const FounderIntelligencePage = React.lazy(() => import("./FounderIntelligencePage"));
-const FundingPage = React.lazy(() => import("./FundingPage"));
-const FundingPlanPage = React.lazy(() => import("./FundingPlanPage"));
-const MyStartupPage = React.lazy(() => import("./MyStartupPage"));
-const RequirementsPage = React.lazy(() => import("./RequirementsPage"));
-const ReviewerVerificationWorkspace = React.lazy(() => import("./ReviewerVerificationWorkspace"));
-const SchemeDetailPage = React.lazy(() => import("./SchemeDetailPage"));
-const SchemeExplorerPage = React.lazy(() => import("./SchemeExplorerPage"));
-const StartingPlanPage = React.lazy(() => import("./StartingPlanPage"));
-const StartupBuilderPage = React.lazy(() => import("./StartupBuilderPage"));
-const WebsiteTour = React.lazy(() => import("./WebsiteTour"));
-const ChatbotDrawer = React.lazy(() => import("./ChatbotDrawer"));
+import ActionRoadmapPage from "./ActionRoadmapPage";
+import ApplicationTrackerPage from "./ApplicationTrackerPage";
+import AssessmentWizard from "./AssessmentWizard";
+import CapitalPlannerPage from "./CapitalPlannerPage";
+import DocumentIntakeWorkspace from "./DocumentIntakeWorkspace";
+import ExecutionMilestonesPage from "./ExecutionMilestonesPage";
+import FounderConcierge from "./FounderConcierge";
+import FounderIntelligencePage from "./FounderIntelligencePage";
+import FundingPage from "./FundingPage";
+import FundingPlanPage from "./FundingPlanPage";
+import MyStartupPage from "./MyStartupPage";
+import RequirementsPage from "./RequirementsPage";
+import ReviewerVerificationWorkspace from "./ReviewerVerificationWorkspace";
+import SchemeDetailPage from "./SchemeDetailPage";
+import SchemeExplorerPage from "./SchemeExplorerPage";
+import StartingPlanPage from "./StartingPlanPage";
+import StartupBuilderPage from "./StartupBuilderPage";
+import WebsiteTour from "./WebsiteTour";
+import ChatbotDrawer from "./ChatbotDrawer";
+import { JourneyDialog } from "./App";
 
 const MOTION_EASE = [0.22, 1, 0.36, 1];
 
@@ -276,6 +295,9 @@ function ProductTopbar({ query, setQuery }) {
 // ---------------------------------------------------------------------------
 
 function Workspace({ onSignOut }) {
+  const location = useLocation();
+  const activeView = location.pathname.split("/")[1] || "dashboard";
+  const { t } = useT();
   const [currentUser, setCurrentUser] = useState(null);
   const [profiles, setProfiles] = useState([]);
   const [selectedProfileId, setSelectedProfileId] = useState("");
@@ -296,11 +318,12 @@ function Workspace({ onSignOut }) {
   const [onboardingProgress, setOnboardingProgress] = useState(null);
   const [onboardingBusy, setOnboardingBusy] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  const [showJourneyDialog, setShowJourneyDialog] = useState(false);
 
   const navigate = useNavigate();
 
   const selectedProfile = useMemo(
-    () => profiles.find((p) => p.id === selectedProfileId) || null,
+    () => (profiles || []).find((p) => String(p.id) === String(selectedProfileId)) || null,
     [profiles, selectedProfileId],
   );
   const metrics = dashboardMetrics(dashboardData, currentBriefing);
@@ -346,21 +369,24 @@ function Workspace({ onSignOut }) {
 
         setCurrentUser(identity);
         setOnboardingProgress(onboardingPayload);
-        setProfiles(result.profiles);
-        setSchemes(result.schemes);
-        setExternalSchemes(result.externalSchemes);
-        setExternalCapitalSupport(result.externalCapitalSupport);
-        setExternalCertificationRequirements(result.externalCertificationRequirements);
+        setProfiles(result.profiles || []);
+        setSchemes(result.schemes || []);
+        setExternalSchemes(result.externalSchemes || []);
+        setExternalCapitalSupport(result.externalCapitalSupport || []);
+        setExternalCertificationRequirements(result.externalCertificationRequirements || []);
+
         setSelectedProfileId((current) =>
-          result.profiles.some((p) => p.id === current)
+          result.profiles && result.profiles.some((p) => String(p.id) === String(current))
             ? current
-            : result.profiles[0]?.id || ""
+            : result.profiles && result.profiles.length > 0
+              ? String(result.profiles[0].id)
+              : "",
         );
 
-        if (canAccessReviewerWorkspace(identity) && !result.profiles.length) {
+        if (canAccessReviewerWorkspace(identity) && (!result.profiles || !result.profiles.length)) {
           navigate("/reviewer-verifications", { replace: true });
-        } else if (!result.profiles.length && identity?.role !== "reviewer") {
-          navigate("/onboarding", { replace: true });
+        } else if ((!result.profiles || !result.profiles.length) && identity?.role !== "reviewer") {
+          setShowJourneyDialog(true);
         }
 
         setError(partialLoadWarning([
@@ -414,6 +440,7 @@ function Workspace({ onSignOut }) {
         if (isActiveAdvisorJob(latestJob)) {
           setGenerationJob(latestJob);
           setGenerationStep(advisorJobProgress(latestJob));
+          navigate("/advisor");
         }
       } catch (err) {
         if (active) handleRequestError(err);
@@ -425,42 +452,74 @@ function Workspace({ onSignOut }) {
     return () => { active = false; };
   }, [selectedProfileId]);
 
-  // Poll active generation jobs
+  // Polling loop for generation jobs
   useEffect(() => {
-    if (!selectedProfileId || !generating) return;
+    if (!selectedProfileId || !isActiveAdvisorJob(generationJob)) {
+      return undefined;
+    }
 
     let active = true;
     let timerId = null;
+    const controller = new AbortController();
 
-    async function pollJob() {
+    async function pollGenerationJob() {
       try {
-        const result = await getCurrentStartupAdvisorBriefingJob();
+        const nextJob = await getStartupAdvisorBriefingJob(generationJob.id, { signal: controller.signal });
         if (!active) return;
-        const job = result?.job;
-        if (isActiveAdvisorJob(job)) {
-          setGenerationJob(job);
-          setGenerationStep(advisorJobProgress(job));
-          timerId = setTimeout(pollJob, 4000);
-        } else {
-          setGenerationJob(null);
-          setGenerationStep("");
-          // Reload workspace to pick up the new briefing
-          setSelectedProfileId((id) => id); // trigger re-render
+
+        setGenerationJob(nextJob);
+        setGenerationStep(advisorJobProgress(nextJob));
+
+        if (nextJob.status === "succeeded") {
+          if (!nextJob.briefing_id) throw new Error("Completed founder guidance job has no briefing record.");
+          const newBriefing = await getStartupAdvisorBriefing(nextJob.briefing_id, { signal: controller.signal });
+          if (!active) return;
+          setCurrentBriefing(newBriefing);
+          setSuccess("Founder guidance successfully generated.");
+          // Add to history list immediately to avoid a reload hop
+          setHistory((prev) => {
+            const updated = prev.filter((h) => h.id !== newBriefing.id);
+            return [newBriefing, ...updated];
+          });
+        } else if (isActiveAdvisorJob(nextJob)) {
+          timerId = setTimeout(pollGenerationJob, 4000);
         }
-      } catch {
+      } catch (err) {
+        if (err.name === "AbortError") return;
         if (active) {
           setGenerationJob(null);
           setGenerationStep("");
+          handleRequestError(err);
         }
       }
     }
 
-    timerId = setTimeout(pollJob, 4000);
+    pollGenerationJob();
     return () => {
       active = false;
       if (timerId) clearTimeout(timerId);
+      controller.abort();
     };
-  }, [selectedProfileId, generating]);
+  }, [selectedProfileId, generationJob?.id]);
+
+  const handleGenerate = async () => {
+    if (!selectedProfileId || generating) return;
+    setError("");
+    setSuccess("");
+    setGenerationStep("Freezing the current verified advisor snapshot…");
+    try {
+      const queuedResponse = await generateGroundedBriefing(selectedProfileId, setGenerationStep);
+      if (!queuedResponse?.job) throw new Error("The server did not return a founder guidance job.");
+      setGenerationJob(queuedResponse.job);
+      setGenerationStep(advisorJobProgress(queuedResponse.job));
+      navigate("/advisor");
+      if (!queuedResponse.created) setSuccess("The existing founder guidance job was resumed.");
+    } catch (err) {
+      setGenerationJob(null);
+      setGenerationStep("");
+      handleRequestError(err);
+    }
+  };
 
   // The shared context object all child routes can use via window or React context
   // For now we pass it as Outlet context (React Router built-in)
@@ -500,6 +559,7 @@ function Workspace({ onSignOut }) {
     setGenerationStep,
     updateCurrentStartupOnboarding,
     generateGroundedBriefing,
+    handleGenerate,
     showTour,
     setShowTour,
   };
@@ -549,16 +609,23 @@ function Workspace({ onSignOut }) {
           </div>
         )}
         <main className="product-content">
-          <React.Suspense
-            fallback={
-              <div className="dashboard-loader" role="status">
-                <span className="spinner" aria-hidden="true" />
-                Loading workspace module…
-              </div>
-            }
-          >
-            <Outlet context={outletContext} />
-          </React.Suspense>
+          {loadingWorkspace ? (
+            <div className="dashboard-loader" role="status">
+              <span className="spinner" aria-hidden="true" />
+              Loading workspace module…
+            </div>
+          ) : (
+            <React.Suspense
+              fallback={
+                <div className="dashboard-loader" role="status">
+                  <span className="spinner" aria-hidden="true" />
+                  Loading workspace module…
+                </div>
+              }
+            >
+              <Outlet context={outletContext} />
+            </React.Suspense>
+          )}
         </main>
         {showTour && (
           <React.Suspense fallback={null}>
@@ -566,8 +633,28 @@ function Workspace({ onSignOut }) {
           </React.Suspense>
         )}
         <React.Suspense fallback={null}>
-          <ChatbotDrawer profileId={selectedProfileId} schemes={schemes} />
+        {currentUser?.role === "founder" && (
+          <ChatbotDrawer
+            activeView={activeView}
+            onNavigate={(target) => navigate(`/${target}`)}
+            startupProfile={selectedProfile}
+          />
+        )}
         </React.Suspense>
+        {showJourneyDialog && (
+          <div className="onboarding-overlay">
+            <JourneyDialog
+              onExistingStartup={() => {
+                setShowJourneyDialog(false);
+                navigate("/onboarding");
+              }}
+              onNewIdea={() => {
+                setShowJourneyDialog(false);
+                navigate("/builder");
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -610,6 +697,14 @@ export function AppRouter({ onSignOut }) {
 // Route Adapters (Unpack outlet context and pass required props to pages)
 // ---------------------------------------------------------------------------
 
+function openSchemeRoute(navigate, target) {
+  if (!target) return;
+  const id = (typeof target === "object" && target !== null) ? (target.id || target.scheme_id) : target;
+  if (id && id !== "null" && id !== "undefined") {
+    navigate(`/schemes/${id}`);
+  }
+}
+
 function OverviewRoute() {
   const ctx = useOutletContext();
   const navigate = useNavigate();
@@ -620,7 +715,11 @@ function OverviewRoute() {
       dashboardData={ctx.dashboardData}
       generating={ctx.generating}
       generationLabel={ctx.generationLabel}
-      onGenerate={ctx.generateGroundedBriefing}
+      onGenerate={() => ctx.handleGenerate(ctx.selectedProfile?.id)}
+      onOpenScheme={(target) => openSchemeRoute(navigate, target)}
+      profile={ctx.selectedProfile}
+      query={ctx.query}
+      schemes={ctx.schemes}
       onNavigate={(target) => {
         const routeMap = {
           startup: "/startup",
@@ -639,10 +738,6 @@ function OverviewRoute() {
         };
         navigate(routeMap[target] || `/${target}`);
       }}
-      onOpenScheme={(schemeId) => navigate(`/schemes/${schemeId}`)}
-      profile={ctx.selectedProfile}
-      query={ctx.query}
-      schemes={ctx.schemes}
     />
   );
 }
@@ -700,29 +795,74 @@ function SchemesRoute() {
   const navigate = useNavigate();
   return (
     <SchemeExplorerPage
-      onOpenScheme={(scheme) =>
-        navigate(`/schemes/${typeof scheme === "object" ? scheme.id : scheme}`)
-      }
+      onOpenScheme={(target) => openSchemeRoute(navigate, target)}
       profile={ctx.selectedProfile}
       query={ctx.query}
       schemes={ctx.schemes}
+      externalSchemes={ctx.externalSchemes}
+      recommendations={ctx.dashboardData?.recommendations?.recommendations || []}
     />
   );
 }
 
 function SchemeDetailRoute() {
   const ctx = useOutletContext();
-  return <SchemeDetailPage profile={ctx.selectedProfile} />;
+  const navigate = useNavigate();
+  const { schemeId } = useParams();
+  
+  const allSchemes = [...(ctx.schemes || []), ...(ctx.externalSchemes || [])];
+  const scheme = allSchemes.find(
+    (s) => String(s.scheme_id || s.id) === String(schemeId)
+  );
+  if (!scheme) return null;
+
+  return scheme.source_type === "external" ? (
+    <ExternalSchemeDetailPage
+      backLabel="schemes"
+      onBack={() => navigate("/schemes")}
+      onRequestError={ctx.setError}
+      onSuccess={ctx.setSuccess}
+      scheme={scheme}
+      startupProfileId={ctx.selectedProfile?.id}
+    />
+  ) : (
+    <SchemeDetailPage 
+      backLabel="dashboard"
+      onBack={() => navigate(-1)}
+      onRequestError={ctx.setError}
+      onSuccess={ctx.setSuccess}
+      profile={ctx.selectedProfile}
+      scheme={scheme}
+      startupProfileId={ctx.selectedProfileId}
+    />
+  );
 }
 
 function RequirementsRoute() {
   const ctx = useOutletContext();
-  return <RequirementsPage profile={ctx.selectedProfile} />;
+  const navigate = useNavigate();
+  return (
+    <RequirementsPage 
+      profile={ctx.selectedProfile} 
+      schemes={ctx.schemes}
+      externalRequirements={ctx.externalCertificationRequirements}
+      onOpenScheme={(target) => openSchemeRoute(navigate, target)}
+    />
+  );
 }
 
 function FundingRoute() {
   const ctx = useOutletContext();
-  return <FundingPage profile={ctx.selectedProfile} />;
+  const navigate = useNavigate();
+  return (
+    <FundingPage 
+      profile={ctx.selectedProfile} 
+      schemes={ctx.schemes}
+      externalCapitalSupport={ctx.externalCapitalSupport}
+      onNavigate={(target) => navigate(`/${target}`)}
+      onOpenScheme={(target) => openSchemeRoute(navigate, target)}
+    />
+  );
 }
 
 function FundingPlanRoute() {
@@ -737,12 +877,35 @@ function StartingPlanRoute() {
 
 function AdvisorRoute() {
   const ctx = useOutletContext();
-  return <FounderIntelligencePage profile={ctx.selectedProfile} />;
+
+  const handleHistorySelection = async (id) => {
+    if (id === ctx.currentBriefing?.id) return;
+    ctx.setError("");
+    try {
+      const briefing = await getStartupAdvisorBriefing(id);
+      ctx.setCurrentBriefing(briefing);
+    } catch (err) {
+      ctx.handleRequestError(err);
+    }
+  };
+
+  return (
+    <AdvisorWorkspace
+      briefing={ctx.currentBriefing}
+      generating={ctx.generating}
+      generationLabel={ctx.generationLabel}
+      history={ctx.history}
+      loading={ctx.loadingWorkspace}
+      onGenerate={ctx.handleGenerate}
+      onHistorySelection={handleHistorySelection}
+    />
+  );
 }
 
 function IntelligenceRoute() {
   const ctx = useOutletContext();
-  return <FounderConcierge profile={ctx.selectedProfile} />;
+  const navigate = useNavigate();
+  return <FounderConcierge startupProfileId={ctx.selectedProfileId} onNavigate={(target) => navigate(`/${target}`)} />;
 }
 
 function ReviewerRoute() {
@@ -752,7 +915,17 @@ function ReviewerRoute() {
 
 function OnboardingRoute() {
   const ctx = useOutletContext();
-  return <AssessmentWizard profile={ctx.selectedProfile} />;
+  const navigate = useNavigate();
+  return (
+    <AssessmentWizard 
+      profile={ctx.selectedProfile} 
+      onSubmitted={(submission) => {
+        const profileId = submission?.startup_profile_id || submission?.startup_profile?.id || submission?.id;
+        if (profileId) ctx.setSelectedProfileId(profileId);
+        navigate("/dashboard");
+      }}
+    />
+  );
 }
 
 function DocumentsRoute() {

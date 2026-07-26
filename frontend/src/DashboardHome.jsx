@@ -143,7 +143,7 @@ function RecommendationList({
               <m.button
                 className="recommendation-row recommendation-row-button"
                 key={recommendation.id}
-                onClick={() => onOpenScheme(scheme, "overview")}
+                onClick={() => onOpenScheme(scheme || recommendation.scheme_id, "overview")}
                 transition={{ duration: 0.2 }}
                 type="button"
                 whileHover={{ x: 4 }}

@@ -39,6 +39,7 @@ import {
   listStartupAdvisorBriefings,
   listStartupProfiles,
   updateCurrentStartupOnboarding,
+  updateStartupProfile,
   uploadEligibilityVerificationEvidence,
 } from "./api";
 import ActionRoadmapPage from "./ActionRoadmapPage";
@@ -652,7 +653,7 @@ function ProductSidebar({
 }
 
 
-function JourneyDialog({ onExistingStartup, onNewIdea }) {
+export function JourneyDialog({ onExistingStartup, onNewIdea }) {
   const { t } = useT();
   return (
     <m.div
@@ -2528,7 +2529,7 @@ function HistoryPanel({ history, loading, onSelect, selectedId }) {
   );
 }
 
-function AdvisorWorkspace({
+export function AdvisorWorkspace({
   briefing,
   generating,
   generationLabel,
@@ -3435,5 +3436,5 @@ export default function App() {
     );
   }
 
-  return <Workspace onSignOut={() => setAuthenticated(false)} />;
+  return <AppShell onSignOut={() => setAuthenticated(false)} />;
 }

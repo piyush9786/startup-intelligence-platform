@@ -227,8 +227,10 @@ class Command(BaseCommand):
             ]))
             corpus.append({"scheme_version_id": str(sv.id), "text": text})
 
+        is_synthetic_fallback = False
         if not corpus:
             # Synthetic fallback
+            is_synthetic_fallback = True
             corpus = [
                 {
                     "scheme_version_id": f"synthetic-{i}",
@@ -237,7 +239,11 @@ class Command(BaseCommand):
                 for i in range(50)
             ]
 
-        result = build_tfidf_index(corpus)
+        metadata = {
+            "training_data_source": "synthetic" if (synthetic or is_synthetic_fallback) else "real_db",
+            "synthetic_fraction": 1.0 if (synthetic or is_synthetic_fallback) else 0.0,
+        }
+        result = build_tfidf_index(corpus, metadata=metadata)
         return f"corpus_size={result['corpus_size']}"
 
     def _train_dbscan(self, synthetic: bool, n: int, is_batch: bool = False) -> str:
