@@ -281,10 +281,11 @@ function ConciergeField({
 
 
 export default function FounderConcierge({
+  initialOpen = true,
   onNavigate,
   startupProfileId,
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [payload, setPayload] = useState(null);
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);

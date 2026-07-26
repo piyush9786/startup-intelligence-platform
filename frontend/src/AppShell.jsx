@@ -989,7 +989,7 @@ function AdvisorRoute() {
 function IntelligenceRoute() {
   const ctx = useOutletContext();
   const navigate = useNavigate();
-  return <FounderConcierge startupProfileId={ctx.selectedProfileId} onNavigate={(target) => navigate(`/${target}`)} />;
+  return <FounderConcierge initialOpen={true} startupProfileId={ctx.selectedProfileId} onNavigate={(target) => navigate(`/${target}`)} />;
 }
 
 function ReviewerRoute() {
