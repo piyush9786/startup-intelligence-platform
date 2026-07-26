@@ -80,32 +80,32 @@ import {
   sourceReferenceLabel,
   formatDateTime as formatDT,
 } from "./advisor";
-import { AdvisorWorkspace } from "./App.jsx";
+import { AdvisorWorkspace } from "./AdvisorWorkspace.jsx";
 import { loadCatalogData, loadFounderWorkspaceData, partialLoadWarning } from "./workspaceLoad";
 import { dashboardMetrics } from "./dashboard";
 
 import DashboardHome from "./DashboardHome.jsx";
 
-import ActionRoadmapPage from "./ActionRoadmapPage";
-import ApplicationTrackerPage from "./ApplicationTrackerPage";
-import AssessmentWizard from "./AssessmentWizard";
-import CapitalPlannerPage from "./CapitalPlannerPage";
-import DocumentIntakeWorkspace from "./DocumentIntakeWorkspace";
-import ExecutionMilestonesPage from "./ExecutionMilestonesPage";
-import FounderConcierge from "./FounderConcierge";
-import FounderIntelligencePage from "./FounderIntelligencePage";
-import FundingPage from "./FundingPage";
-import FundingPlanPage from "./FundingPlanPage";
-import MyStartupPage from "./MyStartupPage";
-import RequirementsPage from "./RequirementsPage";
-import ReviewerVerificationWorkspace from "./ReviewerVerificationWorkspace";
-import SchemeDetailPage from "./SchemeDetailPage";
-import SchemeExplorerPage from "./SchemeExplorerPage";
-import StartingPlanPage from "./StartingPlanPage";
-import StartupBuilderPage from "./StartupBuilderPage";
-import WebsiteTour from "./WebsiteTour";
-import ChatbotDrawer from "./ChatbotDrawer";
-import { JourneyDialog } from "./App";
+const ActionRoadmapPage = React.lazy(() => import("./ActionRoadmapPage"));
+const ApplicationTrackerPage = React.lazy(() => import("./ApplicationTrackerPage"));
+const AssessmentWizard = React.lazy(() => import("./AssessmentWizard"));
+const CapitalPlannerPage = React.lazy(() => import("./CapitalPlannerPage"));
+const DocumentIntakeWorkspace = React.lazy(() => import("./DocumentIntakeWorkspace"));
+const ExecutionMilestonesPage = React.lazy(() => import("./ExecutionMilestonesPage"));
+const FounderConcierge = React.lazy(() => import("./FounderConcierge"));
+const FounderIntelligencePage = React.lazy(() => import("./FounderIntelligencePage"));
+const FundingPage = React.lazy(() => import("./FundingPage"));
+const FundingPlanPage = React.lazy(() => import("./FundingPlanPage"));
+const MyStartupPage = React.lazy(() => import("./MyStartupPage"));
+const RequirementsPage = React.lazy(() => import("./RequirementsPage"));
+const ReviewerVerificationWorkspace = React.lazy(() => import("./ReviewerVerificationWorkspace"));
+const SchemeDetailPage = React.lazy(() => import("./SchemeDetailPage"));
+const SchemeExplorerPage = React.lazy(() => import("./SchemeExplorerPage"));
+const StartingPlanPage = React.lazy(() => import("./StartingPlanPage"));
+const StartupBuilderPage = React.lazy(() => import("./StartupBuilderPage"));
+const WebsiteTour = React.lazy(() => import("./WebsiteTour"));
+const ChatbotDrawer = React.lazy(() => import("./ChatbotDrawer"));
+import { JourneyDialog } from "./JourneyDialog.jsx";
 
 const MOTION_EASE = [0.22, 1, 0.36, 1];
 
@@ -687,7 +687,7 @@ export function AppRouter({ onSignOut }) {
         <Route path="reviewer-verifications" element={<ReviewerRoute />} />
         <Route path="onboarding" element={<OnboardingRoute />} />
         <Route path="documents" element={<DocumentsRoute />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<NotFoundRoute />} />
       </Route>
     </Routes>
   );
@@ -943,4 +943,17 @@ export default function AppShell({ onSignOut }) {
     );
   }
   return <AppRouter onSignOut={onSignOut} />;
+}
+
+function NotFoundRoute() {
+  const navigate = useNavigate();
+  return (
+    <div className="empty-state">
+      <h2>Page Not Found</h2>
+      <p>The page or scheme you are looking for does not exist.</p>
+      <button className="button button-primary" onClick={() => navigate("/dashboard")}>
+        Return to Dashboard
+      </button>
+    </div>
+  );
 }
