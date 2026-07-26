@@ -86,8 +86,10 @@ Django REST Framework 5.2 (Modular app-level urls.py routing)
 ```text
 startup-intelligence-platform/
 ├── .env / .env.example       # Local development environment configuration
+├── .env.production.example  # Production environment manifest template
 ├── .gitignore                # Ignore rules (excludes staticfiles, ml_models, node_modules)
 ├── docker-compose.yml        # Local orchestration (Backend, Postgres, Redis, Qdrant, Neo4j, MinIO, Ollama)
+├── docker-compose.prod.yml   # Production orchestration (Gunicorn, Nginx, Postgres, Redis, Celery, Qdrant)
 ├── Makefile                  # Developer workflow shortcuts
 ├── README.md                 # Primary project overview
 ├── backend/                  # Django REST Framework Backend
@@ -98,7 +100,7 @@ startup-intelligence-platform/
 │   │   ├── discovery/        # Web crawler & URL frontier (urls.py)
 │   │   ├── documents/        # Document extraction & chunking (urls.py)
 │   │   ├── knowledge/        # RAG embeddings & vector search (urls.py)
-│   │   ├── ml_engine/        # 9-Model ML Engine, Feature Store, & Celery Tasks
+│   │   ├── ml_engine/        # 9-Model ML Engine, Feature Store, Shadow Mode, & Celery Tasks
 │   │   ├── recommendations/  # Eligibility engine & SVM scheme ranking (urls.py)
 │   │   ├── schemes/          # Scheme catalog & dependency graph (urls.py)
 │   │   ├── sources/          # Data source registry (urls.py)
@@ -113,8 +115,9 @@ startup-intelligence-platform/
 │   ├── pyproject.toml        # Ruff linter config
 │   └── requirements.txt      # Python dependencies
 ├── frontend/                 # React 19 + Vite Frontend
-│   ├── src/                  # React components, AppShell router, i18n, API clients, & styles
-│   │   ├── AppShell.jsx      # URL-based route container (React Router v7)
+│   ├── src/                  # React components, AppShell router, DashboardHome, i18n, API clients, & styles
+│   │   ├── AppShell.jsx      # URL-based route container with route adapters (React Router v7)
+│   │   ├── DashboardHome.jsx # Standalone decoupled Founder Command Center dashboard view
 │   │   ├── main.jsx          # Root entry wrapping AppShell in BrowserRouter & QueryClientProvider
 │   │   └── components/ui.jsx # Shared UI primitives
 │   ├── package.json          # Frontend dependencies (react-router-dom, @tanstack/react-query)
@@ -125,8 +128,9 @@ startup-intelligence-platform/
 
 ---
 
-## 🚀 Local Setup & ML Model Training
+## 🚀 Local Setup & Production Deployment
 
+### 1. Local Development
 ```bash
 # 1. Environment configuration
 cp .env.example .env
@@ -146,12 +150,24 @@ docker compose exec backend python manage.py seed_sources
 docker compose exec backend python manage.py createsuperuser
 ```
 
+### 2. Production Deployment
+```bash
+# 1. Configure production environment variables
+cp .env.production.example .env.production
+
+# 2. Start production stack via Gunicorn & Nginx
+docker compose -f docker-compose.prod.yml up -d --build
+
+# 3. Perform production security check
+docker compose -f docker-compose.prod.yml exec backend python manage.py check --deploy
+```
+
 ### ML Management Command Usage
 ```bash
 # Train all models with synthetic data (bootstrap mode)
 docker compose exec backend python manage.py train_ml_models --synthetic
 
-# Train all models with real database data (requires ≥50 profiles)
+# Train all models with real database data (requires ≥50 profiles; skips unlabelled supervised models safely in batch runs)
 docker compose exec backend python manage.py train_ml_models --real
 
 # Train a specific model
@@ -177,10 +193,10 @@ docker compose exec backend python manage.py train_ml_models --model kmeans
 ## 🧪 Validation & Testing
 
 ```bash
-# Backend pytest suite & ruff linting
+# Backend pytest suite, ruff linting, & deployment check
 docker compose exec -T backend pytest -q
 docker compose exec -T backend ruff check .
-docker compose exec -T backend python manage.py check
+docker compose exec -T backend python manage.py check --deploy --settings=config.settings.production
 
 # Frontend test suite & production build validation
 docker compose exec -T frontend npm test
