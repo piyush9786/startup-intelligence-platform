@@ -73,7 +73,11 @@ class MLEngineTestCase(TestCase):
             {"scheme_version_id": "sv-1", "text": "Fintech startup grant for early stage AI"},
             {"scheme_version_id": "sv-2", "text": "Agritech loan for farm machinery"},
         ]
-        build_tfidf_index(corpus)
+        result = build_tfidf_index(corpus)
+        model_reg = result["registry"]
+        model_reg.deployment_stage = "production"
+        model_reg.production_approved = True
+        model_reg.save()
         results = sparse_search("fintech grant", top_k=2)
         self.assertGreater(len(results), 0)
         self.assertEqual(results[0]["scheme_version_id"], "sv-1")

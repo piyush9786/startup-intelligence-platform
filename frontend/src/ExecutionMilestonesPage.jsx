@@ -42,10 +42,6 @@ export default function ExecutionMilestonesPage({ onNavigate }) {
   // Log update input
   const [updateNote, setUpdateNote] = useState("");
 
-  useEffect(() => {
-    loadMilestones();
-  }, [activeCategory, activeStatusTab]);
-
   async function loadMilestones() {
     setLoading(true);
     try {
@@ -59,6 +55,10 @@ export default function ExecutionMilestonesPage({ onNavigate }) {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    loadMilestones();
+  }, [activeCategory, activeStatusTab]);
 
   async function handleCreateMilestone(e) {
     e.preventDefault();
