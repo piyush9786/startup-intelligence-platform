@@ -307,6 +307,45 @@ function ProductTopbar({ profiles = [], query, selectedProfileId, setQuery, setS
   );
 }
 
+class WorkspaceErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Workspace render failure:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="empty-state" style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
+          <h2>Workspace View Error</h2>
+          <p style={{ margin: "0.75rem 0 1.5rem", color: "#64748b" }}>
+            {this.state.error?.message || "An unexpected error occurred while rendering this page."}
+          </p>
+          <button
+            className="button button-primary"
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.href = "/dashboard";
+            }}
+            type="button"
+          >
+            Reload Dashboard
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Workspace — the authenticated shell that manages shared data state
 // ---------------------------------------------------------------------------
@@ -584,7 +623,13 @@ function Workspace({ onSignOut }) {
   if (loadingProfiles) {
     return (
       <div className="app-loading" role="status" aria-label="Loading workspace">
-        <span>Loading your workspace…</span>
+        <div className="app-loading-card">
+          <div className="sidebar-brand-mark" style={{ width: 44, height: 44, fontSize: "0.9rem" }}>
+            <span>SI</span>
+          </div>
+          <div className="app-loading-spinner" />
+          <span>Loading your workspace…</span>
+        </div>
       </div>
     );
   }
@@ -638,16 +683,18 @@ function Workspace({ onSignOut }) {
               Loading workspace module…
             </div>
           ) : (
-            <React.Suspense
-              fallback={
-                <div className="dashboard-loader" role="status">
-                  <span className="spinner" aria-hidden="true" />
-                  Loading workspace module…
-                </div>
-              }
-            >
-              <Outlet context={outletContext} />
-            </React.Suspense>
+            <WorkspaceErrorBoundary>
+              <React.Suspense
+                fallback={
+                  <div className="dashboard-loader" role="status">
+                    <span className="spinner" aria-hidden="true" />
+                    Loading workspace module…
+                  </div>
+                }
+              >
+                <Outlet context={outletContext} />
+              </React.Suspense>
+            </WorkspaceErrorBoundary>
           )}
         </main>
         {showTour && (
