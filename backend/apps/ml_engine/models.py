@@ -74,6 +74,16 @@ class MLModelRegistry(TimeStampedModel):
     artifact_path = models.CharField(max_length=512, blank=True)
     training_metadata = models.JSONField(default=dict, blank=True)
     trained_at = models.DateTimeField(null=True, blank=True)
+    production_approved = models.BooleanField(default=False)
+    deployment_stage = models.CharField(
+        max_length=32,
+        choices=[
+            ("experimental", "Experimental"),
+            ("shadow", "Shadow"),
+            ("production", "Production"),
+        ],
+        default="experimental",
+    )
 
     class Meta:
         ordering = ["model_type", "-model_version"]

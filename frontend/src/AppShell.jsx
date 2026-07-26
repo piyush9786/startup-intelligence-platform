@@ -25,11 +25,13 @@
  */
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  BrowserRouter,
   Navigate,
   NavLink,
   Outlet,
   Route,
   Routes,
+  useInRouterContext,
   useNavigate,
   useOutletContext,
 } from "react-router-dom";
@@ -63,7 +65,7 @@ import { humanizeApiError, advisorJobProgress, advisorJobButtonLabel, isActiveAd
 import { loadCatalogData, loadFounderWorkspaceData, partialLoadWarning } from "./workspaceLoad";
 import { dashboardMetrics } from "./dashboard";
 
-import { DashboardHome } from "./App.jsx";
+import DashboardHome from "./DashboardHome.jsx";
 
 // Lazy-loaded page components for optimal bundle splitting
 const ActionRoadmapPage = React.lazy(() => import("./ActionRoadmapPage"));
@@ -580,31 +582,35 @@ export function AppRouter({ onSignOut }) {
     <Routes>
       <Route element={<Workspace onSignOut={onSignOut} />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<OverviewPage />} />
-        <Route path="startup" element={<MyStartupPage />} />
-        <Route path="builder" element={<StartupBuilderPage />} />
-        <Route path="capital-planner" element={<CapitalPlannerPage />} />
-        <Route path="tracker" element={<ApplicationTrackerPage />} />
-        <Route path="roadmap" element={<ActionRoadmapPage />} />
-        <Route path="milestones" element={<ExecutionMilestonesPage />} />
-        <Route path="schemes" element={<SchemeExplorerPage />} />
-        <Route path="schemes/:schemeId" element={<SchemeDetailPage />} />
-        <Route path="requirements" element={<RequirementsPage />} />
-        <Route path="funding" element={<FundingPage />} />
-        <Route path="funding/plans" element={<FundingPlanPage />} />
-        <Route path="starting-plan" element={<StartingPlanPage />} />
-        <Route path="advisor" element={<FounderIntelligencePage />} />
-        <Route path="intelligence" element={<FounderConcierge />} />
-        <Route path="reviewer-verifications" element={<ReviewerVerificationWorkspace />} />
-        <Route path="onboarding" element={<AssessmentWizard />} />
-        <Route path="documents" element={<DocumentIntakeWorkspace />} />
+        <Route path="dashboard" element={<OverviewRoute />} />
+        <Route path="startup" element={<StartupRoute />} />
+        <Route path="builder" element={<BuilderRoute />} />
+        <Route path="capital-planner" element={<CapitalPlannerRoute />} />
+        <Route path="tracker" element={<TrackerRoute />} />
+        <Route path="roadmap" element={<RoadmapRoute />} />
+        <Route path="milestones" element={<MilestonesRoute />} />
+        <Route path="schemes" element={<SchemesRoute />} />
+        <Route path="schemes/:schemeId" element={<SchemeDetailRoute />} />
+        <Route path="requirements" element={<RequirementsRoute />} />
+        <Route path="funding" element={<FundingRoute />} />
+        <Route path="funding/plans" element={<FundingPlanRoute />} />
+        <Route path="starting-plan" element={<StartingPlanRoute />} />
+        <Route path="advisor" element={<AdvisorRoute />} />
+        <Route path="intelligence" element={<IntelligenceRoute />} />
+        <Route path="reviewer-verifications" element={<ReviewerRoute />} />
+        <Route path="onboarding" element={<OnboardingRoute />} />
+        <Route path="documents" element={<DocumentsRoute />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>
   );
 }
 
-function OverviewPage() {
+// ---------------------------------------------------------------------------
+// Route Adapters (Unpack outlet context and pass required props to pages)
+// ---------------------------------------------------------------------------
+
+function OverviewRoute() {
   const ctx = useOutletContext();
   const navigate = useNavigate();
 
@@ -641,6 +647,127 @@ function OverviewPage() {
   );
 }
 
+function StartupRoute() {
+  const ctx = useOutletContext();
+  const navigate = useNavigate();
+  return (
+    <MyStartupPage
+      onNavigate={(target) => navigate(`/${target}`)}
+      profile={ctx.selectedProfile}
+      startupProfileId={ctx.selectedProfileId}
+    />
+  );
+}
+
+function BuilderRoute() {
+  const ctx = useOutletContext();
+  const navigate = useNavigate();
+  return (
+    <StartupBuilderPage
+      onNavigate={(target) => navigate(`/${target}`)}
+      startupProfileId={ctx.selectedProfileId}
+    />
+  );
+}
+
+function CapitalPlannerRoute() {
+  const ctx = useOutletContext();
+  return <CapitalPlannerPage startupProfileId={ctx.selectedProfileId} />;
+}
+
+function TrackerRoute() {
+  const ctx = useOutletContext();
+  return (
+    <ApplicationTrackerPage
+      profile={ctx.selectedProfile}
+      startupProfileId={ctx.selectedProfileId}
+    />
+  );
+}
+
+function RoadmapRoute() {
+  const ctx = useOutletContext();
+  return <ActionRoadmapPage startupProfileId={ctx.selectedProfileId} />;
+}
+
+function MilestonesRoute() {
+  const ctx = useOutletContext();
+  return <ExecutionMilestonesPage startupProfileId={ctx.selectedProfileId} />;
+}
+
+function SchemesRoute() {
+  const ctx = useOutletContext();
+  const navigate = useNavigate();
+  return (
+    <SchemeExplorerPage
+      onOpenScheme={(scheme) =>
+        navigate(`/schemes/${typeof scheme === "object" ? scheme.id : scheme}`)
+      }
+      profile={ctx.selectedProfile}
+      query={ctx.query}
+      schemes={ctx.schemes}
+    />
+  );
+}
+
+function SchemeDetailRoute() {
+  const ctx = useOutletContext();
+  return <SchemeDetailPage profile={ctx.selectedProfile} />;
+}
+
+function RequirementsRoute() {
+  const ctx = useOutletContext();
+  return <RequirementsPage profile={ctx.selectedProfile} />;
+}
+
+function FundingRoute() {
+  const ctx = useOutletContext();
+  return <FundingPage profile={ctx.selectedProfile} />;
+}
+
+function FundingPlanRoute() {
+  const ctx = useOutletContext();
+  return <FundingPlanPage startupProfileId={ctx.selectedProfileId} />;
+}
+
+function StartingPlanRoute() {
+  const ctx = useOutletContext();
+  return <StartingPlanPage startupProfileId={ctx.selectedProfileId} />;
+}
+
+function AdvisorRoute() {
+  const ctx = useOutletContext();
+  return <FounderIntelligencePage profile={ctx.selectedProfile} />;
+}
+
+function IntelligenceRoute() {
+  const ctx = useOutletContext();
+  return <FounderConcierge profile={ctx.selectedProfile} />;
+}
+
+function ReviewerRoute() {
+  const ctx = useOutletContext();
+  return <ReviewerVerificationWorkspace currentUser={ctx.currentUser} />;
+}
+
+function OnboardingRoute() {
+  const ctx = useOutletContext();
+  return <AssessmentWizard profile={ctx.selectedProfile} />;
+}
+
+function DocumentsRoute() {
+  const ctx = useOutletContext();
+  return <DocumentIntakeWorkspace profile={ctx.selectedProfile} />;
+}
+
 export default function AppShell({ onSignOut }) {
+  const inRouter = useInRouterContext();
+  if (!inRouter) {
+    return (
+      <BrowserRouter>
+        <AppRouter onSignOut={onSignOut} />
+      </BrowserRouter>
+    );
+  }
   return <AppRouter onSignOut={onSignOut} />;
 }

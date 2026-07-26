@@ -6,6 +6,7 @@ keeps the MLModelRegistry up to date.
 """
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +28,7 @@ def save_model(
     model_type: str,
     model_name: str,
     model_obj: Any,
-    version: int,
+    version: int | None = None,
     training_sample_count: int = 0,
     primary_metric_name: str = "",
     primary_metric_value: float | None = None,
@@ -35,27 +36,44 @@ def save_model(
 ) -> MLModelRegistry:  # noqa: F821 — imported at call time to avoid circular
     from apps.ml_engine.models import MLModelRegistry
 
-    path = _artifact_path(model_name, version)
+    ML_MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    temp_path = ML_MODELS_DIR / f"tmp_{model_type}_{uuid.uuid4().hex}.joblib"
 
-    # Save candidate artifact to storage
-    joblib.dump(model_obj, path)
+    # Save candidate artifact to a temporary path first
+    joblib.dump(model_obj, temp_path)
 
     # Validate that the dumped artifact can be loaded cleanly before database promotion
     try:
-        joblib.load(path)
+        joblib.load(temp_path)
     except Exception as exc:
+        if temp_path.exists():
+            temp_path.unlink()
         raise ValueError(
-            f"Saved artifact for '{model_name}' v{version} failed load validation: {exc}"
+            f"Saved artifact for '{model_name}' failed load validation: {exc}"
         ) from exc
 
+    meta = metadata or {}
+    is_synthetic = meta.get("training_data_source") == "synthetic"
+    is_approved = not is_synthetic
+    stage = "shadow" if is_synthetic else "production"
+
     with transaction.atomic():
-        # Acquire a database lock on active models of this type to prevent concurrent promotion races
-        active_models = MLModelRegistry.objects.select_for_update().filter(
-            model_type=model_type, status=MLModelRegistry.Status.ACTIVE
+        # Lock all registry rows for this model type to prevent version allocation and promotion race conditions
+        existing = list(
+            MLModelRegistry.objects.select_for_update().filter(model_type=model_type)
         )
 
+        if version is None:
+            max_ver = max([r.model_version for r in existing], default=0)
+            version = max_ver + 1
+
+        final_path = _artifact_path(model_name, version)
+        temp_path.replace(final_path)
+
         # Retire previous active models of the same type
-        active_models.update(status=MLModelRegistry.Status.RETIRED)
+        MLModelRegistry.objects.filter(
+            model_type=model_type, status=MLModelRegistry.Status.ACTIVE
+        ).update(status=MLModelRegistry.Status.RETIRED)
 
         registry_entry = MLModelRegistry.objects.create(
             model_type=model_type,
@@ -65,9 +83,11 @@ def save_model(
             training_sample_count=training_sample_count,
             primary_metric_name=primary_metric_name,
             primary_metric_value=primary_metric_value,
-            artifact_path=str(path),
-            training_metadata=metadata or {},
+            artifact_path=str(final_path),
+            training_metadata=meta,
             trained_at=timezone.now(),
+            production_approved=is_approved,
+            deployment_stage=stage,
         )
     return registry_entry
 
