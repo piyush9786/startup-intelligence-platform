@@ -271,7 +271,7 @@ function ProductSidebar({ canReviewEligibility, metrics, onLogout, profile }) {
   );
 }
 
-function ProductTopbar({ query, setQuery }) {
+function ProductTopbar({ profiles = [], query, selectedProfileId, setQuery, setSelectedProfileId }) {
   const { t } = useT();
   return (
     <header className="product-topbar">
@@ -285,7 +285,24 @@ function ProductTopbar({ query, setQuery }) {
           value={query}
         />
       </label>
-      <LanguageSwitcher />
+      <div className="topbar-right-actions">
+        {profiles && profiles.length > 0 && (
+          <div className="profile-switcher">
+            <select
+              aria-label="Select Startup Profile"
+              onChange={(e) => setSelectedProfileId && setSelectedProfileId(e.target.value)}
+              value={selectedProfileId || ""}
+            >
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.startup_name || `Startup #${p.id}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <LanguageSwitcher />
+      </div>
     </header>
   );
 }
@@ -573,7 +590,7 @@ function Workspace({ onSignOut }) {
   }
 
   return (
-    <div className="product-layout">
+    <div className="product-shell">
       <ProductSidebar
         canReviewEligibility={canReviewEligibility}
         metrics={metrics}
@@ -581,7 +598,13 @@ function Workspace({ onSignOut }) {
         profile={selectedProfile}
       />
       <div className="product-main">
-        <ProductTopbar query={query} setQuery={setQuery} />
+        <ProductTopbar
+          profiles={profiles}
+          query={query}
+          selectedProfileId={selectedProfileId}
+          setQuery={setQuery}
+          setSelectedProfileId={setSelectedProfileId}
+        />
         {error && (
           <div className="notice notice-warning" role="status">
             {error}
@@ -810,7 +833,12 @@ function SchemeDetailRoute() {
   const navigate = useNavigate();
   const { schemeId } = useParams();
   
-  const allSchemes = [...(ctx.schemes || []), ...(ctx.externalSchemes || [])];
+  const allSchemes = [
+    ...(ctx.schemes || []),
+    ...(ctx.externalSchemes || []),
+    ...(ctx.externalCapitalSupport || []),
+    ...(ctx.externalCertificationRequirements || []),
+  ];
   const scheme = allSchemes.find(
     (s) => String(s.scheme_id || s.id) === String(schemeId)
   );

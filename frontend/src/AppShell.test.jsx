@@ -53,8 +53,8 @@ describe("AppShell Router Integration", () => {
       </QueryClientProvider>
     );
 
-    await waitFor(async () => {
-      expect(await screen.findByText(/Test Startup/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByText(/Test Startup/i)[0]).toBeInTheDocument();
     });
   });
 

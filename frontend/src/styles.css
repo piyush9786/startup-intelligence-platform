@@ -1332,6 +1332,12 @@ body {
   z-index: 20;
 }
 
+.topbar-right-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.85rem;
+}
+
 .dashboard-search {
   align-items: center;
   background: #f8faff;
