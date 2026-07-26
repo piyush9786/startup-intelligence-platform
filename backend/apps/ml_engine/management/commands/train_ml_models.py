@@ -258,6 +258,6 @@ class Command(BaseCommand):
             {"scheme_version_id": f"syn-{i}", "vector": [0.1 * i] * 32}
             for i in range(20)
         ]
-        result = find_duplicate_schemes(synthetic_embeddings)
+        result = find_duplicate_schemes(synthetic_embeddings, training_data_source="synthetic")
         return f"duplicate_groups={len(result['duplicate_groups'])}"
 

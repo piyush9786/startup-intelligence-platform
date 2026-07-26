@@ -53,9 +53,42 @@ describe("AppShell Router Integration", () => {
       </QueryClientProvider>
     );
 
-    // Wait for AppShell to load the profile (which sets up the router context)
     await waitFor(async () => {
       expect(await screen.findByText(/Test Startup/i)).toBeInTheDocument();
+    });
+  });
+
+  it("handles deep linking to a specific route", async () => {
+    const queryClient = new QueryClient();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/capital-planner"]}>
+          <AppShell onSignOut={() => {}} />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    await waitFor(async () => {
+      // CapitalPlannerPage renders Capital Structure
+      expect(await screen.findByText(/Capital & Cost Model/i)).toBeInTheDocument();
+    });
+  });
+
+  it("renders the NotFoundRoute for unknown paths", async () => {
+    const queryClient = new QueryClient();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/some-random-unknown-path"]}>
+          <AppShell onSignOut={() => {}} />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    await waitFor(async () => {
+      expect(await screen.findByText(/Page Not Found/i)).toBeInTheDocument();
+      expect(await screen.findByText(/The page or scheme you are looking for does not exist/i)).toBeInTheDocument();
     });
   });
 });

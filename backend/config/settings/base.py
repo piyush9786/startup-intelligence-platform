@@ -103,6 +103,7 @@ CORS_ALLOWED_ORIGINS = [
     for x in os.environ.get("DJANGO_CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
     if x.strip()
 ]
+CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
 REST_FRAMEWORK = {

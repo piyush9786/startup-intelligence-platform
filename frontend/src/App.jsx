@@ -313,7 +313,7 @@ function EmptyList({ children }) {
   return <p className="empty-list">{children}</p>;
 }
 
-function BriefingDocument({ briefingRecord }) {
+export function BriefingDocument({ briefingRecord }) {
   const payload = briefingRecord?.briefing;
   const counts = briefingCounts(briefingRecord);
   const evidenceById = buildEvidenceById(briefingRecord);
@@ -653,56 +653,7 @@ function ProductSidebar({
 }
 
 
-export function JourneyDialog({ onExistingStartup, onNewIdea }) {
-  const { t } = useT();
-  return (
-    <m.div
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0.95, opacity: 0 }}
-      initial={{ scale: 0.95, opacity: 0 }}
-      style={{
-        backgroundColor: "#fff",
-        borderRadius: "12px",
-        padding: "2rem",
-        maxWidth: "480px",
-        width: "100%",
-        boxShadow:
-          "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-      }}
-    >
-      <h2 style={{ margin: "0 0 1rem 0", color: "#0f172a" }}>
-        {t("journey.title")}
-      </h2>
-      <p style={{ margin: "0 0 1.5rem 0", color: "#475569", lineHeight: 1.5 }}>
-        {t("journey.subtitle")}
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <button
-          className="button button-primary"
-          onClick={onExistingStartup}
-          style={{
-            width: "100%",
-            justifyContent: "center",
-            padding: "0.75rem",
-          }}
-        >
-          {t("journey.existing_startup")}
-        </button>
-        <button
-          className="button button-secondary"
-          onClick={onNewIdea}
-          style={{
-            width: "100%",
-            justifyContent: "center",
-            padding: "0.75rem",
-          }}
-        >
-          {t("journey.new_idea")}
-        </button>
-      </div>
-    </m.div>
-  );
-}
+
 
 function ProductTopbar({ query, setQuery }) {
   const { t } = useT();
@@ -723,7 +674,7 @@ function ProductTopbar({ query, setQuery }) {
   );
 }
 
-function PageHeader({ eyebrow, title, description, actions }) {
+export function PageHeader({ eyebrow, title, description, actions }) {
   return (
     <header className="page-header">
       <div>
@@ -2507,66 +2458,6 @@ function ExternalSchemeDetailPage({
   );
 }
 
-function HistoryPanel({ history, loading, onSelect, selectedId }) {
-  return (
-    <section className="history-panel" aria-labelledby="history-title">
-      <div className="sidebar-heading">
-        <div><span className="section-kicker">Persisted records</span><h2 id="history-title">Guidance history</h2></div>
-        <span className="count-badge">{history.length}</span>
-      </div>
-      {loading ? <p className="muted">Loading history…</p> : history.length ? (
-        <div className="history-list">
-          {history.map((item, index) => (
-            <button aria-current={selectedId === item.id ? "true" : undefined} className={`history-item ${selectedId === item.id ? "history-item-active" : ""}`} key={item.id} onClick={() => onSelect(item.id)} type="button">
-              <span>Briefing {history.length - index}</span>
-              <strong>{item.briefing?.executive_summary || "Founder guidance"}</strong>
-              <small>{formatDateTime(item.completed_at || item.created_at)}</small>
-            </button>
-          ))}
-        </div>
-      ) : <p className="muted">Generated guidance will appear here.</p>}
-    </section>
-  );
-}
-
-export function AdvisorWorkspace({
-  briefing,
-  generating,
-  generationLabel,
-  history,
-  loading,
-  onGenerate,
-  onHistorySelection,
-}) {
-  return (
-    <div className="advisor-workspace-page">
-      <PageHeader
-        eyebrow="EVIDENCE-BACKED GUIDANCE"
-        title="Founder advisor"
-        description="Review priorities, scheme guidance, risks and unanswered founder questions grounded in an immutable startup snapshot."
-        actions={
-          <button
-            className="button button-primary"
-            disabled={generating || loading}
-            onClick={onGenerate}
-            type="button"
-          >
-            {generationLabel || "Generate new guidance"}
-          </button>
-        }
-      />
-      <div className="advisor-layout">
-        <aside className="advisor-history-column">
-          <HistoryPanel history={history} loading={loading} onSelect={onHistorySelection} selectedId={briefing?.id} />
-          <section className="grounding-note"><strong>Grounding boundary</strong><p>Guidance can cite only fields stored in the persisted startup advisor snapshot.</p></section>
-        </aside>
-        <section className={`document-panel ${loading ? "is-loading" : ""}`}>
-          {loading ? <div className="document-loader" role="status"><span className="spinner" aria-hidden="true" />Loading persisted guidance…</div> : <BriefingDocument briefingRecord={briefing} />}
-        </section>
-      </div>
-    </div>
-  );
-}
 
 
 function formatReviewerValue(value) {

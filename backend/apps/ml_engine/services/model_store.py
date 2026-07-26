@@ -7,6 +7,7 @@ keeps the MLModelRegistry up to date.
 from __future__ import annotations
 
 import uuid
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -81,25 +82,39 @@ def save_model(
         final_path = _artifact_path(model_name, version)
         temp_path.replace(final_path)
 
+        # Calculate SHA-256 checksum
+        sha256_hash = hashlib.sha256()
+        with open(final_path, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+        checksum = sha256_hash.hexdigest()
+
         # Retire previous models of the same deployment stage (e.g. shadow retires shadow)
         MLModelRegistry.objects.filter(
             model_type=model_type, status=MLModelRegistry.Status.ACTIVE, deployment_stage=stage
         ).update(status=MLModelRegistry.Status.RETIRED)
 
-        registry_entry = MLModelRegistry.objects.create(
-            model_type=model_type,
-            model_name=model_name,
-            model_version=version,
-            status=MLModelRegistry.Status.ACTIVE,
-            training_sample_count=training_sample_count,
-            primary_metric_name=primary_metric_name,
-            primary_metric_value=primary_metric_value,
-            artifact_path=str(final_path),
-            training_metadata=meta,
-            trained_at=timezone.now(),
-            production_approved=is_approved,
-            deployment_stage=stage,
-        )
+        try:
+            registry_entry = MLModelRegistry.objects.create(
+                model_type=model_type,
+                model_name=model_name,
+                model_version=version,
+                status=MLModelRegistry.Status.ACTIVE,
+                training_sample_count=training_sample_count,
+                primary_metric_name=primary_metric_name,
+                primary_metric_value=primary_metric_value,
+                artifact_path=str(final_path),
+                artifact_checksum=checksum,
+                training_metadata=meta,
+                trained_at=timezone.now(),
+                production_approved=is_approved,
+                deployment_stage=stage,
+            )
+        except Exception:
+            if final_path.exists():
+                final_path.unlink()
+            raise
+
     return registry_entry
 
 

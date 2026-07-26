@@ -25,6 +25,7 @@ def find_duplicate_schemes(
     *,
     eps: float = 0.08,
     min_samples: int = 2,
+    training_data_source: str = "real",
 ) -> dict:
     """
     Detect near-duplicate scheme versions using DBSCAN on embedding vectors.
@@ -73,7 +74,7 @@ def find_duplicate_schemes(
         training_sample_count=len(ids),
         primary_metric_name="duplicate_group_count",
         primary_metric_value=float(len(duplicate_groups)),
-        metadata={"eps": eps, "min_samples": min_samples},
+        metadata={"eps": eps, "min_samples": min_samples, "training_data_source": training_data_source},
     )
 
     return {

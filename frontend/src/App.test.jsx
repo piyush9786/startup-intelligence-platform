@@ -1579,8 +1579,8 @@ describe("functional user dashboard", () => {
     render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     await user.click(await screen.findByRole("link", { name: "My startup" }));
-    expect(screen.getAllByRole("heading", { name: "Acme Climate" })[0]).toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { name: /Company overview/i })[0]).toBeInTheDocument();
+    expect((await screen.findAllByRole("heading", { name: "Acme Climate" }))[0]).toBeInTheDocument();
+    expect((await screen.findAllByRole("heading", { name: /Company overview/i }))[0]).toBeInTheDocument();
 
     await user.click(await screen.findByRole("link", { name: "Action roadmap" }));
     expect(await screen.findByRole("heading", { name: "Readiness Score Breakdown & Action Roadmap" })).toBeInTheDocument();

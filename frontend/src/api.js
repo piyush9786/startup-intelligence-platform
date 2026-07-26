@@ -51,6 +51,8 @@ export function saveSession(session, storage = sessionStorageOrNull()) {
 export function clearSession(storage = sessionStorageOrNull()) {
   if (!storage) return;
   storage.removeItem(SESSION_KEY);
+  // Also try to hit logout endpoint to clear cookie if possible
+  axios.post(`${apiRoot}/auth/token/logout/`, {}, { withCredentials: true }).catch(() => {});
 }
 
 export function expireSession(
@@ -106,13 +108,12 @@ client.interceptors.response.use(
       refreshPromise = axios
         .post(
           `${apiRoot}/auth/token/refresh/`,
-          { refresh: session.refresh },
-          { timeout: 30000 },
+          {},
+          { timeout: 30000, withCredentials: true },
         )
         .then((response) => {
           const nextSession = {
             access: response.data.access,
-            refresh: response.data.refresh || session.refresh,
           };
           saveSession(nextSession);
           return nextSession.access;
@@ -136,12 +137,11 @@ export async function login({ username, password }) {
   const response = await axios.post(
     `${apiRoot}/auth/token/`,
     { username, password },
-    { timeout: 30000 },
+    { timeout: 30000, withCredentials: true },
   );
 
   const session = {
     access: response.data.access,
-    refresh: response.data.refresh,
   };
   saveSession(session);
   return session;

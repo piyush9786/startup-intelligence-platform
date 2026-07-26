@@ -72,6 +72,8 @@ class MLModelRegistry(TimeStampedModel):
     primary_metric_value = models.FloatField(null=True, blank=True)
     # Path to the serialized .joblib file (relative to ML_MODELS_DIR)
     artifact_path = models.CharField(max_length=512, blank=True)
+    # SHA-256 checksum of the artifact file
+    artifact_checksum = models.CharField(max_length=64, blank=True)
     training_metadata = models.JSONField(default=dict, blank=True)
     trained_at = models.DateTimeField(null=True, blank=True)
     production_approved = models.BooleanField(default=False)
