@@ -24,8 +24,9 @@ def train_adaboost(
     X: np.ndarray,
     y: np.ndarray,
     *,
-    n_estimators: int = 100,
+    n_estimators: int = 50,
     random_state: int = 42,
+    metadata: dict | None = None,
 ) -> dict:
     """
     Train an AdaBoost classifier on startup readiness transition labels.
@@ -35,6 +36,7 @@ def train_adaboost(
         y: Binary labels (1 = became READY within 30 days, 0 = did not).
         n_estimators: Number of weak learners in the ensemble.
         random_state: Seed for reproducibility.
+        metadata: Optional additional training metadata.
 
     Returns:
         dict with registry entry and accuracy metrics.
@@ -61,6 +63,13 @@ def train_adaboost(
         roc_auc = None
 
     version = next_version(MODEL_TYPE)
+    meta = {
+        "n_estimators": n_estimators,
+        "accuracy": accuracy,
+        "random_state": random_state,
+    }
+    if metadata:
+        meta.update(metadata)
     registry_entry = save_model(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
@@ -69,11 +78,7 @@ def train_adaboost(
         training_sample_count=len(X_train),
         primary_metric_name="roc_auc",
         primary_metric_value=roc_auc,
-        metadata={
-            "n_estimators": n_estimators,
-            "accuracy": accuracy,
-            "random_state": random_state,
-        },
+        metadata=meta,
     )
     return {"registry": registry_entry, "accuracy": accuracy, "roc_auc": roc_auc}
 

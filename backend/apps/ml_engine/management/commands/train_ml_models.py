@@ -119,11 +119,15 @@ class Command(BaseCommand):
         from apps.ml_engine.services.models.kmeans_cohorts import train_kmeans
         from apps.ml_engine.services.synthetic_data import generate_startup_features
 
+        metadata = {
+            "training_data_source": "synthetic" if synthetic else "real_db",
+            "synthetic_fraction": 1.0 if synthetic else 0.0,
+        }
         if synthetic:
             X = generate_startup_features(n)
-            result = train_kmeans(X=X)
+            result = train_kmeans(X=X, metadata=metadata)
         else:
-            result = train_kmeans()
+            result = train_kmeans(metadata=metadata)
 
         return f"silhouette={result['silhouette_score']:.3f}, clusters={result['n_clusters']}"
 
@@ -131,28 +135,36 @@ class Command(BaseCommand):
         from apps.ml_engine.services.models.svm_ranker import train_svm
         from apps.ml_engine.services.synthetic_data import generate_svm_dataset
 
-        if synthetic:
-            X, y = generate_svm_dataset(n)
-            result = train_svm(X, y)
-        else:
-            # Note: For production real data, this should query StartupProfile
-            # Currently a placeholder until real labels are constructed
-            self.stdout.write(self.style.WARNING("       (Real labels missing; falling back to synthetic for SVM)"))
-            X, y = generate_svm_dataset(n)
-            result = train_svm(X, y)
+        if not synthetic:
+            raise CommandError(
+                "Real labelled training data is not implemented for the SVM scheme ranker model. "
+                "Use --synthetic for experimental bootstrap training."
+            )
+
+        metadata = {
+            "training_data_source": "synthetic",
+            "synthetic_fraction": 1.0,
+        }
+        X, y = generate_svm_dataset(n)
+        result = train_svm(X, y, metadata=metadata)
         return f"accuracy={result['accuracy']:.3f}"
 
     def _train_adaboost(self, synthetic: bool, n: int) -> str:
         from apps.ml_engine.services.models.adaboost_readiness import train_adaboost
         from apps.ml_engine.services.synthetic_data import generate_adaboost_dataset
 
-        if synthetic:
-            X, y = generate_adaboost_dataset(n)
-            result = train_adaboost(X, y)
-        else:
-            self.stdout.write(self.style.WARNING("       (Real labels missing; falling back to synthetic for AdaBoost)"))
-            X, y = generate_adaboost_dataset(n)
-            result = train_adaboost(X, y)
+        if not synthetic:
+            raise CommandError(
+                "Real labelled training data is not implemented for the AdaBoost readiness model. "
+                "Use --synthetic for experimental bootstrap training."
+            )
+
+        metadata = {
+            "training_data_source": "synthetic",
+            "synthetic_fraction": 1.0,
+        }
+        X, y = generate_adaboost_dataset(n)
+        result = train_adaboost(X, y, metadata=metadata)
         roc = f"{result['roc_auc']:.3f}" if result.get("roc_auc") else "N/A"
         return f"accuracy={result['accuracy']:.3f}, roc_auc={roc}"
 
@@ -160,24 +172,33 @@ class Command(BaseCommand):
         from apps.ml_engine.services.models.isolation_forest_detector import train_isolation_forest
         from apps.ml_engine.services.synthetic_data import generate_startup_features
 
+        metadata = {
+            "training_data_source": "synthetic" if synthetic else "real_db",
+            "synthetic_fraction": 1.0 if synthetic else 0.0,
+        }
         if synthetic:
             X, _ = generate_startup_features(n), None
-            train_isolation_forest(X=X)
+            train_isolation_forest(X=X, metadata=metadata)
         else:
-            train_isolation_forest()
+            train_isolation_forest(metadata=metadata)
         return "trained on contamination=0.05"
 
     def _train_random_forest(self, synthetic: bool, n: int) -> str:
         from apps.ml_engine.services.models.random_forest_capital import train_random_forest
         from apps.ml_engine.services.synthetic_data import generate_capital_dataset
 
-        if synthetic:
-            X, y = generate_capital_dataset(n)
-            result = train_random_forest(X, y)
-        else:
-            self.stdout.write(self.style.WARNING("       (Real labels missing; falling back to synthetic for Random Forest)"))
-            X, y = generate_capital_dataset(n)
-            result = train_random_forest(X, y)
+        if not synthetic:
+            raise CommandError(
+                "Real labelled training data is not implemented for the Random Forest capital forecaster model. "
+                "Use --synthetic for experimental bootstrap training."
+            )
+
+        metadata = {
+            "training_data_source": "synthetic",
+            "synthetic_fraction": 1.0,
+        }
+        X, y = generate_capital_dataset(n)
+        result = train_random_forest(X, y, metadata=metadata)
         return f"mae={result['mae_months']:.2f} months"
 
     def _train_tfidf(self, synthetic: bool, n: int) -> str:

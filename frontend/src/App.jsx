@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { BrowserRouter } from "react-router-dom";
+import AppShell from "./AppShell.jsx";
 import { useT } from "./i18n/index.jsx";
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
 import {
@@ -1224,7 +1226,7 @@ function AdvisorSummary({
   );
 }
 
-function DashboardHome({
+export function DashboardHome({
   briefing,
   dashboardData,
   generating,
