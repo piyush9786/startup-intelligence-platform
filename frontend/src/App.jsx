@@ -652,7 +652,7 @@ function ProductSidebar({
 }
 
 
-function JourneyDialog({ onExistingStartup, onNewIdea }) {
+export function JourneyDialog({ onExistingStartup, onNewIdea }) {
   const { t } = useT();
   return (
     <m.div
@@ -2528,7 +2528,7 @@ function HistoryPanel({ history, loading, onSelect, selectedId }) {
   );
 }
 
-function AdvisorWorkspace({
+export function AdvisorWorkspace({
   briefing,
   generating,
   generationLabel,

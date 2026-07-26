@@ -62,7 +62,12 @@ def save_model(
         # This serializes version allocation even if the table has no rows to select_for_update.
         from django.db import connection
         with connection.cursor() as cursor:
-            cursor.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", [model_type])
+            if connection.vendor == "postgresql":
+                # pg_advisory_xact_lock(int, int) accepts two 32-bit integers
+                cursor.execute(
+                    "SELECT pg_advisory_xact_lock(hashtext('ml_model_registry'), hashtext(%s))",
+                    [model_type]
+                )
 
         # We can also still do select_for_update for safety on existing rows
         existing = list(
