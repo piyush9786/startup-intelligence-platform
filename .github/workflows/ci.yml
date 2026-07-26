@@ -39,6 +39,7 @@ jobs:
       - run: python manage.py check
       - run: DJANGO_SETTINGS_MODULE=config.settings.production DJANGO_SECRET_KEY=ci-secret-key-1234567890-must-be-long-enough python manage.py check --deploy
       - run: python manage.py makemigrations --check --dry-run
+      - run: touch ../.env.production
       - run: docker compose -f ../docker-compose.prod.yml config
       - run: pytest
       - run: ruff check .
