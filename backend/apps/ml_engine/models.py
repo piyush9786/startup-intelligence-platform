@@ -93,7 +93,7 @@ class MLModelRegistry(TimeStampedModel):
                 name="unique_model_type_version",
             ),
             models.UniqueConstraint(
-                fields=["model_type"],
+                fields=["model_type", "deployment_stage"],
                 condition=models.Q(status="active"),
                 name="unique_active_model_per_type",
             ),
