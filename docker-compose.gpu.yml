@@ -1,0 +1,17 @@
+# GPU override for Ollama — use on hosts with NVIDIA GPUs.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.gpu.yml up -d
+#
+# This override adds the NVIDIA device reservation to the `ollama` service.
+# The base docker-compose.prod.yml runs Ollama in CPU-only mode by default.
+
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

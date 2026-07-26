@@ -81,11 +81,17 @@ class MLModelRegistry(TimeStampedModel):
         max_length=32,
         choices=[
             ("experimental", "Experimental"),
+            ("candidate", "Candidate"),
             ("shadow", "Shadow"),
             ("production", "Production"),
         ],
         default="experimental",
     )
+    # Promotion audit trail
+    promoted_by = models.CharField(max_length=150, blank=True)
+    promoted_at = models.DateTimeField(null=True, blank=True)
+    promotion_reason = models.TextField(blank=True)
+    replaced_model_version = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ["model_type", "-model_version"]

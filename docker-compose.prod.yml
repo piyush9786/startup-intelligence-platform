@@ -90,18 +90,14 @@ services:
       until mc alias set local http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY; do sleep 2; done;
       mc mb --ignore-existing local/$$MINIO_BUCKET_RAW;
       mc mb --ignore-existing local/$${MINIO_BUCKET_STARTUP_EVIDENCE:-startup-eligibility-evidence};
+      mc mb --ignore-existing local/$${MINIO_BUCKET_PROCESSED:-startup-processed-documents};
       exit 0;
       "
 
   ollama:
     image: ollama/ollama:latest
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    # GPU support: use docker-compose.gpu.yml override
+    # docker compose -f docker-compose.prod.yml -f docker-compose.gpu.yml up
     environment:
       OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-4096}
       OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-1}

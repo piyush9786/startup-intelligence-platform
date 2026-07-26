@@ -97,7 +97,7 @@ client.interceptors.response.use(
       throw error;
     }
 
-    if (originalRequest?._retried || !session?.refresh) {
+    if (originalRequest?._retried) {
       expireSession();
       throw error;
     }
