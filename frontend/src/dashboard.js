@@ -380,3 +380,121 @@ export function recommendationScheme(recommendation, schemes) {
     ) || null
   );
 }
+
+export function evaluatedSchemeStatusLabel(result) {
+  const labels = {
+    eligible: "Eligible",
+    ineligible: "Not eligible",
+    likely_eligible: "Likely eligible",
+    conditionally_eligible: "Conditionally eligible",
+    insufficient_information: "More information needed",
+    verification_required: "Verification required",
+    application_closed: "Applications closed",
+  };
+
+  return labels[result] || readinessStatusLabel(result || "not matched");
+}
+
+export function evaluatedSchemeReason(evaluation = {}) {
+  const explanationSummary =
+    evaluation.eligibility_explanation?.summary;
+  if (explanationSummary) {
+    return explanationSummary;
+  }
+
+  const resultMessages = {
+    ineligible:
+      "One or more mandatory eligibility requirements were not met.",
+    likely_eligible:
+      "The profile appears relevant, but eligibility is not yet confirmed.",
+    conditionally_eligible:
+      "Additional conditions must be completed before applying.",
+    insufficient_information:
+      "Complete the missing startup information to check eligibility.",
+    verification_required:
+      "Supporting evidence must be verified before eligibility is confirmed.",
+    application_closed:
+      "The scheme was relevant, but applications are currently closed.",
+  };
+
+  if (resultMessages[evaluation.result]) {
+    return resultMessages[evaluation.result];
+  }
+
+  const reason = String(evaluation.reason || "");
+
+  if (reason === "no_evaluated_rules") {
+    return "No verified eligibility rules were available for evaluation.";
+  }
+
+  if (reason.startsWith("application_status:")) {
+    const status = reason.split(":", 2)[1];
+    return `Application status is ${readinessStatusLabel(status)}.`;
+  }
+
+  return reason
+    ? readinessStatusLabel(reason.replace(":", " "))
+    : "This scheme was evaluated but was not included in the ranked matches.";
+}
+
+export function recommendationVerificationProvenance(recommendation = {}) {
+  const provenance =
+    recommendation.eligibility_explanation?.verification_provenance;
+
+  return Array.isArray(provenance) ? provenance : [];
+}
+
+export function formatVerificationDate(value) {
+  const parts = String(value || "").split("-").map(Number);
+
+  if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part))) {
+    return String(value || "");
+  }
+
+  const [year, month, day] = parts;
+  const monthLabels = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  if (
+    year < 1 ||
+    month < 1 ||
+    month > monthLabels.length ||
+    day < 1 ||
+    day > 31
+  ) {
+    return String(value || "");
+  }
+
+  return `${day} ${monthLabels[month - 1]} ${year}`;
+}
+
+export function verificationEffectiveLabel(provenance = {}) {
+  const validFrom = formatVerificationDate(provenance.valid_from);
+  const expiresOn = formatVerificationDate(provenance.expires_on);
+
+  if (validFrom && expiresOn) {
+    return `Effective ${validFrom} to ${expiresOn}`;
+  }
+
+  if (validFrom) {
+    return `Effective from ${validFrom}`;
+  }
+
+  if (expiresOn) {
+    return `Valid until ${expiresOn}`;
+  }
+
+  return "";
+}

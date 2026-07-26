@@ -85,11 +85,28 @@ def _quantize(value: Decimal) -> Decimal:
 
 
 def _get_svm_score(startup_profile, scheme_version) -> Decimal | None:
-    """Attempt to get SVM success probability; return None on any failure."""
+    """Attempt to get SVM success probability; return None if model is synthetic or unapproved."""
     try:
+        from apps.ml_engine.models import MLModelRegistry
         from apps.ml_engine.services.models.svm_ranker import (
+            MODEL_TYPE,
             predict_scheme_probability,
         )
+
+        entry = (
+            MLModelRegistry.objects.filter(
+                model_type=MODEL_TYPE, status=MLModelRegistry.Status.ACTIVE
+            )
+            .order_by("-model_version")
+            .first()
+        )
+        if (
+            not entry
+            or not entry.production_approved
+            or entry.training_metadata.get("training_data_source") == "synthetic"
+        ):
+            # Synthetic / unapproved models operate in shadow mode and do not alter production rankings
+            return None
 
         prob = predict_scheme_probability(startup_profile, scheme_version)
         return Decimal(str(prob))
@@ -100,7 +117,7 @@ def _get_svm_score(startup_profile, scheme_version) -> Decimal | None:
             "SVM prediction failed for startup %s, scheme %s. Fallback reason: %s",
             startup_profile.id,
             scheme_version.id,
-            exc
+            exc,
         )
         return None
 

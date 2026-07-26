@@ -94,17 +94,21 @@ class Command(BaseCommand):
             "dbscan": self._train_dbscan,
         }
 
-        models_to_train = list(trainers.keys()) if target_model == "all" else [target_model]
+        is_batch = target_model == "all"
+        models_to_train = list(trainers.keys()) if is_batch else [target_model]
 
         for model_name in models_to_train:
             self.stdout.write(f"  → Training {model_name.upper()}...")
             t0 = time.time()
             try:
-                result = trainers[model_name](use_synthetic, n_samples)
+                result = trainers[model_name](use_synthetic, n_samples, is_batch=is_batch)
                 elapsed = time.time() - t0
-                self.stdout.write(
-                    self.style.SUCCESS(f"     ✓ Done in {elapsed:.1f}s — {result}")
-                )
+                if result.startswith("Skipped"):
+                    self.stdout.write(self.style.WARNING(f"     ⚠ {result}"))
+                else:
+                    self.stdout.write(
+                        self.style.SUCCESS(f"     ✓ Done in {elapsed:.1f}s — {result}")
+                    )
             except Exception as exc:
                 self.stdout.write(self.style.ERROR(f"     ✗ FAILED: {exc}"))
                 raise CommandError(f"Training failed for {model_name}: {exc}") from exc
@@ -115,7 +119,7 @@ class Command(BaseCommand):
 
     # ─── Individual trainers ───────────────────────────────────────────
 
-    def _train_kmeans(self, synthetic: bool, n: int) -> str:
+    def _train_kmeans(self, synthetic: bool, n: int, is_batch: bool = False) -> str:
         from apps.ml_engine.services.models.kmeans_cohorts import train_kmeans
         from apps.ml_engine.services.synthetic_data import generate_startup_features
 
@@ -131,11 +135,13 @@ class Command(BaseCommand):
 
         return f"silhouette={result['silhouette_score']:.3f}, clusters={result['n_clusters']}"
 
-    def _train_svm(self, synthetic: bool, n: int) -> str:
+    def _train_svm(self, synthetic: bool, n: int, is_batch: bool = False) -> str:
         from apps.ml_engine.services.models.svm_ranker import train_svm
         from apps.ml_engine.services.synthetic_data import generate_svm_dataset
 
         if not synthetic:
+            if is_batch:
+                return "Skipped (Real labelled dataset unavailable; train on-demand with --synthetic)"
             raise CommandError(
                 "Real labelled training data is not implemented for the SVM scheme ranker model. "
                 "Use --synthetic for experimental bootstrap training."
@@ -149,11 +155,13 @@ class Command(BaseCommand):
         result = train_svm(X, y, metadata=metadata)
         return f"accuracy={result['accuracy']:.3f}"
 
-    def _train_adaboost(self, synthetic: bool, n: int) -> str:
+    def _train_adaboost(self, synthetic: bool, n: int, is_batch: bool = False) -> str:
         from apps.ml_engine.services.models.adaboost_readiness import train_adaboost
         from apps.ml_engine.services.synthetic_data import generate_adaboost_dataset
 
         if not synthetic:
+            if is_batch:
+                return "Skipped (Real labelled dataset unavailable; train on-demand with --synthetic)"
             raise CommandError(
                 "Real labelled training data is not implemented for the AdaBoost readiness model. "
                 "Use --synthetic for experimental bootstrap training."
@@ -168,7 +176,7 @@ class Command(BaseCommand):
         roc = f"{result['roc_auc']:.3f}" if result.get("roc_auc") else "N/A"
         return f"accuracy={result['accuracy']:.3f}, roc_auc={roc}"
 
-    def _train_isolation_forest(self, synthetic: bool, n: int) -> str:
+    def _train_isolation_forest(self, synthetic: bool, n: int, is_batch: bool = False) -> str:
         from apps.ml_engine.services.models.isolation_forest_detector import train_isolation_forest
         from apps.ml_engine.services.synthetic_data import generate_startup_features
 
@@ -183,11 +191,13 @@ class Command(BaseCommand):
             train_isolation_forest(metadata=metadata)
         return "trained on contamination=0.05"
 
-    def _train_random_forest(self, synthetic: bool, n: int) -> str:
+    def _train_random_forest(self, synthetic: bool, n: int, is_batch: bool = False) -> str:
         from apps.ml_engine.services.models.random_forest_capital import train_random_forest
         from apps.ml_engine.services.synthetic_data import generate_capital_dataset
 
         if not synthetic:
+            if is_batch:
+                return "Skipped (Real labelled dataset unavailable; train on-demand with --synthetic)"
             raise CommandError(
                 "Real labelled training data is not implemented for the Random Forest capital forecaster model. "
                 "Use --synthetic for experimental bootstrap training."
@@ -201,7 +211,7 @@ class Command(BaseCommand):
         result = train_random_forest(X, y, metadata=metadata)
         return f"mae={result['mae_months']:.2f} months"
 
-    def _train_tfidf(self, synthetic: bool, n: int) -> str:
+    def _train_tfidf(self, synthetic: bool, n: int, is_batch: bool = False) -> str:
         from apps.ml_engine.services.models.tfidf_search import build_tfidf_index
         from apps.schemes.models import SchemeVersion
 
@@ -230,7 +240,7 @@ class Command(BaseCommand):
         result = build_tfidf_index(corpus)
         return f"corpus_size={result['corpus_size']}"
 
-    def _train_dbscan(self, synthetic: bool, n: int) -> str:
+    def _train_dbscan(self, synthetic: bool, n: int, is_batch: bool = False) -> str:
         # DBSCAN runs on-demand from Qdrant embeddings; register a placeholder
         from apps.ml_engine.services.models.dbscan_dedup import find_duplicate_schemes
 
