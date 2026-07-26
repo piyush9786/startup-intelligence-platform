@@ -25,8 +25,9 @@ def train_random_forest(
     X: np.ndarray,
     y: np.ndarray,
     *,
-    n_estimators: int = 200,
+    n_estimators: int = 100,
     random_state: int = 42,
+    metadata: dict | None = None,
 ) -> dict:
     """
     Train a Random Forest Regressor to predict runway months.
@@ -38,6 +39,7 @@ def train_random_forest(
         y: Target values — actual runway months (float).
         n_estimators: Number of trees.
         random_state: Seed for reproducibility.
+        metadata: Optional additional training metadata.
 
     Returns:
         dict with registry entry and MAE metric.
@@ -60,6 +62,9 @@ def train_random_forest(
     mae = float(mean_absolute_error(y_test, model.predict(X_test)))
 
     version = next_version(MODEL_TYPE)
+    meta = {"n_estimators": n_estimators, "max_depth": 12, "random_state": random_state}
+    if metadata:
+        meta.update(metadata)
     registry_entry = save_model(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
@@ -68,7 +73,7 @@ def train_random_forest(
         training_sample_count=len(X_train),
         primary_metric_name="mae_months",
         primary_metric_value=mae,
-        metadata={"n_estimators": n_estimators, "max_depth": 12},
+        metadata=meta,
     )
     return {"registry": registry_entry, "mae_months": mae}
 

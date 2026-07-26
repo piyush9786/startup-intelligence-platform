@@ -125,7 +125,7 @@ def _score_assessment(
     svm_score = _get_svm_score(startup_profile, scheme_version) if startup_profile else None
 
     if svm_score is not None:
-        # Recommendations-v2 ML Blend: 40% eligibility + 10% rule match + 40% SVM + 10% app status
+        # Recommendations-v2 ML Blend: 70% eligibility + 10% rule match + 10% SVM + 10% app status
         eligibility_component = _ELIGIBILITY_WEIGHT_V2
         rule_match_component = _quantize(match_ratio * _RULE_MATCH_WEIGHT_MAX_V2)
         svm_component = _quantize(svm_score * _SVM_WEIGHT_V2)

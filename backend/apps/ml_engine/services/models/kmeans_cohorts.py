@@ -26,6 +26,7 @@ def train_kmeans(
     X: np.ndarray | None = None,
     ids: list[int] | None = None,
     random_state: int = 42,
+    metadata: dict | None = None,
 ) -> dict:
     """
     Train a K-Means model on startup feature vectors.
@@ -36,6 +37,7 @@ def train_kmeans(
         X: Pre-computed feature matrix (used in synthetic training).
         ids: Aligned list of startup PKs for X.
         random_state: Seed for reproducibility.
+        metadata: Optional additional training metadata.
 
     Returns:
         dict with model registry entry and silhouette score.
@@ -55,6 +57,9 @@ def train_kmeans(
     silhouette = float(silhouette_score(X, model.labels_)) if len(X) > n_clusters else 0.0
 
     version = next_version(MODEL_TYPE)
+    meta = {"n_clusters": n_clusters, "random_state": random_state}
+    if metadata:
+        meta.update(metadata)
     registry_entry = save_model(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
@@ -63,7 +68,7 @@ def train_kmeans(
         training_sample_count=len(X),
         primary_metric_name="silhouette_score",
         primary_metric_value=silhouette,
-        metadata={"n_clusters": n_clusters, "random_state": random_state},
+        metadata=meta,
     )
 
     # Persist cohort IDs back to feature store if real IDs provided

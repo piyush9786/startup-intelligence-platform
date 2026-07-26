@@ -11,6 +11,7 @@ from typing import Any
 
 import joblib
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 
 ML_MODELS_DIR = Path(getattr(settings, "ML_MODELS_DIR", "/app/ml_models"))
@@ -32,23 +33,28 @@ def save_model(
     primary_metric_value: float | None = None,
     metadata: dict | None = None,
 ) -> MLModelRegistry:  # noqa: F821 — imported at call time to avoid circular
-    from django.db import transaction
-
     from apps.ml_engine.models import MLModelRegistry
-    from django.db import transaction
 
     path = _artifact_path(model_name, version)
-    
+
     # Save candidate artifact to storage
     joblib.dump(model_obj, path)
 
+    # Validate that the dumped artifact can be loaded cleanly before database promotion
+    try:
+        joblib.load(path)
+    except Exception as exc:
+        raise ValueError(
+            f"Saved artifact for '{model_name}' v{version} failed load validation: {exc}"
+        ) from exc
+
     with transaction.atomic():
-        # Acquire a database lock on the active model of this type to prevent concurrent promotion races
+        # Acquire a database lock on active models of this type to prevent concurrent promotion races
         active_models = MLModelRegistry.objects.select_for_update().filter(
             model_type=model_type, status=MLModelRegistry.Status.ACTIVE
         )
-        
-        # Retire previous active model of the same type
+
+        # Retire previous active models of the same type
         active_models.update(status=MLModelRegistry.Status.RETIRED)
 
         registry_entry = MLModelRegistry.objects.create(

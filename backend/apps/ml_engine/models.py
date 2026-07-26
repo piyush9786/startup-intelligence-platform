@@ -81,7 +81,12 @@ class MLModelRegistry(TimeStampedModel):
             models.UniqueConstraint(
                 fields=["model_type", "model_version"],
                 name="unique_model_type_version",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["model_type"],
+                condition=models.Q(status="active"),
+                name="unique_active_model_per_type",
+            ),
         ]
         indexes = [
             models.Index(fields=["model_type", "status"]),

@@ -36,6 +36,7 @@ def train_svm(
     y: np.ndarray,
     *,
     random_state: int = 42,
+    metadata: dict | None = None,
 ) -> dict:
     """
     Train an SVM classifier with probability output.
@@ -44,6 +45,7 @@ def train_svm(
         X: Feature matrix of shape (n_samples, n_features).
         y: Binary labels (1 = scheme acquired, 0 = not acquired).
         random_state: Seed for reproducibility.
+        metadata: Optional additional training metadata.
 
     Returns:
         dict with registry entry and accuracy metrics.
@@ -70,6 +72,9 @@ def train_svm(
     # Package scaler + model together so we don't need separate storage
     bundle = {"scaler": scaler, "model": model}
     version = next_version(MODEL_TYPE)
+    meta = {"kernel": "rbf", "random_state": random_state}
+    if metadata:
+        meta.update(metadata)
     registry_entry = save_model(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
@@ -78,7 +83,7 @@ def train_svm(
         training_sample_count=len(X_train),
         primary_metric_name="accuracy",
         primary_metric_value=accuracy,
-        metadata={"kernel": "rbf", "random_state": random_state},
+        metadata=meta,
     )
     return {"registry": registry_entry, "accuracy": accuracy}
 

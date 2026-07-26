@@ -31,6 +31,7 @@ import {
   Route,
   Routes,
   useNavigate,
+  useOutletContext,
 } from "react-router-dom";
 import * as m from "motion/react-m";
 
@@ -62,26 +63,28 @@ import { humanizeApiError, advisorJobProgress, advisorJobButtonLabel, isActiveAd
 import { loadCatalogData, loadFounderWorkspaceData, partialLoadWarning } from "./workspaceLoad";
 import { dashboardMetrics } from "./dashboard";
 
-// Lazy-loaded page components (same files, just now mounted via routes)
-import ActionRoadmapPage from "./ActionRoadmapPage";
-import ApplicationTrackerPage from "./ApplicationTrackerPage";
-import AssessmentWizard from "./AssessmentWizard";
-import CapitalPlannerPage from "./CapitalPlannerPage";
-import DocumentIntakeWorkspace from "./DocumentIntakeWorkspace";
-import ExecutionMilestonesPage from "./ExecutionMilestonesPage";
-import FounderConcierge from "./FounderConcierge";
-import FounderIntelligencePage from "./FounderIntelligencePage";
-import FundingPage from "./FundingPage";
-import FundingPlanPage from "./FundingPlanPage";
-import MyStartupPage from "./MyStartupPage";
-import RequirementsPage from "./RequirementsPage";
-import ReviewerVerificationWorkspace from "./ReviewerVerificationWorkspace";
-import SchemeDetailPage from "./SchemeDetailPage";
-import SchemeExplorerPage from "./SchemeExplorerPage";
-import StartingPlanPage from "./StartingPlanPage";
-import StartupBuilderPage from "./StartupBuilderPage";
-import WebsiteTour from "./WebsiteTour";
-import ChatbotDrawer from "./ChatbotDrawer";
+import { DashboardHome } from "./App.jsx";
+
+// Lazy-loaded page components for optimal bundle splitting
+const ActionRoadmapPage = React.lazy(() => import("./ActionRoadmapPage"));
+const ApplicationTrackerPage = React.lazy(() => import("./ApplicationTrackerPage"));
+const AssessmentWizard = React.lazy(() => import("./AssessmentWizard"));
+const CapitalPlannerPage = React.lazy(() => import("./CapitalPlannerPage"));
+const DocumentIntakeWorkspace = React.lazy(() => import("./DocumentIntakeWorkspace"));
+const ExecutionMilestonesPage = React.lazy(() => import("./ExecutionMilestonesPage"));
+const FounderConcierge = React.lazy(() => import("./FounderConcierge"));
+const FounderIntelligencePage = React.lazy(() => import("./FounderIntelligencePage"));
+const FundingPage = React.lazy(() => import("./FundingPage"));
+const FundingPlanPage = React.lazy(() => import("./FundingPlanPage"));
+const MyStartupPage = React.lazy(() => import("./MyStartupPage"));
+const RequirementsPage = React.lazy(() => import("./RequirementsPage"));
+const ReviewerVerificationWorkspace = React.lazy(() => import("./ReviewerVerificationWorkspace"));
+const SchemeDetailPage = React.lazy(() => import("./SchemeDetailPage"));
+const SchemeExplorerPage = React.lazy(() => import("./SchemeExplorerPage"));
+const StartingPlanPage = React.lazy(() => import("./StartingPlanPage"));
+const StartupBuilderPage = React.lazy(() => import("./StartupBuilderPage"));
+const WebsiteTour = React.lazy(() => import("./WebsiteTour"));
+const ChatbotDrawer = React.lazy(() => import("./ChatbotDrawer"));
 
 const MOTION_EASE = [0.22, 1, 0.36, 1];
 
@@ -544,10 +547,25 @@ function Workspace({ onSignOut }) {
           </div>
         )}
         <main className="product-content">
-          <Outlet context={outletContext} />
+          <React.Suspense
+            fallback={
+              <div className="dashboard-loader" role="status">
+                <span className="spinner" aria-hidden="true" />
+                Loading workspace module…
+              </div>
+            }
+          >
+            <Outlet context={outletContext} />
+          </React.Suspense>
         </main>
-        {showTour && <WebsiteTour onClose={() => setShowTour(false)} />}
-        <ChatbotDrawer profileId={selectedProfileId} schemes={schemes} />
+        {showTour && (
+          <React.Suspense fallback={null}>
+            <WebsiteTour onClose={() => setShowTour(false)} />
+          </React.Suspense>
+        )}
+        <React.Suspense fallback={null}>
+          <ChatbotDrawer profileId={selectedProfileId} schemes={schemes} />
+        </React.Suspense>
       </div>
     </div>
   );
@@ -586,21 +604,43 @@ export function AppRouter({ onSignOut }) {
   );
 }
 
-// Placeholder that re-exports DashboardHome content.
-// The real DashboardHome JSX lives in App.jsx and will be migrated
-// incrementally; for now this page component simply pulls from Outlet context.
 function OverviewPage() {
-  // This will be replaced with a proper DashboardHome component during the
-  // incremental migration. For now it renders a loading state that signals
-  // to the developer that routing is correctly wired.
+  const ctx = useOutletContext();
+  const navigate = useNavigate();
+
   return (
-    <div className="dashboard-page" style={{ padding: "2rem" }}>
-      <h1 style={{ color: "var(--color-text-primary, #0f172a)" }}>
-        Dashboard
-      </h1>
-      <p style={{ color: "var(--color-text-muted, #64748b)" }}>
-        Router is active. Dashboard content will load here as App.jsx is incrementally migrated.
-      </p>
-    </div>
+    <DashboardHome
+      briefing={ctx.currentBriefing}
+      dashboardData={ctx.dashboardData}
+      generating={ctx.generating}
+      generationLabel={ctx.generationLabel}
+      onGenerate={ctx.generateGroundedBriefing}
+      onNavigate={(target) => {
+        const routeMap = {
+          startup: "/startup",
+          builder: "/builder",
+          "capital-planner": "/capital-planner",
+          tracker: "/tracker",
+          roadmap: "/roadmap",
+          schemes: "/schemes",
+          requirements: "/requirements",
+          funding: "/funding",
+          advisor: "/advisor",
+          intelligence: "/intelligence",
+          "reviewer-verifications": "/reviewer-verifications",
+          onboarding: "/onboarding",
+          documents: "/documents",
+        };
+        navigate(routeMap[target] || `/${target}`);
+      }}
+      onOpenScheme={(schemeId) => navigate(`/schemes/${schemeId}`)}
+      profile={ctx.selectedProfile}
+      query={ctx.query}
+      schemes={ctx.schemes}
+    />
   );
+}
+
+export default function AppShell({ onSignOut }) {
+  return <AppRouter onSignOut={onSignOut} />;
 }

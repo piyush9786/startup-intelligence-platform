@@ -28,6 +28,7 @@ def train_isolation_forest(
     X: np.ndarray | None = None,
     contamination: float = 0.05,
     random_state: int = 42,
+    metadata: dict | None = None,
 ) -> dict:
     """
     Train an Isolation Forest on all known valid startup profiles.
@@ -37,6 +38,7 @@ def train_isolation_forest(
         X: Pre-computed feature matrix (used in synthetic training).
         contamination: Expected fraction of outliers in training data.
         random_state: Seed for reproducibility.
+        metadata: Optional additional training metadata.
 
     Returns:
         dict with registry entry.
@@ -56,6 +58,9 @@ def train_isolation_forest(
     model.fit(X)
 
     version = next_version(MODEL_TYPE)
+    meta = {"contamination": contamination, "random_state": random_state}
+    if metadata:
+        meta.update(metadata)
     registry_entry = save_model(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
@@ -64,7 +69,7 @@ def train_isolation_forest(
         training_sample_count=len(X),
         primary_metric_name="contamination",
         primary_metric_value=contamination,
-        metadata={"n_estimators": 200, "threshold": ANOMALY_THRESHOLD},
+        metadata=meta,
     )
     return {"registry": registry_entry}
 

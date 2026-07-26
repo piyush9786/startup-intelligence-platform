@@ -147,3 +147,25 @@ export function formatEvidenceScore(value) {
   if (!Number.isFinite(score)) return "Score unavailable";
   return `${Math.round(score * 100)}% semantic match`;
 }
+
+const ACTIVE_ADVISOR_JOB_STATUSES = new Set(["queued", "running"]);
+
+export function isActiveAdvisorJob(job) {
+  return Boolean(job && ACTIVE_ADVISOR_JOB_STATUSES.has(job.status));
+}
+
+export function advisorJobProgress(job) {
+  if (job?.status === "queued") {
+    return "Founder guidance is queued and waiting for the local model worker…";
+  }
+  if (job?.status === "running") {
+    return "Generating grounded guidance with the local open-source model…";
+  }
+  return "";
+}
+
+export function advisorJobButtonLabel(job) {
+  if (job?.status === "queued") return "Queued…";
+  if (job?.status === "running") return "Generating…";
+  return "";
+}
