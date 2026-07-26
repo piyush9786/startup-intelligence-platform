@@ -16,7 +16,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
 from apps.ml_engine.services.feature_pipeline import extract_features
-from apps.ml_engine.services.model_store import load_model, next_version, save_model
+from apps.ml_engine.services.model_store import save_model
 
 MODEL_TYPE = "svm"
 MODEL_NAME = "svm_scheme_ranker"
@@ -71,7 +71,6 @@ def train_svm(
 
     # Package scaler + model together so we don't need separate storage
     bundle = {"scaler": scaler, "model": model}
-    version = next_version(MODEL_TYPE)
     meta = {"kernel": "rbf", "random_state": random_state}
     if metadata:
         meta.update(metadata)
@@ -79,7 +78,6 @@ def train_svm(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
         model_obj=bundle,
-        version=version,
         training_sample_count=len(X_train),
         primary_metric_name="accuracy",
         primary_metric_value=accuracy,
@@ -99,7 +97,12 @@ def predict_scheme_probability(startup, scheme_version) -> float:
     Returns:
         float: Probability [0.0, 1.0] of successful application.
     """
-    bundle = load_model(MODEL_TYPE)
+    try:
+        from apps.ml_engine.services.model_store import load_production_model
+        bundle = load_production_model(MODEL_TYPE)
+    except FileNotFoundError:
+        return 0.0
+
     scaler = bundle["scaler"]
     model = bundle["model"]
 

@@ -54,11 +54,17 @@ def save_model(
 
     meta = metadata or {}
     is_synthetic = meta.get("training_data_source") == "synthetic"
-    is_approved = not is_synthetic
-    stage = "shadow" if is_synthetic else "production"
+    is_approved = False
+    stage = "shadow" if is_synthetic else "candidate"
 
     with transaction.atomic():
-        # Lock all registry rows for this model type to prevent version allocation and promotion race conditions
+        # Acquire PostgreSQL transaction-level advisory lock using hash of model_type
+        # This serializes version allocation even if the table has no rows to select_for_update.
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", [model_type])
+
+        # We can also still do select_for_update for safety on existing rows
         existing = list(
             MLModelRegistry.objects.select_for_update().filter(model_type=model_type)
         )
@@ -70,9 +76,9 @@ def save_model(
         final_path = _artifact_path(model_name, version)
         temp_path.replace(final_path)
 
-        # Retire previous active models of the same type
+        # Retire previous models of the same deployment stage (e.g. shadow retires shadow)
         MLModelRegistry.objects.filter(
-            model_type=model_type, status=MLModelRegistry.Status.ACTIVE
+            model_type=model_type, status=MLModelRegistry.Status.ACTIVE, deployment_stage=stage
         ).update(status=MLModelRegistry.Status.RETIRED)
 
         registry_entry = MLModelRegistry.objects.create(
@@ -93,7 +99,7 @@ def save_model(
 
 
 def load_model(model_type: str) -> Any:
-    """Load the currently active model for a given model_type."""
+    """Load the latest active model of any stage. (Legacy/Generic loader)"""
     from apps.ml_engine.models import MLModelRegistry
 
     entry = (
@@ -111,14 +117,41 @@ def load_model(model_type: str) -> Any:
     return joblib.load(entry.artifact_path)
 
 
-def next_version(model_type: str) -> int:
-    """Return the next available version number for a model type."""
+def load_production_model(model_type: str) -> Any:
+    """Load the currently active production-approved model for a given model_type."""
     from apps.ml_engine.models import MLModelRegistry
 
-    latest = (
-        MLModelRegistry.objects.filter(model_type=model_type)
+    entry = (
+        MLModelRegistry.objects.filter(
+            model_type=model_type,
+            status=MLModelRegistry.Status.ACTIVE,
+            deployment_stage="production",
+            production_approved=True
+        )
         .order_by("-model_version")
-        .values_list("model_version", flat=True)
         .first()
     )
-    return (latest or 0) + 1
+    if entry is None:
+        raise FileNotFoundError(
+            f"No active production ML model found for type '{model_type}'."
+        )
+    return joblib.load(entry.artifact_path)
+
+
+def load_shadow_model(model_type: str) -> Any:
+    """Load the currently active shadow or candidate model for testing."""
+    from apps.ml_engine.models import MLModelRegistry
+
+    entry = (
+        MLModelRegistry.objects.filter(
+            model_type=model_type, status=MLModelRegistry.Status.ACTIVE
+        )
+        .exclude(deployment_stage="production")
+        .order_by("-model_version")
+        .first()
+    )
+    if entry is None:
+        raise FileNotFoundError(
+            f"No active shadow model found for type '{model_type}'."
+        )
+    return joblib.load(entry.artifact_path)

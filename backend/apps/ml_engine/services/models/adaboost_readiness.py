@@ -14,7 +14,7 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 
 from apps.ml_engine.services.feature_pipeline import extract_features
-from apps.ml_engine.services.model_store import load_model, next_version, save_model
+from apps.ml_engine.services.model_store import save_model
 
 MODEL_TYPE = "adaboost"
 MODEL_NAME = "adaboost_readiness_predictor"
@@ -62,8 +62,8 @@ def train_adaboost(
     except Exception:
         roc_auc = None
 
-    version = next_version(MODEL_TYPE)
     meta = {
+        "learning_rate": 1.0,
         "n_estimators": n_estimators,
         "accuracy": accuracy,
         "random_state": random_state,
@@ -74,7 +74,6 @@ def train_adaboost(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
         model_obj=model,
-        version=version,
         training_sample_count=len(X_train),
         primary_metric_name="roc_auc",
         primary_metric_value=roc_auc,
@@ -90,7 +89,12 @@ def predict_readiness_improvement(startup) -> float:
     Returns:
         float: Probability [0.0, 1.0].
     """
-    model = load_model(MODEL_TYPE)
+    try:
+        from apps.ml_engine.services.model_store import load_production_model
+        model = load_production_model(MODEL_TYPE)
+    except FileNotFoundError:
+        return 0.0
+
     vec = extract_features(startup).reshape(1, -1)
     prob = float(model.predict_proba(vec)[0][1])
     return round(prob, 4)

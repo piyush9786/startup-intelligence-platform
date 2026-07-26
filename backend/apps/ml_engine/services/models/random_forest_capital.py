@@ -15,7 +15,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
 
 from apps.ml_engine.services.feature_pipeline import extract_features
-from apps.ml_engine.services.model_store import load_model, next_version, save_model
+from apps.ml_engine.services.model_store import save_model
 
 MODEL_TYPE = "random_forest"
 MODEL_NAME = "rf_capital_forecaster"
@@ -61,7 +61,6 @@ def train_random_forest(
 
     mae = float(mean_absolute_error(y_test, model.predict(X_test)))
 
-    version = next_version(MODEL_TYPE)
     meta = {"n_estimators": n_estimators, "max_depth": 12, "random_state": random_state}
     if metadata:
         meta.update(metadata)
@@ -69,7 +68,6 @@ def train_random_forest(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
         model_obj=model,
-        version=version,
         training_sample_count=len(X_train),
         primary_metric_name="mae_months",
         primary_metric_value=mae,
@@ -96,7 +94,14 @@ def predict_ml_runway(
     Returns:
         float: Predicted runway in months (capped at 99.0).
     """
-    model = load_model(MODEL_TYPE)
+    try:
+        from apps.ml_engine.services.model_store import load_production_model
+        model = load_production_model(MODEL_TYPE)
+    except FileNotFoundError:
+        # Fallback to deterministic basic math if no model
+        net_burn = (fixed_costs + variable_costs) - monthly_revenue
+        return round(available_capital / net_burn, 1) if net_burn > 0 else 99.0
+
     startup_vec = extract_features(startup)
     capital_vec = np.array(
         [

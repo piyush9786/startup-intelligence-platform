@@ -77,10 +77,15 @@ services:
   frontend:
     build:
       context: ./frontend
-    command: npx serve -s build -l 3000
+      dockerfile: Dockerfile.prod
     restart: always
     ports:
-      - "80:3000"
+      - "80:80"
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    depends_on:
+      - backend
 
 volumes:
   postgres_prod_data:
