@@ -3435,5 +3435,5 @@ export default function App() {
     );
   }
 
-  return <Workspace onSignOut={() => setAuthenticated(false)} />;
+  return <AppShell onSignOut={() => setAuthenticated(false)} />;
 }

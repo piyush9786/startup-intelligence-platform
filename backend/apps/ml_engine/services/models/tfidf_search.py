@@ -15,13 +15,13 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from apps.ml_engine.services.model_store import load_model, next_version, save_model
+from apps.ml_engine.services.model_store import load_production_model, save_model
 
 MODEL_TYPE = "tfidf"
 MODEL_NAME = "tfidf_hybrid_search"
 
 
-def build_tfidf_index(scheme_corpus: list[dict]) -> dict:
+def build_tfidf_index(scheme_corpus: list[dict], metadata: dict | None = None) -> dict:
     """
     Build and persist a TF-IDF index over scheme text corpus.
 
@@ -29,6 +29,7 @@ def build_tfidf_index(scheme_corpus: list[dict]) -> dict:
         scheme_corpus: List of dicts with keys:
             - "scheme_version_id": str
             - "text": combined description + objective + eligibility evidence
+        metadata: Optional additional training metadata.
 
     Returns:
         dict with registry entry and corpus size.
@@ -50,16 +51,18 @@ def build_tfidf_index(scheme_corpus: list[dict]) -> dict:
         "scheme_version_ids": ids,
     }
 
-    version = next_version(MODEL_TYPE)
+    meta = {"ngram_range": "(1,2)", "max_features": 10_000}
+    if metadata:
+        meta.update(metadata)
+        
     registry_entry = save_model(
         model_type=MODEL_TYPE,
         model_name=MODEL_NAME,
         model_obj=bundle,
-        version=version,
         training_sample_count=len(texts),
         primary_metric_name="vocabulary_size",
         primary_metric_value=float(len(vectorizer.vocabulary_)),
-        metadata={"ngram_range": "(1,2)", "max_features": 10_000},
+        metadata=meta,
     )
     return {"registry": registry_entry, "corpus_size": len(texts)}
 
@@ -76,7 +79,11 @@ def sparse_search(query: str, top_k: int = 20) -> list[dict]:
         list of {"scheme_version_id": str, "sparse_score": float, "rank": int}
         sorted by score descending.
     """
-    bundle = load_model(MODEL_TYPE)
+    try:
+        bundle = load_production_model(MODEL_TYPE)
+    except FileNotFoundError:
+        return []
+
     vectorizer: TfidfVectorizer = bundle["vectorizer"]
     tfidf_matrix = bundle["tfidf_matrix"]
     ids: list[str] = bundle["scheme_version_ids"]
