@@ -104,7 +104,14 @@ CORS_ALLOWED_ORIGINS = [
     if x.strip()
 ]
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+CSRF_TRUSTED_ORIGINS = [
+    x.strip()
+    for x in os.environ.get(
+        "DJANGO_CSRF_TRUSTED_ORIGINS",
+        os.environ.get("DJANGO_CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
+    ).split(",")
+    if x.strip()
+]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

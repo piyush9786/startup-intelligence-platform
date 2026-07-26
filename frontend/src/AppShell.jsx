@@ -814,7 +814,16 @@ function SchemeDetailRoute() {
   const scheme = allSchemes.find(
     (s) => String(s.scheme_id || s.id) === String(schemeId)
   );
-  if (!scheme) return null;
+  if (!scheme) {
+    // Only show NotFound once we know schemes have loaded.
+    // If schemes is still empty and loading is active, show a spinner to prevent
+    // a false not-found flash during async data fetch.
+    const schemesLoaded = allSchemes.length > 0 || !ctx.loadingWorkspace;
+    if (!schemesLoaded) {
+      return <div className="dashboard-loader" role="status"><span className="spinner" aria-hidden="true" />Loading…</div>;
+    }
+    return <NotFoundRoute />;
+  }
 
   return scheme.source_type === "external" ? (
     <ExternalSchemeDetailPage

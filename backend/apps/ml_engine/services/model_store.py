@@ -24,6 +24,36 @@ def _artifact_path(model_name: str, version: int) -> Path:
     return ML_MODELS_DIR / f"{model_name}_v{version}.joblib"
 
 
+def _compute_checksum(path: Path) -> str:
+    """Compute SHA-256 hex digest of the file at *path*."""
+    sha256_hash = hashlib.sha256()
+    with open(path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+
+def _verify_artifact_checksum(entry) -> None:
+    """Raise an error if the artifact file is missing or its checksum doesn't match the registry.
+
+    This is called before loading production or shadow models to detect corruption/tampering.
+    """
+    path = Path(entry.artifact_path) if entry.artifact_path else None
+    if not path or not path.exists():
+        raise FileNotFoundError(
+            f"Artifact file missing for {entry.model_type} v{entry.model_version}: "
+            f"{entry.artifact_path!r}"
+        )
+    if entry.artifact_checksum:
+        actual = _compute_checksum(path)
+        if actual != entry.artifact_checksum:
+            raise ValueError(
+                f"Checksum mismatch for {entry.model_type} v{entry.model_version}. "
+                f"Expected {entry.artifact_checksum!r}, got {actual!r}. "
+                "The artifact may be corrupt or have been tampered with."
+            )
+
+
 def save_model(
     *,
     model_type: str,
@@ -82,12 +112,8 @@ def save_model(
         final_path = _artifact_path(model_name, version)
         temp_path.replace(final_path)
 
-        # Calculate SHA-256 checksum
-        sha256_hash = hashlib.sha256()
-        with open(final_path, "rb") as f:
-            for byte_block in iter(lambda: f.read(4096), b""):
-                sha256_hash.update(byte_block)
-        checksum = sha256_hash.hexdigest()
+        # Calculate SHA-256 checksum of the final artifact
+        checksum = _compute_checksum(final_path)
 
         # Retire previous models of the same deployment stage (e.g. shadow retires shadow)
         MLModelRegistry.objects.filter(
@@ -138,7 +164,10 @@ def load_model(model_type: str) -> Any:
 
 
 def load_production_model(model_type: str) -> Any:
-    """Load the currently active production-approved model for a given model_type."""
+    """Load the currently active production-approved model for a given model_type.
+
+    Verifies artifact integrity via SHA-256 checksum before loading.
+    """
     from apps.ml_engine.models import MLModelRegistry
 
     entry = (
@@ -155,11 +184,15 @@ def load_production_model(model_type: str) -> Any:
         raise FileNotFoundError(
             f"No active production ML model found for type '{model_type}'."
         )
+    _verify_artifact_checksum(entry)
     return joblib.load(entry.artifact_path)
 
 
 def load_shadow_model(model_type: str) -> Any:
-    """Load the currently active shadow or candidate model for testing."""
+    """Load the currently active shadow or candidate model for testing.
+
+    Verifies artifact integrity via SHA-256 checksum before loading.
+    """
     from apps.ml_engine.models import MLModelRegistry
 
     entry = (
@@ -174,4 +207,5 @@ def load_shadow_model(model_type: str) -> Any:
         raise FileNotFoundError(
             f"No active shadow model found for type '{model_type}'."
         )
+    _verify_artifact_checksum(entry)
     return joblib.load(entry.artifact_path)

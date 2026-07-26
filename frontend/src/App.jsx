@@ -42,23 +42,7 @@ import {
   updateStartupProfile,
   uploadEligibilityVerificationEvidence,
 } from "./api";
-import ActionRoadmapPage from "./ActionRoadmapPage";
-import ApplicationTrackerPage from "./ApplicationTrackerPage";
-import AssessmentWizard from "./AssessmentWizard";
-import CapitalPlannerPage from "./CapitalPlannerPage";
-import ChatbotDrawer from "./ChatbotDrawer";
-import DocumentIntakeWorkspace from "./DocumentIntakeWorkspace";
-import FounderIntelligencePage from "./FounderIntelligencePage";
-import FundingPage from "./FundingPage";
-import FundingPlanPage from "./FundingPlanPage";
-import MyStartupPage from "./MyStartupPage";
-import WebsiteTour from "./WebsiteTour";
 import PublicEntry from "./PublicEntry";
-import RequirementsPage from "./RequirementsPage";
-import ReviewerVerificationWorkspace from "./ReviewerVerificationWorkspace";
-import SchemeExplorerPage from "./SchemeExplorerPage";
-import StartingPlanPage from "./StartingPlanPage";
-import StartupBuilderPage from "./StartupBuilderPage";
 import {
   canAccessReviewerWorkspace,
   normalizeCurrentUser,
