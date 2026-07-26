@@ -1,8 +1,8 @@
+import django.db.models.deletion
+import django.utils.timezone
 from django.conf import settings
 from django.db import migrations, models
 from django.db.models import Count, Max, Min, Q
-import django.db.models.deletion
-import django.utils.timezone
 
 
 def backfill_generation_runs(apps, schema_editor):

@@ -715,7 +715,7 @@ function OverviewRoute() {
       dashboardData={ctx.dashboardData}
       generating={ctx.generating}
       generationLabel={ctx.generationLabel}
-      onGenerate={ctx.handleGenerate}
+      onGenerate={() => ctx.handleGenerate(ctx.selectedProfile?.id)}
       onOpenScheme={(target) => openSchemeRoute(navigate, target)}
       profile={ctx.selectedProfile}
       query={ctx.query}
@@ -915,7 +915,17 @@ function ReviewerRoute() {
 
 function OnboardingRoute() {
   const ctx = useOutletContext();
-  return <AssessmentWizard profile={ctx.selectedProfile} />;
+  const navigate = useNavigate();
+  return (
+    <AssessmentWizard 
+      profile={ctx.selectedProfile} 
+      onSubmitted={(submission) => {
+        const profileId = submission?.startup_profile_id || submission?.startup_profile?.id || submission?.id;
+        if (profileId) ctx.setSelectedProfileId(profileId);
+        navigate("/dashboard");
+      }}
+    />
+  );
 }
 
 function DocumentsRoute() {
