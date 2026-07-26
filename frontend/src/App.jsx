@@ -39,6 +39,7 @@ import {
   listStartupAdvisorBriefings,
   listStartupProfiles,
   updateCurrentStartupOnboarding,
+  updateStartupProfile,
   uploadEligibilityVerificationEvidence,
 } from "./api";
 import ActionRoadmapPage from "./ActionRoadmapPage";

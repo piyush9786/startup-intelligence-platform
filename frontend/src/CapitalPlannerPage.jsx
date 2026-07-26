@@ -13,16 +13,13 @@ export default function CapitalPlannerPage({ onNavigate }) {
   const [generating, setGenerating] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
-  useEffect(() => {
-    loadPlan();
-  }, []);
-
   async function loadPlan() {
     setLoading(true);
     try {
       const data = await getCurrentCapitalPlan();
       setPlan(data);
       if (data) {
+        setActiveScenario(data.active_scenario || "balanced");
         setCapitalInput(data.available_capital || "");
         setRevenueInput(data.monthly_revenue || "");
         setFixedCostsInput(data.fixed_costs || "");
@@ -34,6 +31,10 @@ export default function CapitalPlannerPage({ onNavigate }) {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    loadPlan();
+  }, []);
 
   async function handleCalculate(e) {
     if (e) e.preventDefault();
