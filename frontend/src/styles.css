@@ -1399,6 +1399,57 @@ body {
   min-height: 60vh;
 }
 
+.app-loading {
+  align-items: center;
+  background: radial-gradient(circle at 50% 35%, #102d1d 0%, #08160f 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  justify-content: center;
+  left: 0;
+  position: fixed;
+  top: 0;
+  width: 100vw;
+  z-index: 9999;
+}
+
+.app-loading-card {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 20px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 2.75rem 3.25rem;
+  text-align: center;
+}
+
+.app-loading-spinner {
+  border: 3px solid rgba(204, 240, 84, 0.2);
+  border-top-color: #ccf054;
+  border-radius: 50%;
+  height: 40px;
+  width: 40px;
+  animation: app-spin 0.75s linear infinite;
+}
+
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.app-loading span {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .dashboard-page,
 .advisor-workspace-page {
   display: grid;
