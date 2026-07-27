@@ -100,13 +100,6 @@ services:
 
   ollama:
     image: ollama/ollama:latest
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     environment:
       OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-4096}
       OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-1}
@@ -123,6 +116,26 @@ services:
       timeout: 5s
       retries: 30
     restart: unless-stopped
+
+  ollama_init:
+    image: ollama/ollama:latest
+    env_file: .env
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: >-
+      model="$${STARTUP_ADVISOR_LLM_MODEL:-qwen3.5:9b}";
+      echo "Ensuring Ollama generation model: $$model";
+      ollama pull "$$model";
+      if [ "$${STARTUP_ADVISOR_RAG_ENABLED:-false}" = "true" ]; then
+        embedding_model="$${STARTUP_ADVISOR_EMBEDDING_MODEL:-embeddinggemma}";
+        echo "Ensuring Ollama embedding model: $$embedding_model";
+        ollama pull "$$embedding_model";
+      fi
+    restart: "no"
 
   mailpit:
     image: axllent/mailpit:latest
@@ -145,6 +158,13 @@ services:
 
   worker:
     <<: *backend-common
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama_init:
+        condition: service_completed_successfully
     command: celery -A config worker --loglevel=INFO --concurrency=2
 
   beat:

@@ -42,25 +42,31 @@ from .services.advisor_briefing_jobs import (
 
 
 def _visible_profiles(user):
-    return StartupProfile.objects.filter(owner=user)
+    queryset = StartupProfile.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(owner=user)
+    return queryset
 
 
 def _visible_advisor_briefings(user):
-    return StartupAdvisorBriefing.objects.filter(
-        startup_profile__owner=user,
-    )
+    queryset = StartupAdvisorBriefing.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
 
 
 def _visible_advisor_briefing_jobs(user):
-    return StartupAdvisorBriefingJob.objects.filter(
-        startup_profile__owner=user,
-    )
+    queryset = StartupAdvisorBriefingJob.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
 
 
 def _visible_advisor_snapshots(user):
-    return StartupAdvisorSnapshot.objects.filter(
-        startup_profile__owner=user,
-    )
+    queryset = StartupAdvisorSnapshot.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
 
 
 class StartupAdvisorCurrentView(APIView):

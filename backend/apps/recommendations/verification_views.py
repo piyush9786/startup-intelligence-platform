@@ -26,13 +26,17 @@ from .verification_serializers import (
 
 
 def _visible_profiles(user):
-    return StartupProfile.objects.filter(owner=user)
+    queryset = StartupProfile.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(owner=user)
+    return queryset
 
 
 def _visible_submissions(user):
-    return EligibilityVerificationSubmission.objects.filter(
-        startup_profile__owner=user,
-    )
+    queryset = EligibilityVerificationSubmission.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
 
 
 def _raise_service_validation(
