@@ -6,9 +6,11 @@ import {
 } from "./complianceEngine";
 import {
   certificationRequirements,
+  currentSchemeVersion,
   filterSchemes,
   schemeEligibilityRules,
   schemeRequirements,
+  schemeRestrictions,
 } from "./dashboard";
 import {
   externalCertificationTags,
@@ -24,10 +26,19 @@ export default function RequirementsPage({
   const [selectedAuthority, setSelectedAuthority] = useState("all");
 
   const applicableSchemes = filterSchemes(schemes, query).filter(
-    (scheme) =>
-      schemeRequirements(scheme).length ||
-      schemeEligibilityRules(scheme).length ||
-      schemeRequirements(scheme).length,
+    (scheme) => {
+      const version = currentSchemeVersion(scheme);
+
+      return (
+        (version?.verification_status === "verified" || !version?.verification_status) &&
+        (
+          schemeRequirements(scheme).length > 0 ||
+          certificationRequirements(scheme).length > 0 ||
+          schemeEligibilityRules(scheme).length > 0 ||
+          schemeRestrictions(scheme).length > 0
+        )
+      );
+    },
   );
 
   const externalRecords = filterExternalCertificationRequirements(
@@ -97,6 +108,7 @@ export default function RequirementsPage({
               const documents = schemeRequirements(scheme);
               const certifications = certificationRequirements(scheme);
               const rules = schemeEligibilityRules(scheme);
+              const restrictions = schemeRestrictions(scheme);
 
               return (
                 <article className="requirement-card" key={scheme.id}>
@@ -155,6 +167,19 @@ export default function RequirementsPage({
                         </ul>
                       ) : (
                         <p>No structured eligibility rule captured.</p>
+                      )}
+                    </section>
+
+                    <section>
+                      <h3>Other conditions and restrictions</h3>
+                      {restrictions.length ? (
+                        <ul>
+                          {restrictions.slice(0, 6).map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>No additional restriction has been captured.</p>
                       )}
                     </section>
                   </div>
