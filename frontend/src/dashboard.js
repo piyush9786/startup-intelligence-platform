@@ -239,6 +239,16 @@ function searchableSchemeText(scheme) {
     ...(version.support_types || []),
     ...(version.categories || []),
     ...(version.benefits || []),
+    ...(version.required_documents || []).map(normalizeRequirement),
+    ...(version.restrictions || []).map(normalizeRequirement),
+    ...(version.eligibility_rules || []).flatMap((rule) => [
+      rule?.evidence_text,
+      rule?.field_path,
+      rule?.operator,
+      rule?.expected_value === undefined
+        ? ""
+        : JSON.stringify(rule.expected_value),
+    ]),
   ]
     .filter(Boolean)
     .join(" ")
@@ -340,6 +350,14 @@ function normalizeRequirement(value) {
 export function schemeRequirements(scheme) {
   const version = currentSchemeVersion(scheme) || {};
   return (version.required_documents || [])
+    .map(normalizeRequirement)
+    .filter(Boolean);
+}
+
+export function schemeRestrictions(scheme) {
+  const version = currentSchemeVersion(scheme) || {};
+
+  return (version.restrictions || [])
     .map(normalizeRequirement)
     .filter(Boolean);
 }
