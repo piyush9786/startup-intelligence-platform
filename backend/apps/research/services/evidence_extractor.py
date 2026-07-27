@@ -5,8 +5,8 @@ from typing import Any
 
 from .source_validator import (
     classify_source_type,
-    classify_verification_status,
     compute_content_hash,
+    compute_evidence_confidence,
     validate_source_url,
 )
 from .tavily_client import SearchResult
@@ -24,8 +24,8 @@ def extract_and_score_evidence(
             continue
 
         stype = classify_source_type(res.url, res.publisher)
-        conf = float(res.score) if res.score is not None else 0.75
-        vstatus = classify_verification_status(stype, conf)
+        relevance = float(res.score) if res.score is not None else 0.75
+        conf_score, vstatus = compute_evidence_confidence(stype, relevance)
 
         chash = compute_content_hash(f"{res.url}:{res.content[:200]}")
 
@@ -38,7 +38,7 @@ def extract_and_score_evidence(
                 "source_type": stype,
                 "content_excerpt": res.content,
                 "content_hash": chash,
-                "confidence_score": conf,
+                "confidence_score": conf_score,
                 "verification_status": vstatus,
             }
         )
