@@ -12,6 +12,13 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     server: {
+      host: "0.0.0.0",
+      port: 5173,
+      strictPort: true,
+      watch: {
+        usePolling: env.VITE_USE_POLLING === "true",
+        interval: 250,
+      },
       proxy: {
         "/admin": {
           changeOrigin: true,
