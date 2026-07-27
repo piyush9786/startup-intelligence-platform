@@ -21,6 +21,7 @@ urlpatterns = [
     path("api/v1/knowledge/", include("apps.knowledge.urls")),
     path("api/v1/", include("apps.recommendations.urls")),
     path("api/v1/", include("apps.schemes.urls")),
-    path("api/v1/", include("apps.sources.urls")),
+    path("api/v1/sources/", include("apps.sources.urls")),
     path("api/v1/", include("apps.startups.urls")),
+    path("api/v1/research/", include("apps.research.urls")),
 ]
