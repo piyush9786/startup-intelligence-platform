@@ -197,6 +197,29 @@ function ExternalSchemeSection({ eyebrow, id, onOpenScheme, schemes, title }) {
   );
 }
 
+function finiteNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function probabilityPercent(value) {
+  const probability = finiteNumber(value);
+
+  if (
+    probability === null ||
+    probability < 0 ||
+    probability > 1
+  ) {
+    return null;
+  }
+
+  return Math.round(probability * 100);
+}
+
 export default function SchemeExplorerPage({
   externalSchemes = [],
   onOpenScheme,
@@ -212,12 +235,21 @@ export default function SchemeExplorerPage({
 
   const recommendationMap = useMemo(() => {
     const map = new Map();
-    (recommendations || []).forEach((rec, idx) => {
-      map.set(rec.scheme_id || rec.id, {
-        score: rec.score ?? 90,
-        rank: rec.rank ?? idx + 1,
+
+    (recommendations || []).forEach((recommendation) => {
+      const schemeId =
+        recommendation.scheme_id ?? recommendation.id;
+
+      if (schemeId === null || schemeId === undefined) {
+        return;
+      }
+
+      map.set(String(schemeId), {
+        rank: recommendation.rank ?? null,
+        svmScore: finiteNumber(recommendation.svm_score),
       });
     });
+
     return map;
   }, [recommendations]);
 
@@ -440,7 +472,11 @@ export default function SchemeExplorerPage({
                   const version = currentSchemeVersion(scheme) || {};
                   const supportTypes = (version.support_types || []).slice(0, 3);
                   const deadline = schemeDeadlineStatus(scheme);
-                  const rec = recommendationMap.get(scheme.id) || { score: 85, rank: null };
+                  const recommendation =
+                    recommendationMap.get(String(scheme.id));
+                  const svmMatchPercent = probabilityPercent(
+                    recommendation?.svmScore,
+                  );
 
                   return (
                     <button
@@ -456,10 +492,20 @@ export default function SchemeExplorerPage({
                         <span className={`application-badge deadline-${deadline.tone}`} title={deadline.detail}>
                           {deadline.label}
                         </span>
-                        {rec.rank && <span className="rank-badge">Rank: #{rec.rank}</span>}
-                        <span className="score-pill" title="Calibrated SVM Scheme Success Ranker (Model 4)">
-                          {rec.svm_score ? `⚡ SVM Match: ${Math.round(rec.svm_score * 100)}%` : `Match: ${rec.score <= 1 ? Math.round(rec.score * 100) : Math.round(rec.score)}%`}
-                        </span>
+                        {recommendation?.rank && (
+                          <span className="rank-badge">
+                            Rank: #{recommendation.rank}
+                          </span>
+                        )}
+
+                        {svmMatchPercent !== null && (
+                          <span
+                            className="score-pill"
+                            title="Production-approved calibrated SVM success estimate"
+                          >
+                            ⚡ SVM success estimate: {svmMatchPercent}%
+                          </span>
+                        )}
                       </div>
                       <h3>{scheme.canonical_name || scheme.scheme_name}</h3>
                       <p className="scheme-authority">{scheme.authority_name || "Authority not published"}</p>

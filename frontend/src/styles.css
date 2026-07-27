@@ -1210,6 +1210,7 @@ body {
   padding: 0.6rem 0.75rem;
   position: relative;
   text-align: left;
+  text-decoration: none;
   transition: color 0.18s ease;
   width: 100%;
 }
