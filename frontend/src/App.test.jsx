@@ -1999,7 +1999,7 @@ describe("functional user dashboard", () => {
       profiles: [],
     });
 
-    api.getCurrentUser.mockResolvedValue({
+    api.getCurrentUser.mockResolvedValueOnce({
       id: "reviewer-user-chatbot",
       username: "reviewer",
       email: "reviewer@example.com",
