@@ -54,3 +54,6 @@ htmlcov/
 
 # Local backups created by the research orchestration bundle
 .vanilla-orchestration-backup/
+
+# Local backups created by the research reliability bundle
+.research-reliability-backup/

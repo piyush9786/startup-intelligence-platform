@@ -54,10 +54,37 @@ jobs:
           MINIO_SECRET_KEY=password
           MINIO_BUCKET_RAW=startup-raw
           MINIO_BUCKET_STARTUP_EVIDENCE=startup-evidence
+          STARTUP_ADVISOR_RAG_ENABLED=false
+          WEB_SEARCH_ENABLED=false
           EOF
-      - run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml up -d --build
-      - run: curl --fail --silent --show-error --retry 30 --retry-delay 5 --retry-all-errors http://localhost/api/v1/health/ || (docker compose --env-file ../.env.production -f ../docker-compose.prod.yml logs && exit 1)
-      - run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml down
+      - name: Start production stack
+        run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml up -d --build
+      - name: Verify production backend health
+        run: |
+          set -euo pipefail
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 30 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            -H 'X-Forwarded-Proto: https' \
+            http://localhost/api/v1/health/ \
+          | python -c '
+          import json
+          import sys
+
+          payload = json.load(sys.stdin)
+          assert payload["status"] == "ok", payload
+          assert payload["database"] is True, payload
+          '
+      - name: Show production logs on failure
+        if: failure()
+        run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml logs
+      - name: Stop production stack
+        if: always()
+        run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml down -v
       - run: pytest
       - run: ruff check .
 
