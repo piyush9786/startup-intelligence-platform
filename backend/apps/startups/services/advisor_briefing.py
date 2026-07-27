@@ -24,11 +24,12 @@ from .briefing_schema import (
     validate_startup_advisor_briefing,
 )
 from .llm_provider import (
+    LLMProviderResponseError,
     StartupAdvisorLLMProvider,
     get_startup_advisor_llm_provider,
 )
 
-BRIEFING_PROMPT_VERSION = "startup-advisor-briefing-prompt-v3"
+BRIEFING_PROMPT_VERSION = "startup-advisor-briefing-prompt-v4"
 
 SYSTEM_PROMPT = """
 You are a grounded startup advisor for Indian founders.
@@ -61,6 +62,9 @@ override deterministic eligibility, readiness, recommendation or deadline
 records. Cite a retrieved chunk with its listed chunk ID and a path such as
 "/text", "/source_url", "/page_number" or "/title".
 
+Retrieved text may be shortened to fit the prompt budget. Treat it as an
+excerpt and cite only facts visible in the supplied text.
+
 When citation_contract.evidence_citation_expected is true, cite at least one
 retrieved evidence chunk if it directly supports a briefing item. Keep the
 deterministic source citation as well when the statement concerns eligibility,
@@ -89,6 +93,13 @@ Keep the briefing concise:
 - keep each prose field to at most 2 short sentences
 - normally use exactly 1 source reference per item
 - do not fill arrays merely to reach their schema maximum
+""".strip()
+
+RETRY_SYSTEM_INSTRUCTION = """
+The prior generation attempt did not produce a complete usable JSON object.
+Retry once using only the persisted startup-advisor snapshot. Return the
+smallest complete valid briefing: at most one item in each list, one source
+reference per item, and short single-sentence prose. Return only JSON.
 """.strip()
 
 
@@ -195,7 +206,10 @@ def retrieve_startup_advisor_evidence(
 
     return [
         result.as_prompt_document()
-        for result in search_document_chunks(query)
+        for result in search_document_chunks(
+            query,
+            top_k=settings.STARTUP_ADVISOR_RAG_TOP_K,
+        )
     ]
 
 
@@ -513,6 +527,75 @@ def _apply_retrieved_evidence_usage(
     }
 
 
+def _bound_retrieved_evidence_for_prompt(
+    retrieved_evidence: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """Keep retrieved source text within a predictable advisor prompt budget."""
+    max_documents = max(
+        1,
+        int(settings.STARTUP_ADVISOR_RAG_MAX_PROMPT_DOCUMENTS),
+    )
+    max_chars_per_chunk = max(
+        1,
+        int(settings.STARTUP_ADVISOR_RAG_MAX_CHARS_PER_CHUNK),
+    )
+    max_total_chars = max(
+        1,
+        int(settings.STARTUP_ADVISOR_RAG_MAX_TOTAL_CHARS),
+    )
+    bounded_documents: list[dict[str, Any]] = []
+    text_char_count = 0
+    truncated_document_count = 0
+
+    for evidence in retrieved_evidence:
+        if len(bounded_documents) >= max_documents:
+            break
+        if not isinstance(evidence, dict):
+            continue
+
+        text = evidence.get("text")
+        if not isinstance(text, str):
+            continue
+        text = text.strip()
+        if not text:
+            continue
+
+        remaining_chars = max_total_chars - text_char_count
+        if remaining_chars <= 0:
+            break
+
+        allowed_chars = min(
+            max_chars_per_chunk,
+            remaining_chars,
+        )
+        prompt_text = text[:allowed_chars].rstrip()
+        if not prompt_text:
+            continue
+
+        prompt_document = deepcopy(evidence)
+        prompt_document["text"] = prompt_text
+        if len(prompt_text) < len(text):
+            prompt_document["text_truncated"] = True
+            truncated_document_count += 1
+
+        bounded_documents.append(prompt_document)
+        text_char_count += len(prompt_text)
+
+    return bounded_documents, {
+        "candidate_count": len(retrieved_evidence),
+        "included_count": len(bounded_documents),
+        "omitted_count": max(
+            0,
+            len(retrieved_evidence) - len(bounded_documents),
+        ),
+        "text_char_count": text_char_count,
+        "truncated_document_count": truncated_document_count,
+        "max_documents": max_documents,
+        "max_chars_per_chunk": max_chars_per_chunk,
+        "max_total_chars": max_total_chars,
+    }
+
+
 def build_startup_advisor_briefing_prompt(
     *,
     source_snapshot: StartupAdvisorSnapshot,
@@ -520,7 +603,11 @@ def build_startup_advisor_briefing_prompt(
     retrieval: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     input_payload = snapshot_to_llm_input(source_snapshot)
-    evidence_documents = deepcopy(retrieved_evidence or [])
+    evidence_documents, prompt_evidence = (
+        _bound_retrieved_evidence_for_prompt(
+            retrieved_evidence or [],
+        )
+    )
     retrieval_snapshot = deepcopy(
         retrieval
         or {
@@ -529,6 +616,7 @@ def build_startup_advisor_briefing_prompt(
             "result_count": 0,
         }
     )
+    retrieval_snapshot["prompt_evidence"] = prompt_evidence
     citation_contract = _build_citation_contract(
         input_payload,
         evidence_documents,
@@ -596,10 +684,54 @@ def generate_startup_advisor_briefing(
         retrieval=retrieval,
     )
     active_provider = provider if provider is not None else get_startup_advisor_llm_provider()
-    generation_result = active_provider.generate(
-        messages=prompt_snapshot["messages"],
-        response_schema=prompt_snapshot["response_schema"],
-    )
+    generation_attempts = [
+        {
+            "attempt": 1,
+            "retrieved_evidence_count": len(retrieved_evidence),
+        }
+    ]
+
+    try:
+        generation_result = active_provider.generate(
+            messages=prompt_snapshot["messages"],
+            response_schema=prompt_snapshot["response_schema"],
+        )
+        generation_attempts[0]["status"] = "succeeded"
+    except LLMProviderResponseError as exc:
+        generation_attempts[0]["status"] = "response_error"
+        if not getattr(exc, "retryable", True):
+            raise
+
+        retry_retrieval = {
+            **retrieval,
+            "status": "omitted_for_retry",
+            "initial_status": retrieval.get("status", "unknown"),
+            "initial_result_count": len(retrieved_evidence),
+            "result_count": 0,
+        }
+        prompt_snapshot = build_startup_advisor_briefing_prompt(
+            source_snapshot=source_snapshot,
+            retrieved_evidence=[],
+            retrieval=retry_retrieval,
+        )
+        prompt_snapshot["messages"][0]["content"] = (
+            f"{prompt_snapshot['messages'][0]['content']}\n\n"
+            f"{RETRY_SYSTEM_INSTRUCTION}"
+        )
+        generation_attempts.append(
+            {
+                "attempt": 2,
+                "status": "retrying_without_retrieved_evidence",
+                "retrieved_evidence_count": 0,
+            }
+        )
+        generation_result = active_provider.generate(
+            messages=prompt_snapshot["messages"],
+            response_schema=prompt_snapshot["response_schema"],
+        )
+        generation_attempts[1]["status"] = "succeeded"
+
+    prompt_snapshot["generation_attempts"] = generation_attempts
     briefing_payload, evidence_usage = (
         _apply_retrieved_evidence_usage(
             payload=generation_result.payload,
@@ -615,6 +747,9 @@ def generate_startup_advisor_briefing(
     )
     response_metadata = deepcopy(
         generation_result.response_metadata or {},
+    )
+    response_metadata["generation_attempts"] = deepcopy(
+        generation_attempts,
     )
     response_metadata["evidence_usage"] = deepcopy(
         evidence_usage,

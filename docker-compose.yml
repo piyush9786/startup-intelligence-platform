@@ -136,7 +136,7 @@ services:
         echo "Ensuring Ollama chatbot model: $$chatbot_model";
         ollama pull "$$chatbot_model";
       fi;
-      if [ "$${STARTUP_ADVISOR_RAG_ENABLED:-false}" = "true" ]; then
+      if [ "$${STARTUP_ADVISOR_RAG_ENABLED:-false}" = "true" ] || [ "$${RESEARCH_VECTOR_RAG_ENABLED:-false}" = "true" ]; then
         embedding_model="$${STARTUP_ADVISOR_EMBEDDING_MODEL:-embeddinggemma}";
         echo "Ensuring Ollama embedding model: $$embedding_model";
         ollama pull "$$embedding_model";

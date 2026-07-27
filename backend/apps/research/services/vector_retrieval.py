@@ -128,7 +128,7 @@ def retrieve_startup_vector_evidence(
     profile_field = str(
         getattr(
             settings,
-            "STARTUP_ADVISOR_QDRANT_PROFILE_FIELD",
+            "RESEARCH_VECTOR_QDRANT_PROFILE_FIELD",
             "startup_profile_id",
         )
     ).strip()
@@ -139,15 +139,17 @@ def retrieve_startup_vector_evidence(
     expected_profile_id = str(startup_profile_id)
     limit = max(
         1,
-        int(top_k or settings.STARTUP_ADVISOR_RAG_TOP_K),
+        int(
+            top_k
+            if top_k is not None
+            else settings.RESEARCH_VECTOR_RAG_TOP_K
+        ),
     )
 
     client = _build_qdrant_client()
     try:
         response = client.query_points(
-            collection_name=(
-                settings.STARTUP_ADVISOR_QDRANT_COLLECTION
-            ),
+            collection_name=settings.RESEARCH_VECTOR_QDRANT_COLLECTION,
             query=embedding,
             query_filter=qdrant_models.Filter(
                 must=[
@@ -161,7 +163,7 @@ def retrieve_startup_vector_evidence(
             ),
             limit=limit,
             score_threshold=float(
-                settings.STARTUP_ADVISOR_RAG_MIN_SCORE,
+                settings.RESEARCH_VECTOR_RAG_MIN_SCORE,
             ),
             with_payload=True,
             with_vectors=False,

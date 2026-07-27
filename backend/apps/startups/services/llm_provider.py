@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import json
+import logging
+import re
 from dataclasses import dataclass
 from typing import Any, Protocol
 
 import httpx
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+
+logger = logging.getLogger(__name__)
 
 
 class LLMProviderError(RuntimeError):
@@ -18,7 +22,17 @@ class LLMProviderUnavailableError(LLMProviderError):
 
 
 class LLMProviderResponseError(LLMProviderError):
-    pass
+    def __init__(self, message: str, *, retryable: bool = True):
+        super().__init__(message)
+        self.retryable = retryable
+
+
+class LLMOutputTruncatedError(LLMProviderResponseError):
+    """Raised when LLM generation exceeds max output tokens or finishes prematurely."""
+
+
+class LLMResponseFormatError(LLMProviderResponseError):
+    """Raised when LLM output cannot be parsed as a valid JSON object."""
 
 
 @dataclass(frozen=True)
@@ -44,12 +58,58 @@ class StartupAdvisorLLMProvider(Protocol):
     ) -> LLMGenerationResult: ...
 
 
-def _ollama_generation_schema(schema: Any) -> Any:
-    """Reduce JSON Schema to the subset needed for Ollama generation.
+def _clean_and_parse_json_payload(content: Any) -> dict[str, Any]:
+    """Robust JSON cleaning and parsing for LLM output.
 
-    Django still validates the returned payload against the complete schema,
-    including lengths, item counts, constants, formats, patterns and grounding.
+    Strips markdown code fences (```json ... ```), extracts outer JSON objects,
+    repairs trailing commas, and parses into a dictionary.
     """
+    if isinstance(content, dict):
+        return content
+
+    if not isinstance(content, str) or not content.strip():
+        raise LLMResponseFormatError("LLM response content is empty.")
+
+    cleaned = content.strip()
+
+    # Remove markdown code fences if present
+    if "```" in cleaned:
+        fence_match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", cleaned, re.IGNORECASE)
+        if fence_match:
+            cleaned = fence_match.group(1).strip()
+        else:
+            cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    # Extract JSON object substring between first '{' and last '}'
+    if not (cleaned.startswith("{") and cleaned.endswith("}")):
+        start_idx = cleaned.find("{")
+        end_idx = cleaned.rfind("}")
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            cleaned = cleaned[start_idx : end_idx + 1].strip()
+
+    # Standard JSON parse
+    try:
+        data = json.loads(cleaned)
+        if isinstance(data, dict):
+            return data
+    except ValueError:
+        pass
+
+    # Secondary repair attempt: strip trailing commas before closing braces/brackets
+    repaired = re.sub(r",\s*([\}\]])", r"\1", cleaned)
+    try:
+        data = json.loads(repaired)
+        if isinstance(data, dict):
+            return data
+    except ValueError as exc:
+        raise LLMResponseFormatError("The local Ollama model returned an invalid response.") from exc
+
+    raise LLMResponseFormatError("The local Ollama model returned an invalid response.")
+
+
+def _ollama_generation_schema(schema: Any) -> Any:
+    """Reduce JSON Schema to the subset needed for Ollama generation."""
     if isinstance(schema, list):
         return [_ollama_generation_schema(item) for item in schema]
 
@@ -80,8 +140,6 @@ def _ollama_generation_schema(schema: Any) -> Any:
             schema["items"],
         )
 
-    # Preserve only the inexpensive zero-item constraint. This lets
-    # callers require an unsupported result group to remain empty.
     if schema.get("maxItems") == 0:
         simplified["maxItems"] = 0
 
@@ -189,43 +247,111 @@ class OllamaStartupAdvisorProvider:
                 )
                 response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 400 or exc.response.status_code >= 500:
-                raise LLMProviderResponseError(
-                    "The local Ollama model rejected the structured response request."
+            status_code = exc.response.status_code
+
+            if status_code == 400:
+                raise LLMResponseFormatError(
+                    "Ollama rejected the structured response schema.",
+                    retryable=False,
                 ) from exc
+
+            if status_code == 404:
+                raise LLMProviderUnavailableError(
+                    f"The configured Ollama model {self.model_name!r} was not found."
+                ) from exc
+
+            if status_code >= 500:
+                raise LLMProviderUnavailableError(
+                    "Ollama failed while generating the advisor response."
+                ) from exc
+
             raise LLMProviderUnavailableError(
-                "The local Ollama model service is unavailable or "
-                "the configured model is not ready."
+                f"Ollama returned HTTP {status_code}."
             ) from exc
         except (
             httpx.ConnectError,
             httpx.TimeoutException,
         ) as exc:
             raise LLMProviderUnavailableError(
-                "The local Ollama model service is unavailable or "
-                "the configured model is not ready."
+                "The local Ollama model service is unavailable or configured model is not ready."
             ) from exc
         except httpx.HTTPError as exc:
             raise LLMProviderUnavailableError("The local Ollama request failed.") from exc
 
+        response_data: Any = None
+        content: Any = None
+
         try:
             response_data = response.json()
+        except ValueError as exc:
+            _log_invalid_ollama_advisor_response(
+                model_name=self.model_name,
+                response=response,
+                response_data=response_data,
+                content=content,
+            )
+            raise LLMResponseFormatError(
+                "The local Ollama model returned invalid non-JSON HTTP body."
+            ) from exc
+
+        if not isinstance(response_data, dict):
+            _log_invalid_ollama_advisor_response(
+                model_name=self.model_name,
+                response=response,
+                response_data=response_data,
+                content=content,
+            )
+            raise LLMResponseFormatError(
+                "The local Ollama model response is not a dict."
+            )
+
+        try:
             content = response_data.get("response")
             if content is None:
                 content = response_data["message"]["content"]
-            payload = json.loads(content)
-        except (
-            KeyError,
-            TypeError,
-            ValueError,
-            json.JSONDecodeError,
-        ) as exc:
-            raise LLMProviderResponseError(
-                "The local Ollama model returned an invalid response."
+        except (KeyError, TypeError) as exc:
+            _log_invalid_ollama_advisor_response(
+                model_name=self.model_name,
+                response=response,
+                response_data=response_data,
+                content=content,
+            )
+            raise LLMResponseFormatError(
+                "The local Ollama model payload lacks a 'response' or 'message' field."
             ) from exc
 
-        if not isinstance(payload, dict):
-            raise LLMProviderResponseError("The local Ollama model response must be a JSON object.")
+        if response_data.get("done_reason") == "length":
+            _log_invalid_ollama_advisor_response(
+                model_name=self.model_name,
+                response=response,
+                response_data=response_data,
+                content=content,
+            )
+            raise LLMOutputTruncatedError(
+                "The advisor response was truncated because the output token limit was reached."
+            )
+
+        if response_data.get("done") is False:
+            _log_invalid_ollama_advisor_response(
+                model_name=self.model_name,
+                response=response,
+                response_data=response_data,
+                content=content,
+            )
+            raise LLMResponseFormatError(
+                "Ollama did not finish generating the advisor response."
+            )
+
+        try:
+            payload = _clean_and_parse_json_payload(content)
+        except LLMResponseFormatError as exc:
+            _log_invalid_ollama_advisor_response(
+                model_name=self.model_name,
+                response=response,
+                response_data=response_data,
+                content=content,
+            )
+            raise exc
 
         return LLMGenerationResult(
             payload=payload,
@@ -248,6 +374,29 @@ class OllamaStartupAdvisorProvider:
                 "created_at": response_data.get("created_at"),
             },
         )
+
+
+def _log_invalid_ollama_advisor_response(
+    *,
+    model_name: str,
+    response: httpx.Response,
+    response_data: Any,
+    content: Any,
+) -> None:
+    metadata = response_data if isinstance(response_data, dict) else {}
+
+    logger.warning(
+        "Invalid Ollama advisor response",
+        extra={
+            "model": model_name,
+            "http_status": response.status_code,
+            "done": metadata.get("done"),
+            "done_reason": metadata.get("done_reason"),
+            "eval_count": metadata.get("eval_count"),
+            "content_length": len(content) if isinstance(content, str) else None,
+            "content_preview": content[:300] if isinstance(content, str) else None,
+        },
+    )
 
 
 def _optional_nonnegative_int(value: Any) -> int | None:

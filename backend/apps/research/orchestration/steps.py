@@ -208,7 +208,7 @@ def retrieve_vector_evidence(
     state: ResearchState,
     dependencies: ResearchDependencies,
 ) -> ResearchState:
-    if not settings.STARTUP_ADVISOR_RAG_ENABLED:
+    if not settings.RESEARCH_VECTOR_RAG_ENABLED:
         state.vector_retrieval_status = "disabled"
         return state
 
@@ -216,7 +216,7 @@ def retrieve_vector_evidence(
         state.vector_evidence = dependencies.retrieve_vector_evidence(
             startup_profile_id=str(state.profile.id),
             query=state.question,
-            top_k=settings.STARTUP_ADVISOR_RAG_TOP_K,
+            top_k=settings.RESEARCH_VECTOR_RAG_TOP_K,
         )
     except VectorRetrievalError as exc:
         logger.warning(
