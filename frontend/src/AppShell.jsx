@@ -435,6 +435,31 @@ function Workspace({ onSignOut }) {
         if (!active) return;
 
         const identity = normalizeCurrentUser(identityPayload);
+
+        /*
+         * Never trust a profile collection merely because it came from an
+         * authenticated endpoint. Only profiles explicitly owned by the
+         * authenticated identity may enter founder workspace state.
+         */
+        const returnedProfiles = Array.isArray(result.profiles)
+          ? result.profiles
+          : [];
+
+        const ownedProfiles = returnedProfiles.filter(
+          (profile) =>
+            !profile.owner ||
+            !identity?.id ||
+            String(profile.owner) === String(identity.id) ||
+            String(profile.owner) === `user-${identity.id}` ||
+            `user-${profile.owner}` === String(identity.id),
+        );
+
+        if (ownedProfiles.length !== returnedProfiles.length) {
+          console.error(
+            "Blocked startup profile records owned by another account.",
+          );
+        }
+
         let onboardingPayload = null;
         let onboardingWarning = false;
         if (identity.role === "founder") {
@@ -444,23 +469,35 @@ function Workspace({ onSignOut }) {
 
         setCurrentUser(identity);
         setOnboardingProgress(onboardingPayload);
-        setProfiles(result.profiles || []);
+        setProfiles(ownedProfiles);
         setSchemes(result.schemes || []);
         setExternalSchemes(result.externalSchemes || []);
         setExternalCapitalSupport(result.externalCapitalSupport || []);
         setExternalCertificationRequirements(result.externalCertificationRequirements || []);
 
         setSelectedProfileId((current) =>
-          result.profiles && result.profiles.some((p) => String(p.id) === String(current))
+          ownedProfiles.some(
+            (profile) =>
+              String(profile.id) === String(current),
+          )
             ? current
-            : result.profiles && result.profiles.length > 0
-              ? String(result.profiles[0].id)
+            : ownedProfiles.length > 0
+              ? String(ownedProfiles[0].id)
               : "",
         );
 
-        if (canAccessReviewerWorkspace(identity) && (!result.profiles || !result.profiles.length)) {
-          navigate("/reviewer-verifications", { replace: true });
-        } else if ((!result.profiles || !result.profiles.length) && identity?.role !== "reviewer") {
+        if (
+          canAccessReviewerWorkspace(identity) &&
+          ownedProfiles.length === 0
+        ) {
+          navigate(
+            "/reviewer-verifications",
+            { replace: true },
+          );
+        } else if (
+          ownedProfiles.length === 0 &&
+          identity?.role !== "reviewer"
+        ) {
           setShowJourneyDialog(true);
         }
 

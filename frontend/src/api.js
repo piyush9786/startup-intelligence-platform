@@ -25,6 +25,9 @@ export const SESSION_EXPIRED_EVENT =
 
 const SESSION_KEY = "startup-intelligence-founder-session";
 
+let sessionRevision = 0;
+let logoutBarrier = Promise.resolve();
+
 function sessionStorageOrNull() {
   if (typeof window === "undefined") {
     return null;
@@ -43,16 +46,54 @@ export function getSession(storage = sessionStorageOrNull()) {
   }
 }
 
-export function saveSession(session, storage = sessionStorageOrNull()) {
+function writeSession(
+  session,
+  storage = sessionStorageOrNull(),
+) {
   if (!storage) return;
-  storage.setItem(SESSION_KEY, JSON.stringify(session));
+  storage.setItem(
+    SESSION_KEY,
+    JSON.stringify(session),
+  );
 }
 
-export function clearSession(storage = sessionStorageOrNull()) {
-  if (!storage) return;
-  storage.removeItem(SESSION_KEY);
-  // Also try to hit logout endpoint to clear cookie if possible
-  axios.post(`${apiRoot}/auth/token/logout/`, {}, { withCredentials: true }).catch(() => {});
+export function saveSession(
+  session,
+  storage = sessionStorageOrNull(),
+) {
+  sessionRevision += 1;
+  writeSession(session, storage);
+}
+
+export function clearSession(
+  storage = sessionStorageOrNull(),
+) {
+  sessionRevision += 1;
+
+  if (storage) {
+    storage.removeItem(SESSION_KEY);
+  }
+
+  /*
+   * Serialize cookie deletion requests. A subsequent login waits for
+   * this barrier, preventing an older logout response from deleting
+   * the newly authenticated account's refresh cookie.
+   */
+  logoutBarrier = logoutBarrier
+    .catch(() => undefined)
+    .then(() =>
+      axios.post(
+        `${apiRoot}/auth/token/logout/`,
+        {},
+        {
+          timeout: 30000,
+          withCredentials: true,
+        },
+      ),
+    )
+    .catch(() => undefined);
+
+  return logoutBarrier;
 }
 
 export function expireSession(
@@ -105,26 +146,52 @@ client.interceptors.response.use(
     originalRequest._retried = true;
 
     if (!refreshPromise) {
-      refreshPromise = axios
+      const refreshRevision = sessionRevision;
+
+      const pendingRefresh = axios
         .post(
           `${apiRoot}/auth/token/refresh/`,
           {},
-          { timeout: 30000, withCredentials: true },
+          {
+            timeout: 30000,
+            withCredentials: true,
+          },
         )
         .then((response) => {
+          /*
+           * Ignore a refresh response started under a previous login.
+           * It must never overwrite the access token for a newer user.
+           */
+          if (sessionRevision !== refreshRevision) {
+            const staleRefreshError = new Error(
+              "The authenticated account changed while the token was refreshing.",
+            );
+            staleRefreshError.code =
+              "STALE_SESSION_REFRESH";
+            throw staleRefreshError;
+          }
+
           const nextSession = {
             access: response.data.access,
           };
-          saveSession(nextSession);
+
+          writeSession(nextSession);
           return nextSession.access;
         })
         .catch((refreshError) => {
-          expireSession();
+          if (sessionRevision === refreshRevision) {
+            expireSession();
+          }
+
           throw refreshError;
         })
         .finally(() => {
-          refreshPromise = null;
+          if (refreshPromise === pendingRefresh) {
+            refreshPromise = null;
+          }
         });
+
+      refreshPromise = pendingRefresh;
     }
 
     const accessToken = await refreshPromise;
@@ -133,17 +200,42 @@ client.interceptors.response.use(
   },
 );
 
-export async function login({ username, password }) {
+export async function login({
+  username,
+  password,
+}) {
+  /*
+   * Ensure any previous account's refresh cookie has been removed
+   * before authenticating a different account.
+   */
+  await logoutBarrier;
+
+  const loginRevision = sessionRevision + 1;
+  sessionRevision = loginRevision;
+
   const response = await axios.post(
     `${apiRoot}/auth/token/`,
-    { username, password },
-    { timeout: 30000, withCredentials: true },
+    {
+      username,
+      password,
+    },
+    {
+      timeout: 30000,
+      withCredentials: true,
+    },
   );
+
+  if (sessionRevision !== loginRevision) {
+    throw new Error(
+      "The authentication session changed before login completed.",
+    );
+  }
 
   const session = {
     access: response.data.access,
   };
-  saveSession(session);
+
+  writeSession(session);
   return session;
 }
 
