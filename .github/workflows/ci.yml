@@ -20,7 +20,7 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DJANGO_SECRET_KEY: test-secret
-      DJANGO_SETTINGS_MODULE: config.settings.development
+      DJANGO_SETTINGS_MODULE: config.settings.test
       POSTGRES_DB: startup_test
       POSTGRES_USER: startup
       POSTGRES_PASSWORD: startup
