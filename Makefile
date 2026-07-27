@@ -10,7 +10,7 @@ help:
 	@echo "make migrations  Create Django migrations"
 	@echo "make migrate     Apply Django migrations"
 	@echo "make superuser   Create an admin user"
-	@echo "make seed        Add starter authoritative sources"
+	@echo "make seed        Add sources and bundled support catalogs"
 	@echo "make test        Run backend and frontend tests"
 	@echo "make lint        Run Python lint checks"
 	@echo "make shell       Open a Django shell"
@@ -42,6 +42,7 @@ superuser:
 
 seed:
 	docker compose exec backend python manage.py seed_sources
+	docker compose exec backend python manage.py bootstrap_catalogs
 
 test:
 	docker compose run --rm backend pytest

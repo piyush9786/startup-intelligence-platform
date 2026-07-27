@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { describeApiFailure } from "./api";
 import {
   getResearchRequest,
+  getCurrentResearchRequest,
   getResearchReport,
   listResearchReports,
   submitResearchRequest,
@@ -147,9 +148,21 @@ export default function ResearchPage({ startupProfileId }) {
         cancelled = true;
       };
     }
-    listResearchReports(startupProfileId)
-      .then((records) => {
-        if (!cancelled) setHistory(records || []);
+    Promise.all([
+      listResearchReports(startupProfileId),
+      getCurrentResearchRequest(startupProfileId),
+    ])
+      .then(([records, currentPayload]) => {
+        if (cancelled) return;
+
+        setHistory(records || []);
+        const currentJob = currentPayload?.job || null;
+        if (currentJob) {
+          setJob(currentJob);
+          if (currentJob.generated_report) {
+            setReport(currentJob.generated_report);
+          }
+        }
       })
       .catch((requestError) => {
         if (!cancelled) setError(describeApiFailure(requestError));
@@ -256,11 +269,16 @@ export default function ResearchPage({ startupProfileId }) {
             >
               {active ? "Research in progress…" : loading ? "Submitting…" : "Start research"}
             </button>
-            {job && (
+            {active && (
               <div className="research-job-status" role="status">
                 <span className="spinner" aria-hidden="true" />
                 <span>{humanize(job.status)}</span>
               </div>
+            )}
+            {job?.source_advisor_briefing && (
+              <p className="muted">
+                Started automatically after Founder Advisor.
+              </p>
             )}
           </form>
           <section className="research-history">

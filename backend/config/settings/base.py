@@ -432,9 +432,14 @@ STARTUP_ADVISOR_JOB_RUNNING_TIMEOUT_SECONDS = int(
 STARTUP_ADVISOR_LLM_TEMPERATURE = float(
     os.environ.get(
         "STARTUP_ADVISOR_LLM_TEMPERATURE",
-        "0",
+        "0.30",
     )
 )
+AUTO_RESEARCH_AFTER_ADVISOR_ENABLED = os.environ.get(
+    "AUTO_RESEARCH_AFTER_ADVISOR_ENABLED",
+    "true",
+).lower() in ("1", "true", "yes")
+
 STARTUP_ADVISOR_LLM_SEED = int(
     os.environ.get(
         "STARTUP_ADVISOR_LLM_SEED",
@@ -446,7 +451,7 @@ STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS = max(
     int(
         os.environ.get(
             "STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS",
-            "1024",
+            "1536",
         )
     ),
 )

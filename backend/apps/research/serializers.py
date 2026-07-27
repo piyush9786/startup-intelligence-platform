@@ -69,6 +69,7 @@ class ResearchRequestDetailSerializer(serializers.ModelSerializer):
             "id",
             "startup_profile",
             "requested_by",
+            "source_advisor_briefing",
             "question",
             "status",
             "requires_live_search",

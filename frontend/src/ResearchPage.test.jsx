@@ -15,6 +15,7 @@ import {
 import ResearchPage from "./ResearchPage";
 
 const mocks = vi.hoisted(() => ({
+  getCurrentRequest: vi.fn(),
   getRequest: vi.fn(),
   getReport: vi.fn(),
   listReports: vi.fn(),
@@ -22,6 +23,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("./researchApi", () => ({
+  getCurrentResearchRequest: mocks.getCurrentRequest,
   getResearchRequest: mocks.getRequest,
   getResearchReport: mocks.getReport,
   listResearchReports: mocks.listReports,
@@ -30,10 +32,12 @@ vi.mock("./researchApi", () => ({
 
 describe("ResearchPage", () => {
   beforeEach(() => {
+    mocks.getCurrentRequest.mockReset();
     mocks.getRequest.mockReset();
     mocks.getReport.mockReset();
     mocks.listReports.mockReset();
     mocks.submit.mockReset();
+    mocks.getCurrentRequest.mockResolvedValue(null);
     mocks.listReports.mockResolvedValue([]);
   });
 

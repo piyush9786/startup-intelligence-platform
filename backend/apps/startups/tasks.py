@@ -255,4 +255,31 @@ def generate_startup_advisor_briefing_task(
             ],
         )
 
+    try:
+        from apps.research.services.advisor_trigger import (
+            queue_research_after_advisor,
+        )
+
+        research_request, research_created = queue_research_after_advisor(
+            briefing=briefing,
+            requested_by=requested_by,
+        )
+        logger.info(
+            "Advisor-to-research handoff completed",
+            extra={
+                "advisor_briefing_id": str(briefing.id),
+                "research_request_id": (
+                    str(research_request.id)
+                    if research_request is not None
+                    else None
+                ),
+                "research_created": research_created,
+            },
+        )
+    except Exception:
+        logger.exception(
+            "Advisor-to-research handoff failed",
+            extra={"advisor_briefing_id": str(briefing.id)},
+        )
+
     return _terminal_result(job)

@@ -134,6 +134,47 @@ class ResearchRequestDetailView(APIView):
         return Response(ResearchRequestDetailSerializer(req_obj).data)
 
 
+class CurrentResearchRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        profile_id = request.query_params.get("startup_profile_id")
+        if not profile_id:
+            return Response(
+                {"detail": "startup_profile_id query parameter is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        profile = _resolve_profile(request.user, profile_id)
+        queryset = ResearchRequest.objects.filter(
+            startup_profile=profile,
+        ).select_related(
+            "generated_report",
+            "source_advisor_briefing",
+        )
+        current = (
+            queryset.filter(
+                status__in=[
+                    ResearchRequest.Status.QUEUED,
+                    ResearchRequest.Status.RUNNING,
+                ]
+            )
+            .order_by("-created_at", "-id")
+            .first()
+            or queryset.order_by("-created_at", "-id").first()
+        )
+
+        return Response(
+            {
+                "job": (
+                    ResearchRequestDetailSerializer(current).data
+                    if current is not None
+                    else None
+                )
+            }
+        )
+
+
 class StartupResearchReportListView(APIView):
     permission_classes = [IsAuthenticated]
 
