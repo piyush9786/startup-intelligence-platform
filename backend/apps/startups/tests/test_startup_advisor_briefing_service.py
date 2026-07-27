@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 
 import pytest
@@ -22,6 +23,7 @@ from apps.startups.services import (
     AdvisorSnapshotChangedError,
     BriefingOutputValidationError,
     LLMGenerationResult,
+    LLMProviderResponseError,
     LLMProviderUnavailableError,
     create_startup_advisor_snapshot,
     generate_startup_advisor_briefing,
@@ -63,6 +65,34 @@ class FakeProvider:
 class UnavailableProvider(FakeProvider):
     def generate(self, *, messages, response_schema):
         raise LLMProviderUnavailableError("offline")
+
+
+class RetryableResponseProvider(FakeProvider):
+    def __init__(self, payload):
+        super().__init__(payload)
+        self.messages = []
+
+    def generate(self, *, messages, response_schema):
+        self.messages.append(messages)
+        if len(self.messages) == 1:
+            raise LLMProviderResponseError("truncated")
+        return super().generate(
+            messages=messages,
+            response_schema=response_schema,
+        )
+
+
+class NonRetryableResponseProvider(FakeProvider):
+    def __init__(self, payload):
+        super().__init__(payload)
+        self.calls = 0
+
+    def generate(self, *, messages, response_schema):
+        self.calls += 1
+        raise LLMProviderResponseError(
+            "schema rejected",
+            retryable=False,
+        )
 
 
 def create_source():
@@ -179,6 +209,67 @@ def test_provider_failure_is_not_persisted():
             provider=UnavailableProvider(valid_payload(profile)),
         )
 
+    assert StartupAdvisorBriefing.objects.count() == 0
+
+
+def test_service_retries_retryable_response_without_retrieved_evidence(
+    settings,
+):
+    settings.STARTUP_ADVISOR_RAG_ENABLED = True
+    owner, profile, snapshot = create_source()
+    provider = RetryableResponseProvider(valid_payload(profile))
+    evidence = [
+        {
+            "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+            "score": 0.9,
+            "text": "DPIIT recognition is required for this scheme.",
+            "source_url": "https://example.gov.in/dpiit.pdf",
+            "title": "DPIIT Guide",
+            "page_number": 1,
+            "heading": "Eligibility",
+            "extraction_id": "11111111-1111-1111-1111-111111111111",
+            "document_id": "22222222-2222-2222-2222-222222222222",
+        }
+    ]
+
+    briefing = generate_startup_advisor_briefing(
+        source_snapshot=snapshot,
+        requested_by=owner,
+        provider=provider,
+        retriever=lambda _input: evidence,
+    )
+
+    assert len(provider.messages) == 2
+    retry_payload = json.loads(provider.messages[1][1]["content"])
+    assert retry_payload["retrieved_evidence"] == []
+    assert "smallest complete valid briefing" in provider.messages[1][0]["content"]
+    assert briefing.prompt_snapshot["generation_attempts"] == [
+        {
+            "attempt": 1,
+            "retrieved_evidence_count": 1,
+            "status": "response_error",
+        },
+        {
+            "attempt": 2,
+            "retrieved_evidence_count": 0,
+            "status": "succeeded",
+        },
+    ]
+    assert briefing.prompt_snapshot["retrieval"]["status"] == "omitted_for_retry"
+
+
+def test_service_does_not_retry_non_retryable_response_error():
+    owner, profile, snapshot = create_source()
+    provider = NonRetryableResponseProvider(valid_payload(profile))
+
+    with pytest.raises(LLMProviderResponseError, match="schema rejected"):
+        generate_startup_advisor_briefing(
+            source_snapshot=snapshot,
+            requested_by=owner,
+            provider=provider,
+        )
+
+    assert provider.calls == 1
     assert StartupAdvisorBriefing.objects.count() == 0
 
 

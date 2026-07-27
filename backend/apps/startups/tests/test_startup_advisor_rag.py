@@ -5,6 +5,7 @@ import pytest
 from apps.startups.models import StartupAdvisorBriefing
 from apps.startups.services import (
     BRIEFING_DISCLAIMER,
+    build_startup_advisor_briefing_prompt,
     generate_startup_advisor_briefing,
 )
 from apps.startups.tests.test_startup_advisor_briefing_service import (
@@ -13,6 +14,81 @@ from apps.startups.tests.test_startup_advisor_briefing_service import (
 )
 
 pytestmark = pytest.mark.django_db
+
+
+def test_briefing_prompt_bounds_retrieved_evidence(settings):
+    settings.STARTUP_ADVISOR_RAG_MAX_PROMPT_DOCUMENTS = 3
+    settings.STARTUP_ADVISOR_RAG_MAX_CHARS_PER_CHUNK = 500
+    settings.STARTUP_ADVISOR_RAG_MAX_TOTAL_CHARS = 1200
+    _owner, _profile, snapshot = create_source()
+    evidence = [
+        {
+            "id": f"00000000-0000-0000-0000-00000000000{index}",
+            "score": 0.9,
+            "text": str(index) * 1800,
+            "source_url": f"https://example.gov.in/{index}.pdf",
+            "title": f"Evidence {index}",
+        }
+        for index in range(1, 7)
+    ]
+
+    prompt = build_startup_advisor_briefing_prompt(
+        source_snapshot=snapshot,
+        retrieved_evidence=evidence,
+    )
+
+    prompt_evidence = prompt["retrieved_evidence"]
+    assert len(prompt_evidence) == 3
+    assert [len(item["text"]) for item in prompt_evidence] == [500, 500, 200]
+    assert all(item["text_truncated"] is True for item in prompt_evidence)
+    assert sum(len(item["text"]) for item in prompt_evidence) == 1200
+    assert prompt["retrieval"]["prompt_evidence"] == {
+        "candidate_count": 6,
+        "included_count": 3,
+        "omitted_count": 3,
+        "text_char_count": 1200,
+        "truncated_document_count": 3,
+        "max_documents": 3,
+        "max_chars_per_chunk": 500,
+        "max_total_chars": 1200,
+    }
+    assert evidence[3]["id"] not in prompt["messages"][1]["content"]
+
+
+def test_advisor_retrieval_uses_configured_top_k(settings, monkeypatch):
+    settings.STARTUP_ADVISOR_RAG_ENABLED = True
+    settings.STARTUP_ADVISOR_RAG_TOP_K = 2
+    captured = {}
+
+    class Result:
+        def as_prompt_document(self):
+            return {"id": "evidence-1", "text": "Evidence"}
+
+    def search(query, *, top_k):
+        captured["query"] = query
+        captured["top_k"] = top_k
+        return [Result()]
+
+    monkeypatch.setattr(
+        "apps.startups.services.advisor_briefing.search_document_chunks",
+        search,
+    )
+
+    from apps.startups.services.advisor_briefing import (
+        retrieve_startup_advisor_evidence,
+    )
+
+    evidence = retrieve_startup_advisor_evidence(
+        {
+            "profile": {
+                "startup_name": "Bounded Evidence Startup",
+            },
+            "recommendations": [],
+        }
+    )
+
+    assert captured["top_k"] == 2
+    assert evidence == [{"id": "evidence-1", "text": "Evidence"}]
 
 
 def test_briefing_accepts_and_persists_retrieved_chunk_citation(settings):

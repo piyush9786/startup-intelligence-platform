@@ -240,9 +240,21 @@ STARTUP_ADVISOR_QDRANT_PROFILE_FIELD = os.environ.get(
 STARTUP_ADVISOR_RAG_ENABLED = (
     os.environ.get("STARTUP_ADVISOR_RAG_ENABLED", "false").lower() == "true"
 )
+RESEARCH_VECTOR_RAG_ENABLED = (
+    os.environ.get("RESEARCH_VECTOR_RAG_ENABLED", "false").lower()
+    == "true"
+)
 STARTUP_ADVISOR_QDRANT_COLLECTION = os.environ.get(
     "STARTUP_ADVISOR_QDRANT_COLLECTION",
     "startup_document_chunks_v1",
+)
+RESEARCH_VECTOR_QDRANT_COLLECTION = os.environ.get(
+    "RESEARCH_VECTOR_QDRANT_COLLECTION",
+    "startup_founder_document_chunks_v1",
+)
+RESEARCH_VECTOR_QDRANT_PROFILE_FIELD = os.environ.get(
+    "RESEARCH_VECTOR_QDRANT_PROFILE_FIELD",
+    STARTUP_ADVISOR_QDRANT_PROFILE_FIELD,
 )
 STARTUP_ADVISOR_QDRANT_TIMEOUT_SECONDS = float(
     os.environ.get(
@@ -274,8 +286,45 @@ STARTUP_ADVISOR_EMBEDDING_KEEP_ALIVE = os.environ.get(
     "STARTUP_ADVISOR_EMBEDDING_KEEP_ALIVE",
     "5m",
 )
-STARTUP_ADVISOR_RAG_TOP_K = int(os.environ.get("STARTUP_ADVISOR_RAG_TOP_K", "6"))
+STARTUP_ADVISOR_RAG_TOP_K = max(
+    1,
+    int(os.environ.get("STARTUP_ADVISOR_RAG_TOP_K", "3")),
+)
 STARTUP_ADVISOR_RAG_MIN_SCORE = float(os.environ.get("STARTUP_ADVISOR_RAG_MIN_SCORE", "0.35"))
+STARTUP_ADVISOR_RAG_MAX_PROMPT_DOCUMENTS = max(
+    1,
+    int(
+        os.environ.get(
+            "STARTUP_ADVISOR_RAG_MAX_PROMPT_DOCUMENTS",
+            "3",
+        )
+    ),
+)
+STARTUP_ADVISOR_RAG_MAX_CHARS_PER_CHUNK = max(
+    1,
+    int(
+        os.environ.get(
+            "STARTUP_ADVISOR_RAG_MAX_CHARS_PER_CHUNK",
+            "800",
+        )
+    ),
+)
+STARTUP_ADVISOR_RAG_MAX_TOTAL_CHARS = max(
+    1,
+    int(
+        os.environ.get(
+            "STARTUP_ADVISOR_RAG_MAX_TOTAL_CHARS",
+            "2400",
+        )
+    ),
+)
+RESEARCH_VECTOR_RAG_TOP_K = max(
+    1,
+    int(os.environ.get("RESEARCH_VECTOR_RAG_TOP_K", "6")),
+)
+RESEARCH_VECTOR_RAG_MIN_SCORE = float(
+    os.environ.get("RESEARCH_VECTOR_RAG_MIN_SCORE", "0.35")
+)
 NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://neo4j:7687")
 NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "")
@@ -484,3 +533,8 @@ WEB_SEARCH_DEPTH = os.environ.get("WEB_SEARCH_DEPTH", "basic")
 WEB_SEARCH_TIME_RANGE = os.environ.get("WEB_SEARCH_TIME_RANGE", "year")
 WEB_SEARCH_START_DATE = os.environ.get("WEB_SEARCH_START_DATE", "")
 WEB_SEARCH_END_DATE = os.environ.get("WEB_SEARCH_END_DATE", "")
+
+RESEARCH_RAG_ENABLED = (
+    os.environ.get("RESEARCH_RAG_ENABLED", "true").lower()
+    in {"1", "true", "yes"}
+)

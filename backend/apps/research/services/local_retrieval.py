@@ -115,4 +115,27 @@ def retrieve_local_verified_knowledge(
             }
         )
 
+    # Add Qdrant vector search retrieval if RESEARCH_RAG_ENABLED is active
+    from django.conf import settings
+    if getattr(settings, "RESEARCH_RAG_ENABLED", True):
+        try:
+            from apps.knowledge.services.vector_search import search_document_chunks
+            query_str = f"{profile.startup_name} {' '.join(profile.sectors or [])}".strip()
+            chunks = search_document_chunks(
+                query=query_str or "startup scheme eligibility",
+                startup_profile_id=str(profile.id),
+                top_k=3,
+            )
+            for chunk in chunks:
+                local_items.append(
+                    {
+                        "title": f"Vector Document: {chunk.title}",
+                        "url": chunk.source_url or f"internal://documents/{chunk.document_id}",
+                        "source_type": "verified_internal",
+                        "content_excerpt": chunk.text[:300],
+                    }
+                )
+        except Exception:
+            pass
+
     return local_items

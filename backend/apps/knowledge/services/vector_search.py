@@ -202,6 +202,7 @@ def _point_for_chunk(
             "extraction_id": str(extraction.id),
             "document_id": str(document.id),
             "source_id": str(document.source_id),
+            "startup_profile_id": str(document.metadata.get("startup_profile_id") or getattr(document, "startup_profile_id", "") or ""),
             "source_url": document.final_url or document.source_url,
             "title": _readable_document_title(
                 extraction,
@@ -381,6 +382,7 @@ def search_document_chunks(
     *,
     top_k: int | None = None,
     min_score: float | None = None,
+    startup_profile_id: str | None = None,
     provider: OllamaEmbeddingProvider | None = None,
     client: QdrantClient | None = None,
 ) -> list[RetrievedDocumentChunk]:
@@ -397,12 +399,24 @@ def search_document_chunks(
         else settings.STARTUP_ADVISOR_RAG_MIN_SCORE
     )
 
+    query_filter = None
+    if startup_profile_id:
+        query_filter = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="startup_profile_id",
+                    match=models.MatchValue(value=str(startup_profile_id)),
+                )
+            ]
+        )
+
     try:
         embedded = active_provider.embed([normalized_query])
         response = active_client.query_points(
             collection_name=settings.STARTUP_ADVISOR_QDRANT_COLLECTION,
             query=embedded.vectors[0],
             limit=limit,
+            query_filter=query_filter,
             score_threshold=threshold,
             with_payload=True,
         )

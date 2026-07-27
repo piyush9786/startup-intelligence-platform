@@ -195,7 +195,9 @@ def test_vector_step_is_owner_scoped_and_fail_soft(
     settings,
 ):
     _, profile, request = research_request
-    settings.STARTUP_ADVISOR_RAG_ENABLED = True
+    settings.STARTUP_ADVISOR_RAG_ENABLED = False
+    settings.RESEARCH_VECTOR_RAG_ENABLED = True
+    settings.RESEARCH_VECTOR_RAG_TOP_K = 4
     captured = {}
 
     def retrieve(**kwargs):
@@ -212,19 +214,47 @@ def test_vector_step_is_owner_scoped_and_fail_soft(
 
     assert captured["startup_profile_id"] == str(profile.id)
     assert captured["query"] == request.question
+    assert captured["top_k"] == 4
     assert state.vector_retrieval_status == "empty"
+
+
+@pytest.mark.django_db
+def test_vector_step_is_independent_of_advisor_rag_setting(
+    research_request,
+    settings,
+):
+    _, _, request = research_request
+    settings.STARTUP_ADVISOR_RAG_ENABLED = True
+    settings.RESEARCH_VECTOR_RAG_ENABLED = False
+    called = False
+
+    def retrieve(**kwargs):
+        nonlocal called
+        called = True
+        return []
+
+    state = ResearchState.from_request(request)
+    retrieve_vector_evidence(
+        state,
+        ResearchDependencies(
+            retrieve_vector_evidence=retrieve,
+        ),
+    )
+
+    assert called is False
+    assert state.vector_retrieval_status == "disabled"
 
 
 def test_qdrant_retrieval_uses_profile_filter(
     settings,
     monkeypatch,
 ):
-    settings.STARTUP_ADVISOR_QDRANT_COLLECTION = "test-collection"
-    settings.STARTUP_ADVISOR_QDRANT_PROFILE_FIELD = (
+    settings.RESEARCH_VECTOR_QDRANT_COLLECTION = "research-test-collection"
+    settings.RESEARCH_VECTOR_QDRANT_PROFILE_FIELD = (
         "startup_profile_id"
     )
-    settings.STARTUP_ADVISOR_RAG_TOP_K = 6
-    settings.STARTUP_ADVISOR_RAG_MIN_SCORE = 0.35
+    settings.RESEARCH_VECTOR_RAG_TOP_K = 6
+    settings.RESEARCH_VECTOR_RAG_MIN_SCORE = 0.35
     captured = {}
 
     class FakeClient:
@@ -273,6 +303,8 @@ def test_qdrant_retrieval_uses_profile_filter(
     )
 
     field_condition = captured["query_filter"].must[0]
+    assert captured["collection_name"] == "research-test-collection"
+    assert captured["limit"] == 6
     assert field_condition.key == "startup_profile_id"
     assert field_condition.match.value == "profile-1"
     assert evidence[0]["verification_status"] == "verified_internal"
