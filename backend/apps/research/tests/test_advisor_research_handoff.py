@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -11,11 +12,14 @@ from apps.research.models import ResearchRequest
 from apps.research.services.advisor_trigger import (
     queue_research_after_advisor,
 )
+from apps.research.tasks import reconcile_advisor_research_handoffs_task
 from apps.startups.models import (
     StartupAdvisorBriefing,
+    StartupAdvisorBriefingJob,
     StartupAdvisorSnapshot,
     StartupProfile,
 )
+from apps.startups.tasks import _ensure_auto_research_handoff
 
 User = get_user_model()
 
@@ -56,6 +60,15 @@ def advisor_briefing():
         prompt_snapshot={},
         briefing={},
         response_metadata={},
+        completed_at=timezone.now(),
+    )
+    job = StartupAdvisorBriefingJob.objects.create(
+        requested_by=user,
+        startup_profile=profile,
+        source_snapshot=snapshot,
+        status=StartupAdvisorBriefingJob.Status.SUCCEEDED,
+        briefing=briefing,
+        started_at=timezone.now(),
         completed_at=timezone.now(),
     )
     return user, profile, briefing

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { describeApiFailure } from "./api";
 import {
@@ -182,6 +182,18 @@ export default function ResearchPage({ startupProfileId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const active = ACTIVE_STATUSES.has(job?.status);
+  const currentProfileRef = useRef(startupProfileId);
+
+  useEffect(() => {
+    currentProfileRef.current = startupProfileId;
+  }, [startupProfileId]);
+
+  function profileStillSelected(requestedProfileId) {
+    return (
+      String(currentProfileRef.current)
+      === String(requestedProfileId)
+    );
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -206,7 +218,12 @@ export default function ResearchPage({ startupProfileId }) {
       getCurrentResearchRequest(startupProfileId),
     ])
       .then(([records, currentPayload]) => {
-        if (cancelled) return;
+        if (
+          cancelled
+          || !profileStillSelected(selectedProfileId)
+        ) {
+          return;
+        }
 
         setHistory(records || []);
         const currentJob = currentPayload?.job || null;
@@ -222,7 +239,10 @@ export default function ResearchPage({ startupProfileId }) {
         }
       })
       .catch((requestError) => {
-        if (!cancelled) {
+        if (
+          !cancelled
+          && profileStillSelected(selectedProfileId)
+        ) {
           setError(describeApiFailure(requestError));
         }
       });
@@ -251,6 +271,7 @@ export default function ResearchPage({ startupProfileId }) {
         const nextJob = await getResearchRequest(jobId);
         if (
           cancelled
+          || !profileStillSelected(selectedProfileId)
           || String(nextJob.startup_profile) !== selectedProfileId
         ) {
           return;
@@ -281,7 +302,10 @@ export default function ResearchPage({ startupProfileId }) {
           timer = window.setTimeout(poll, 2000);
         }
       } catch (requestError) {
-        if (!cancelled) {
+        if (
+          !cancelled
+          && profileStillSelected(selectedProfileId)
+        ) {
           setError(describeApiFailure(requestError));
           timer = window.setTimeout(poll, 4000);
         }
@@ -302,6 +326,8 @@ export default function ResearchPage({ startupProfileId }) {
     event.preventDefault();
     if (!startupProfileId || question.trim().length < 5) return;
 
+    const requestedProfileId = String(startupProfileId);
+
     setLoading(true);
     setError("");
     setReport(null);
@@ -311,40 +337,56 @@ export default function ResearchPage({ startupProfileId }) {
         startupProfileId,
         question.trim(),
       );
+      if (!profileStillSelected(requestedProfileId)) {
+        return;
+      }
       if (
         response.job
         && (
           !response.job.startup_profile
           || String(response.job.startup_profile)
-            === String(startupProfileId)
+            === requestedProfileId
         )
       ) {
         setJob(response.job);
       }
     } catch (requestError) {
-      setError(describeApiFailure(requestError));
+      if (profileStillSelected(requestedProfileId)) {
+        setError(describeApiFailure(requestError));
+      }
     } finally {
-      setLoading(false);
+      if (profileStillSelected(requestedProfileId)) {
+        setLoading(false);
+      }
     }
   }
 
   async function handleHistorySelection(reportId) {
+    const requestedProfileId = String(startupProfileId);
+
     setLoading(true);
     setError("");
 
     try {
       const selectedReport = await getResearchReport(reportId);
+      if (!profileStillSelected(requestedProfileId)) {
+        return;
+      }
       if (
         !selectedReport.startup_profile
         || String(selectedReport.startup_profile)
-          === String(startupProfileId)
+          === requestedProfileId
       ) {
         setReport(selectedReport);
       }
     } catch (requestError) {
-      setError(describeApiFailure(requestError));
+      if (profileStillSelected(requestedProfileId)) {
+        setError(describeApiFailure(requestError));
+      }
     } finally {
-      setLoading(false);
+      if (profileStillSelected(requestedProfileId)) {
+        setLoading(false);
+      }
     }
   }
 

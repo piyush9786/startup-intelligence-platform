@@ -26,6 +26,68 @@ ACTIVE_STATUSES = (
     ResearchRequest.Status.RUNNING,
 )
 
+RECOVERABLE_AUTO_RESEARCH_ERRORS = frozenset(
+    {
+        "dispatch_failed",
+        "queue_timeout",
+        "worker_interrupted",
+    }
+)
+
+
+def _resolve_actor(
+    briefing: StartupAdvisorBriefing,
+    requested_by: Any,
+) -> Any:
+    actor = requested_by or briefing.requested_by
+    if actor is not None:
+        return actor
+
+    profile = getattr(briefing, "startup_profile", None)
+    if profile is None:
+        profile = StartupProfile.objects.select_related("owner").get(
+            pk=briefing.startup_profile_id,
+        )
+    return profile.owner
+
+
+def _needs_handoff_repair(
+    research_request: ResearchRequest,
+) -> bool:
+    if (
+        research_request.status == ResearchRequest.Status.QUEUED
+        and not research_request.celery_task_id
+    ):
+        return True
+    return (
+        research_request.status == ResearchRequest.Status.FAILED
+        and research_request.error_code
+        in RECOVERABLE_AUTO_RESEARCH_ERRORS
+    )
+
+
+def _reset_for_redispatch(
+    research_request: ResearchRequest,
+) -> ResearchRequest:
+    research_request.status = ResearchRequest.Status.QUEUED
+    research_request.started_at = None
+    research_request.completed_at = None
+    research_request.error_code = ""
+    research_request.error_message = ""
+    research_request.celery_task_id = ""
+    research_request.save(
+        update_fields=[
+            "status",
+            "started_at",
+            "completed_at",
+            "error_code",
+            "error_message",
+            "celery_task_id",
+            "updated_at",
+        ]
+    )
+    return research_request
+
 
 def _mark_dispatch_failed(
     research_request: ResearchRequest,
@@ -90,10 +152,11 @@ def queue_research_after_advisor(
     ):
         return None, False
 
-    actor = requested_by or briefing.requested_by
+    actor = _resolve_actor(briefing, requested_by)
     if actor is None:
         logger.warning(
-            "Advisor briefing %s has no requesting user; research skipped.",
+            "Advisor briefing %s has no requesting user or profile owner; "
+            "research skipped.",
             briefing.pk,
         )
         return None, False
@@ -133,28 +196,8 @@ def queue_research_after_advisor(
                 return active, False
 
             if existing is not None:
-                if (
-                    existing.status == ResearchRequest.Status.FAILED
-                    and existing.error_code == "dispatch_failed"
-                ):
-                    existing.status = ResearchRequest.Status.QUEUED
-                    existing.started_at = None
-                    existing.completed_at = None
-                    existing.error_code = ""
-                    existing.error_message = ""
-                    existing.celery_task_id = ""
-                    existing.save(
-                        update_fields=[
-                            "status",
-                            "started_at",
-                            "completed_at",
-                            "error_code",
-                            "error_message",
-                            "celery_task_id",
-                            "updated_at",
-                        ]
-                    )
-                    research_request = existing
+                if _needs_handoff_repair(existing):
+                    research_request = _reset_for_redispatch(existing)
                 else:
                     return existing, False
             else:

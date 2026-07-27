@@ -88,6 +88,7 @@ def reconcile_advisor_research_handoffs_task() -> int:
         return 0
 
     from apps.research.services.advisor_trigger import (
+        RECOVERABLE_AUTO_RESEARCH_ERRORS,
         queue_research_after_advisor,
     )
 
@@ -107,17 +108,30 @@ def reconcile_advisor_research_handoffs_task() -> int:
             generation_job__status="succeeded",
         )
         .filter(
+            Q(requested_by__isnull=False)
+            | Q(startup_profile__owner__isnull=False)
+        )
+        .filter(
             Q(automatic_research_request__isnull=True)
             | Q(
                 automatic_research_request__status=(
                     ResearchRequest.Status.FAILED
                 ),
-                automatic_research_request__error_code="dispatch_failed",
+                automatic_research_request__error_code__in=(
+                    RECOVERABLE_AUTO_RESEARCH_ERRORS
+                ),
+            )
+            | Q(
+                automatic_research_request__status=(
+                    ResearchRequest.Status.QUEUED
+                ),
+                automatic_research_request__celery_task_id="",
             )
         )
         .select_related(
             "requested_by",
             "startup_profile",
+            "startup_profile__owner",
         )
         .order_by("completed_at", "id")[:batch_size]
     )
