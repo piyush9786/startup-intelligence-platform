@@ -72,14 +72,16 @@ def _clean_and_parse_json_payload(content: Any) -> dict[str, Any]:
 
     cleaned = content.strip()
 
-    # Remove markdown code fences if present
+    # Remove only the outer fence. A non-greedy object regex would
+    # cut valid advisor JSON at the first nested closing brace.
     if "```" in cleaned:
-        fence_match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", cleaned, re.IGNORECASE)
-        if fence_match:
-            cleaned = fence_match.group(1).strip()
-        else:
-            cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
-            cleaned = re.sub(r"\s*```$", "", cleaned)
+        cleaned = re.sub(
+            r"^\s*```(?:json)?\s*",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+        cleaned = re.sub(r"\s*```\s*$", "", cleaned)
 
     # Extract JSON object substring between first '{' and last '}'
     if not (cleaned.startswith("{") and cleaned.endswith("}")):

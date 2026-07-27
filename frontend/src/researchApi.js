@@ -13,6 +13,13 @@ export async function getResearchRequest(jobId) {
   return response.data;
 }
 
+export async function getCurrentResearchRequest(startupProfileId) {
+  const response = await client.get("/research/requests/current/", {
+    params: { startup_profile_id: startupProfileId },
+  });
+  return response.data;
+}
+
 export async function listResearchReports(startupProfileId) {
   const response = await client.get("/research/reports/", {
     params: { startup_profile_id: startupProfileId },

@@ -29,6 +29,7 @@ backend/ml_models/
 # Environment secrets
 .env
 LOCAL_CREDENTIALS.txt
+.advisor-research-catalog-backup/
 
 # Frontend
 frontend/node_modules/
