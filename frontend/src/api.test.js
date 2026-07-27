@@ -116,17 +116,14 @@ describe("founder registration API", () => {
 
 describe("HttpOnly cookie refresh flow", () => {
   test("login does not store a JS-readable refresh token", async () => {
-    const post = vi.spyOn(axios, "post").mockResolvedValueOnce({
-      data: { access: "new-access-token" },
+    const post = vi.spyOn(axios, "post").mockImplementation((url) => {
+      if (url.includes("/logout/")) return Promise.resolve({ data: {} });
+      return Promise.resolve({ data: { access: "new-access-token" } });
     });
 
     const storage = memoryStorage();
-    // Call login and capture stored session
-    // (login uses sessionStorageOrNull() internally; we spy on saveSession indirectly)
     try {
       await login({ username: "founder", password: "secret" });
-      // The post should be called with withCredentials so the browser
-      // attaches the HttpOnly refresh cookie automatically
       expect(post).toHaveBeenCalledWith(
         `${apiRoot}/auth/token/`,
         { username: "founder", password: "secret" },
@@ -138,12 +135,12 @@ describe("HttpOnly cookie refresh flow", () => {
   });
 
   test("login response does not include a refresh field", async () => {
-    const post = vi.spyOn(axios, "post").mockResolvedValueOnce({
-      data: { access: "acc-token-123" },
+    const post = vi.spyOn(axios, "post").mockImplementation((url) => {
+      if (url.includes("/logout/")) return Promise.resolve({ data: {} });
+      return Promise.resolve({ data: { access: "acc-token-123" } });
     });
     try {
       const session = await login({ username: "u", password: "p" });
-      // The session object stored client-side should only have access
       expect(session).not.toHaveProperty("refresh");
       expect(session.access).toBe("acc-token-123");
     } finally {
