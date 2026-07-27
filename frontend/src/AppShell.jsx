@@ -38,6 +38,11 @@ import {
   useParams,
 } from "react-router-dom";
 import ExternalSchemeDetailPage from "./ExternalSchemeDetailPage.jsx";
+import {
+  LazyMotion,
+  MotionConfig,
+  domAnimation,
+} from "motion/react";
 import * as m from "motion/react-m";
 
 import { useT } from "./i18n/index.jsx";
@@ -92,7 +97,6 @@ const AssessmentWizard = React.lazy(() => import("./AssessmentWizard"));
 const CapitalPlannerPage = React.lazy(() => import("./CapitalPlannerPage"));
 const DocumentIntakeWorkspace = React.lazy(() => import("./DocumentIntakeWorkspace"));
 const ExecutionMilestonesPage = React.lazy(() => import("./ExecutionMilestonesPage"));
-const FounderConcierge = React.lazy(() => import("./FounderConcierge"));
 const FounderIntelligencePage = React.lazy(() => import("./FounderIntelligencePage"));
 const FundingPage = React.lazy(() => import("./FundingPage"));
 const FundingPlanPage = React.lazy(() => import("./FundingPlanPage"));
@@ -377,6 +381,21 @@ function Workspace({ onSignOut }) {
   const [showJourneyDialog, setShowJourneyDialog] = useState(false);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    /*
+     * React Router does not automatically reset the document scroll position.
+     * This prevents a newly opened page from appearing underneath the sticky
+     * top bar or halfway down the document.
+     */
+    if (window.scrollY !== 0) {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+    }
+  }, [location.pathname]);
 
   const selectedProfile = useMemo(
     () => (profiles || []).find((p) => String(p.id) === String(selectedProfileId)) || null,
@@ -887,7 +906,7 @@ function SchemeDetailRoute() {
     ...(ctx.externalCertificationRequirements || []),
   ];
   const scheme = allSchemes.find(
-    (s) => String(s.scheme_id || s.id) === String(schemeId)
+    (s) => String(s.id) === String(schemeId) || String(s.scheme_id) === String(schemeId)
   );
   if (!scheme) {
     // Only show NotFound once we know schemes have loaded.
@@ -989,7 +1008,13 @@ function AdvisorRoute() {
 function IntelligenceRoute() {
   const ctx = useOutletContext();
   const navigate = useNavigate();
-  return <FounderConcierge initialOpen={true} startupProfileId={ctx.selectedProfileId} onNavigate={(target) => navigate(`/${target}`)} />;
+
+  return (
+    <FounderIntelligencePage
+      onNavigate={(target) => navigate(`/${target}`)}
+      startupProfile={ctx.selectedProfile}
+    />
+  );
 }
 
 function ReviewerRoute() {
@@ -1019,14 +1044,24 @@ function DocumentsRoute() {
 
 export default function AppShell({ onSignOut }) {
   const inRouter = useInRouterContext();
+
+  const routedApplication = (
+    <LazyMotion features={domAnimation}>
+      <MotionConfig reducedMotion="user">
+        <AppRouter onSignOut={onSignOut} />
+      </MotionConfig>
+    </LazyMotion>
+  );
+
   if (!inRouter) {
     return (
       <BrowserRouter>
-        <AppRouter onSignOut={onSignOut} />
+        {routedApplication}
       </BrowserRouter>
     );
   }
-  return <AppRouter onSignOut={onSignOut} />;
+
+  return routedApplication;
 }
 
 function NotFoundRoute() {
