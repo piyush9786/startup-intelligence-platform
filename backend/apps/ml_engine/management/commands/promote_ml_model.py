@@ -105,13 +105,14 @@ class Command(BaseCommand):
         reason = options["reason"]
         approved_by = options["approved_by"]
 
-        from apps.ml_engine.models import MLModelRegistry
         from django.db import connection
+
+        from apps.ml_engine.models import MLModelRegistry
 
         try:
             target_model = MLModelRegistry.objects.get(model_type=model_type, model_version=version)
-        except MLModelRegistry.DoesNotExist:
-            raise CommandError(f"Model {model_type} v{version} does not exist.")
+        except MLModelRegistry.DoesNotExist as exc:
+            raise CommandError(f"Model {model_type} v{version} does not exist.") from exc
 
         if is_rollback:
             self._perform_rollback(
@@ -198,10 +199,10 @@ class Command(BaseCommand):
                     restore_model = MLModelRegistry.objects.get(
                         model_type=model_type, model_version=restore_version
                     )
-                except MLModelRegistry.DoesNotExist:
+                except MLModelRegistry.DoesNotExist as exc:
                     raise CommandError(
                         f"Restore target {model_type} v{restore_version} does not exist."
-                    )
+                    ) from exc
             else:
                 # Auto-select the most-recent retired previously-production model
                 restore_model = (

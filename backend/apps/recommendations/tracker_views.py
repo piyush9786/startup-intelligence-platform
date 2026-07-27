@@ -56,9 +56,12 @@ class SchemeApplicationTrackerSerializer(serializers.ModelSerializer):
 
 class SchemeApplicationTrackerViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
+    queryset = SchemeApplicationTracker.objects.none()
     serializer_class = SchemeApplicationTrackerSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return self.queryset
         return SchemeApplicationTracker.objects.filter(
             owner=self.request.user
         ).select_related("scheme_version__scheme", "startup_profile")

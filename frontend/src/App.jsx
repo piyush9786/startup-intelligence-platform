@@ -115,6 +115,25 @@ import {
   verificationGateStatusLabel,
   verificationGateStatusTone,
 } from "./verification";
+import { AdvisorWorkspace } from "./AdvisorWorkspace.jsx";
+import { JourneyDialog } from "./JourneyDialog.jsx";
+
+const ActionRoadmapPage = React.lazy(() => import("./ActionRoadmapPage"));
+const AdvisorWorkspacePage = AdvisorWorkspace;
+const ApplicationTrackerPage = React.lazy(() => import("./ApplicationTrackerPage"));
+const CapitalPlannerPage = React.lazy(() => import("./CapitalPlannerPage"));
+const ChatbotDrawer = React.lazy(() => import("./ChatbotDrawer"));
+const DocumentIntakeWorkspace = React.lazy(() => import("./DocumentIntakeWorkspace"));
+const FounderIntelligencePage = React.lazy(() => import("./FounderIntelligencePage"));
+const FundingPage = React.lazy(() => import("./FundingPage"));
+const MyStartupPage = React.lazy(() => import("./MyStartupPage"));
+const RequirementsPage = React.lazy(() => import("./RequirementsPage"));
+const ReviewerVerificationWorkspace = React.lazy(
+  () => import("./ReviewerVerificationWorkspace"),
+);
+const SchemeExplorerPage = React.lazy(() => import("./SchemeExplorerPage"));
+const StartupBuilderPage = React.lazy(() => import("./StartupBuilderPage"));
+const WebsiteTour = React.lazy(() => import("./WebsiteTour"));
 
 const ACTIVE_ADVISOR_JOB_STATUSES = new Set(["queued", "running"]);
 const MOTION_EASE = [0.22, 1, 0.36, 1];
@@ -3068,7 +3087,7 @@ function Workspace({ onSignOut }) {
 
   } else if (activeView === "advisor") {
     page = (
-      <AdvisorWorkspace
+      <AdvisorWorkspacePage
         briefing={currentBriefing}
         generating={generating}
         generationLabel={generationLabel}

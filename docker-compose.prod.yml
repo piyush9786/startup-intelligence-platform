@@ -123,7 +123,7 @@ services:
         condition: service_healthy
     entrypoint: ["/bin/sh", "-c"]
     command: >-
-      model="$${STARTUP_ADVISOR_LLM_MODEL:-qwen3.5:9b}";
+      model="$${STARTUP_ADVISOR_LLM_MODEL:-qwen3:4b}";
       echo "Ensuring Ollama generation model: $$model";
       ollama pull "$$model";
       if [ "$${STARTUP_ADVISOR_RAG_ENABLED:-false}" = "true" ]; then
@@ -169,7 +169,10 @@ services:
         condition: service_healthy
       ollama_init:
         condition: service_completed_successfully
-    command: celery -A config worker --loglevel=info --concurrency=4
+    command: >-
+      celery -A config worker
+      --loglevel=info
+      --concurrency=${CELERY_WORKER_CONCURRENCY:-1}
     volumes:
       - media_volume:/app/media
       - ml_models_volume:/app/ml_models

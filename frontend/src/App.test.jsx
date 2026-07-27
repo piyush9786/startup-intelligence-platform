@@ -925,7 +925,6 @@ describe("functional user dashboard", () => {
     const user = userEvent.setup();
     render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
-    await new Promise(r => setTimeout(r, 1000)); screen.debug(undefined, 100000);
     await user.click(await screen.findByRole("button", { name: /View all schemes/ }));
 
     expect(api.listSchemes).toHaveBeenCalledTimes(1);
@@ -1293,8 +1292,15 @@ describe("functional user dashboard", () => {
         name: "Review eligibility and apply",
       }),
     );
-    expect(await screen.findByRole("heading", { name: "Startup Working Capital Loan" })).toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: "Official source" })).toHaveAttribute(
+    const officialSource = await screen.findByRole("link", {
+      name: "Official source",
+    });
+    expect(
+      screen.getByRole("heading", {
+        name: "Startup Working Capital Loan",
+      }),
+    ).toBeInTheDocument();
+    expect(officialSource).toHaveAttribute(
       "href",
       "https://authority.example/loan",
     );
@@ -1570,7 +1576,6 @@ describe("functional user dashboard", () => {
       }),
     );
 
-    screen.debug();
 
     expect(await screen.findByRole("heading", { name: "Startup India Seed Fund Scheme" })).toBeInTheDocument();
     const requirementsSection = screen

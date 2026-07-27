@@ -6,6 +6,12 @@ deterministic dependency-aware funding planning, and **integrated multi-model AI
 
 The platform combines a verified deterministic data core with a **9-model ML ensemble** and an enhanced **3-stage RAG pipeline**.
 
+The historical-company foundation adds governed raw-dataset registration,
+source provenance, canonical company identities, append-only metric
+observations, outcome evidence, and idempotent CSV ingestion. See
+[`docs/data-foundation-v1.md`](docs/data-foundation-v1.md) and
+[`docs/architecture/COMBINED_ARCHITECTURE_V2.md`](docs/architecture/COMBINED_ARCHITECTURE_V2.md) for full architectural blueprints.
+
 ---
 
 ## Core Principles
@@ -148,6 +154,13 @@ docker compose exec backend python manage.py train_ml_models --synthetic
 # 5. Seed initial scheme data & create admin account
 docker compose exec backend python manage.py seed_sources
 docker compose exec backend python manage.py createsuperuser
+
+# 6. Import a historical company CSV (archives the original in MinIO)
+docker compose exec backend python manage.py import_companies \
+  --file /app/catalog/companies.csv \
+  --source-slug example-company-source \
+  --source-name "Example company source" \
+  --reliability-score 0.800
 ```
 
 ### 2. Production Deployment

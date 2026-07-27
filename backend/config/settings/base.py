@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.assistant",
     "apps.sources",
+    "apps.companies",
     "apps.documents",
     "apps.discovery",
     "apps.knowledge",
@@ -273,14 +274,23 @@ OLLAMA_BASE_URL = os.environ.get(
     "OLLAMA_BASE_URL",
     "http://ollama:11434",
 )
+OLLAMA_CONTEXT_LENGTH = max(
+    1024,
+    int(
+        os.environ.get(
+            "OLLAMA_CONTEXT_LENGTH",
+            "4096",
+        )
+    ),
+)
 STARTUP_ADVISOR_LLM_MODEL = os.environ.get(
     "STARTUP_ADVISOR_LLM_MODEL",
-    "qwen3.5:9b",
+    "qwen3:4b",
 )
 STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS = float(
     os.environ.get(
         "STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS",
-        "900",
+        "600",
     )
 )
 STARTUP_ADVISOR_JOB_QUEUE_TIMEOUT_SECONDS = int(
@@ -319,11 +329,14 @@ STARTUP_ADVISOR_LLM_SEED = int(
         "7",
     )
 )
-STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS = int(
-    os.environ.get(
-        "STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS",
-        "4096",
-    )
+STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS = max(
+    256,
+    int(
+        os.environ.get(
+            "STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS",
+            "1024",
+        )
+    ),
 )
 STARTUP_ADVISOR_LLM_KEEP_ALIVE = os.environ.get(
     "STARTUP_ADVISOR_LLM_KEEP_ALIVE",
@@ -335,16 +348,39 @@ CHATBOT_LLM_ENABLED = os.environ.get(
     "true",
 ).lower() in ("1", "true", "yes")
 
+CHATBOT_LLM_MODEL = os.environ.get(
+    "CHATBOT_LLM_MODEL",
+    STARTUP_ADVISOR_LLM_MODEL,
+)
+
 CHATBOT_LLM_TIMEOUT_SECONDS = float(
     os.environ.get(
         "CHATBOT_LLM_TIMEOUT_SECONDS",
-        "60",
+        "180",
     )
 )
 
-CHATBOT_LLM_MAX_OUTPUT_TOKENS = int(
-    os.environ.get(
-        "CHATBOT_LLM_MAX_OUTPUT_TOKENS",
-        "1024",
-    )
+CHATBOT_LLM_MAX_OUTPUT_TOKENS = max(
+    64,
+    int(
+        os.environ.get(
+            "CHATBOT_LLM_MAX_OUTPUT_TOKENS",
+            "512",
+        )
+    ),
+)
+
+CHATBOT_LLM_HISTORY_TURNS = max(
+    0,
+    int(
+        os.environ.get(
+            "CHATBOT_LLM_HISTORY_TURNS",
+            "6",
+        )
+    ),
+)
+
+CHATBOT_LLM_KEEP_ALIVE = os.environ.get(
+    "CHATBOT_LLM_KEEP_ALIVE",
+    STARTUP_ADVISOR_LLM_KEEP_ALIVE,
 )
