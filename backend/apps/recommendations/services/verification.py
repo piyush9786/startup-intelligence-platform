@@ -19,7 +19,7 @@ from apps.recommendations.models import (
 )
 from apps.sources.services.storage import (
     delete_object,
-    upload_bytes,
+    upload_stream,
 )
 from apps.startups.models import StartupProfile
 
@@ -144,12 +144,19 @@ def add_verification_evidence(
     filename = _normalized_evidence_filename(
         str(getattr(uploaded_file, "name", "")),
     )
-    content = uploaded_file.read()
+    digest = sha256()
+    size_bytes = 0
+    for chunk in uploaded_file.chunks():
+        size_bytes += len(chunk)
+        if size_bytes > settings.ELIGIBILITY_EVIDENCE_MAX_BYTES:
+            raise ValidationError({"file": "The evidence file is too large."})
+        digest.update(chunk)
+    uploaded_file.seek(0)
 
-    if not isinstance(content, bytes) or not content:
+    if size_bytes == 0:
         raise ValidationError({"file": "The evidence file must not be empty."})
 
-    content_hash = sha256(content).hexdigest()
+    content_hash = digest.hexdigest()
     content_type = getattr(uploaded_file, "content_type", "") or "application/octet-stream"
 
     uploaded_storage_key: str | None = None
@@ -188,9 +195,10 @@ def add_verification_evidence(
                 f"{uuid4().hex}-{filename}"
             )
 
-            upload_bytes(
+            upload_stream(
                 object_key=uploaded_storage_key,
-                content=content,
+                stream=uploaded_file,
+                length=size_bytes,
                 content_type=content_type,
                 bucket_name=settings.MINIO_BUCKET_STARTUP_EVIDENCE,
             )
@@ -200,7 +208,7 @@ def add_verification_evidence(
                 uploaded_by=uploaded_by,
                 filename=filename,
                 mime_type=content_type,
-                size_bytes=len(content),
+                size_bytes=size_bytes,
                 content_hash=content_hash,
                 storage_key=uploaded_storage_key,
             )

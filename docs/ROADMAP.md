@@ -486,7 +486,7 @@ See
 
 - Built `apps.ml_engine` Django application featuring 9 Machine Learning models:
   * Model 1: Transformer Embeddings (`embeddinggemma` via Ollama)
-  * Model 2: Generative AI / LLM (`qwen3.5:9b` via Ollama)
+  * Model 2: Generative AI / LLM (`qwen3:4b` via Ollama)
   * Model 3: K-Means Clustering (`KMeans(n_clusters=8)`, silhouette = 0.089)
   * Model 4: Calibrated SVM (`CalibratedClassifierCV(SVC)`, accuracy = 75%)
   * Model 5: AdaBoost (`AdaBoostClassifier`, ROC-AUC = 0.606)

@@ -23,6 +23,27 @@ export const apiDocsUrl = buildPlatformUrl("/api/docs/");
 export const SESSION_EXPIRED_EVENT =
   "startup-intelligence:session-expired";
 
+export function trustedApiNextPath(nextUrl) {
+  if (!nextUrl) return null;
+
+  const apiBase = new URL(apiRoot, `${browserOrigin}/`);
+  const resolved = new URL(nextUrl, apiBase);
+  const apiPrefix = apiBase.pathname.replace(/\/+$/, "");
+  const isInsideApi =
+    resolved.origin === apiBase.origin
+    && (
+      resolved.pathname === apiPrefix
+      || resolved.pathname.startsWith(`${apiPrefix}/`)
+    );
+
+  if (!isInsideApi) {
+    throw new Error("The API returned an untrusted pagination URL.");
+  }
+
+  const relativePath = resolved.pathname.slice(apiPrefix.length) || "/";
+  return `${relativePath}${resolved.search}`;
+}
+
 const SESSION_KEY = "startup-intelligence-founder-session";
 
 let sessionRevision = 0;
@@ -392,7 +413,7 @@ export async function listExternalSchemes() {
   while (nextUrl && pageCount < 100) {
     const response = await client.get(nextUrl, { params });
     schemes.push(...normalizeCollection(response.data));
-    nextUrl = response.data?.next ? response.data.next.replace(/^.*\/\/[^\/]+\/api\/v1/, "") : null;
+    nextUrl = trustedApiNextPath(response.data?.next);
     params = undefined;
     pageCount += 1;
   }
@@ -412,7 +433,7 @@ export async function listExternalCapitalSupport() {
   while (nextUrl && pageCount < 100) {
     const response = await client.get(nextUrl, { params });
     records.push(...normalizeCollection(response.data));
-    nextUrl = response.data?.next ? response.data.next.replace(/^.*\/\/[^\/]+\/api\/v1/, "") : null;
+    nextUrl = trustedApiNextPath(response.data?.next);
     params = undefined;
     pageCount += 1;
   }
@@ -433,7 +454,7 @@ export async function listExternalCertificationRequirements() {
   while (nextUrl && pageCount < 100) {
     const response = await client.get(nextUrl, { params });
     records.push(...normalizeCollection(response.data));
-    nextUrl = response.data?.next ? response.data.next.replace(/^.*\/\/[^\/]+\/api\/v1/, "") : null;
+    nextUrl = trustedApiNextPath(response.data?.next);
     params = undefined;
     pageCount += 1;
   }
@@ -454,7 +475,7 @@ export async function listSchemes() {
   while (nextUrl && pageCount < 100) {
     const response = await client.get(nextUrl, { params });
     schemes.push(...normalizeCollection(response.data));
-    nextUrl = response.data?.next ? response.data.next.replace(/^.*\/\/[^\/]+\/api\/v1/, "") : null;
+    nextUrl = trustedApiNextPath(response.data?.next);
     params = undefined;
     pageCount += 1;
   }

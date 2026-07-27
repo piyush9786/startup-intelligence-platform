@@ -5,7 +5,7 @@
 The briefing generator uses a local Ollama service and defaults to:
 
 ```text
-qwen3.5:9b
+qwen3:4b
 ```
 
 The model and provider are configurable through environment variables.
@@ -74,7 +74,7 @@ Start Ollama and pull the configured model:
 
 ```bash
 docker compose up -d ollama
-docker compose exec -T ollama ollama pull qwen3.5:9b
+docker compose exec -T ollama ollama pull qwen3:4b
 docker compose exec -T ollama ollama list
 ```
 
@@ -87,7 +87,7 @@ http://ollama:11434
 A smaller model can be selected for lower-memory development machines:
 
 ```text
-STARTUP_ADVISOR_LLM_MODEL=qwen3.5:4b
+STARTUP_ADVISOR_LLM_MODEL=qwen3:4b
 ```
 
 ## Failure behavior

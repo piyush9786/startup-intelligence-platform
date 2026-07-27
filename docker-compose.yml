@@ -6,6 +6,7 @@ x-backend-common: &backend-common
   env_file: .env
   volumes:
     - ./backend:/app
+    - ./data:/data:ro
   depends_on:
     postgres:
       condition: service_healthy
@@ -130,6 +131,11 @@ services:
       model="$${STARTUP_ADVISOR_LLM_MODEL:-qwen3:4b}";
       echo "Ensuring Ollama generation model: $$model";
       ollama pull "$$model";
+      chatbot_model="$${CHATBOT_LLM_MODEL:-$$model}";
+      if [ "$$chatbot_model" != "$$model" ]; then
+        echo "Ensuring Ollama chatbot model: $$chatbot_model";
+        ollama pull "$$chatbot_model";
+      fi;
       if [ "$${STARTUP_ADVISOR_RAG_ENABLED:-false}" = "true" ]; then
         embedding_model="$${STARTUP_ADVISOR_EMBEDDING_MODEL:-embeddinggemma}";
         echo "Ensuring Ollama embedding model: $$embedding_model";
@@ -177,6 +183,7 @@ services:
   frontend:
     build:
       context: ./frontend
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     environment:
       VITE_API_BASE_URL: /api/v1
       VITE_PLATFORM_BASE_URL: /

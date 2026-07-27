@@ -46,7 +46,7 @@ describe("external knowledge API client", () => {
 
   test("loads every paginated capital-support record", async () => {
     const nextUrl =
-      "http://localhost:8000/api/v1/knowledge/" +
+      `${window.location.origin}/api/v1/knowledge/` +
       "external-capital-support/?page=2";
 
     const firstRecord = {
@@ -117,7 +117,7 @@ describe("external knowledge API client", () => {
     "loads every paginated certification-requirement record",
     async () => {
       const nextUrl =
-        "http://localhost:8000/api/v1/knowledge/" +
+        `${window.location.origin}/api/v1/knowledge/` +
         "external-certification-requirements/?page=2";
 
       const firstRecord = {

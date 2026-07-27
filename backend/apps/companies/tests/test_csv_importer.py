@@ -15,6 +15,7 @@ from apps.companies.models import (
     RawCompanyDataset,
     normalize_company_name,
 )
+from apps.companies.services.csv_importer import CompanyCSVError, read_company_csv
 
 pytestmark = pytest.mark.django_db
 
@@ -101,6 +102,23 @@ def test_normalizes_common_legal_suffixes():
     assert normalize_company_name("ABC Technologies & Company") == (
         "abc technologies and company"
     )
+    assert normalize_company_name("आरोग्य टेक प्राइवेट लिमिटेड") == (
+        "आरोग्य टेक प्राइवेट लिमिटेड"
+    )
+
+
+def test_csv_reader_enforces_configured_row_limit(tmp_path):
+    path = tmp_path / "too-many.csv"
+    write_rows(
+        path,
+        [
+            company_row(external_id="source-001"),
+            company_row(external_id="source-002"),
+        ],
+    )
+
+    with pytest.raises(CompanyCSVError, match="maximum of 1"):
+        read_company_csv(path, max_rows=1)
 
 
 def test_company_csv_import_is_idempotent(tmp_path):
@@ -145,6 +163,38 @@ def test_new_observation_file_preserves_metric_history(tmp_path):
             "metric_value", flat=True
         )
     ) == [35, 42]
+
+
+def test_exact_identity_is_resolved_across_sources(tmp_path):
+    first = tmp_path / "source-one.csv"
+    second = tmp_path / "source-two.csv"
+    write_rows(first, [company_row()])
+    write_rows(
+        second,
+        [
+            company_row(
+                external_id="other-source-991",
+                canonical_name="Example Cloud Pvt Ltd",
+            )
+        ],
+    )
+
+    run_import(first)
+    call_command(
+        "import_companies",
+        file=str(second),
+        source_slug="other-company-source",
+        source_name="Other Company Source",
+        source_type="public_dataset",
+        reliability_score="0.800",
+        skip_storage_upload=True,
+    )
+
+    assert Company.objects.count() == 1
+    assert CompanySourceRecord.objects.count() == 2
+    assert Company.objects.get().aliases.filter(
+        alias="Example Cloud Pvt Ltd",
+    ).exists()
 
 
 def test_invalid_metric_row_is_registered_as_failed_without_company_writes(tmp_path):

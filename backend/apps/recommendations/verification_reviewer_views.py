@@ -1,8 +1,7 @@
-from io import BytesIO
-
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.http import FileResponse
+from django.http import StreamingHttpResponse
+from django.utils.http import content_disposition_header
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.exceptions import (
@@ -16,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import User
-from apps.sources.services.storage import download_bytes
+from apps.sources.services.storage import stream_object
 
 from .models import (
     EligibilityVerificationEvidence,
@@ -141,14 +140,18 @@ class EligibilityVerificationReviewerEvidenceDownloadView(
             pk=evidence_id,
         )
 
-        content = download_bytes(
+        content = stream_object(
             evidence.storage_key,
             bucket_name=(settings.MINIO_BUCKET_STARTUP_EVIDENCE),
         )
 
-        return FileResponse(
-            BytesIO(content),
-            as_attachment=True,
-            filename=evidence.filename,
+        response = StreamingHttpResponse(
+            content,
             content_type=(evidence.mime_type or "application/octet-stream"),
         )
+        response["Content-Disposition"] = content_disposition_header(
+            True,
+            evidence.filename,
+        )
+        response["Content-Length"] = evidence.size_bytes
+        return response

@@ -13,7 +13,7 @@ Rather than relying purely on static heuristics or unconstrained generative AI, 
 | # | Model | Algorithm / Implementation | Library | Function & Domain |
 |---|-------|----------------------------|---------|-------------------|
 | **1** | **Transformer Embeddings** | `embeddinggemma` | Ollama | **RAG Vector Search** — encodes scheme text & user queries into 768-dim Qdrant vectors. |
-| **2** | **Generative AI / LLM** | `qwen3.5:9b` | Ollama | **Reasoning & Chat** — site-wide copilot, document autofill, grounded advisor briefings. |
+| **2** | **Generative AI / LLM** | `qwen3:4b` | Ollama | **Reasoning & Chat** — site-wide copilot, document autofill, grounded advisor briefings. |
 | **3** | **K-Means Clustering** | `KMeans(n_clusters=8)` | `scikit-learn` | **Startup Cohort Segmentation** — groups startups by stage, sector, turnover, and team size. |
 | **4** | **Calibrated SVM** | `CalibratedClassifierCV(SVC)` | `scikit-learn` | **Scheme Success Ranking** — predicts probability ($0.0-1.0$) of a startup acquiring a scheme. |
 | **5** | **AdaBoost Classifier** | `AdaBoostClassifier` | `scikit-learn` | **Readiness Predictor** — predicts probability of a startup achieving `READY` status in 30 days. |
@@ -68,7 +68,7 @@ Stage 2: ML RE-RANKING
   Top 20 Candidates ─► Calibrated SVM Ranker (Model 4) ─► Success Probability Ranking [Top 6]
 
 Stage 3: LLM GROUNDED EXPLANATION
-  Top 6 Chunks + Startup Profile ─► LLM (qwen3.5:9b) ─► Grounded Answer + Source Citations
+  Top 6 Chunks + Startup Profile ─► LLM (qwen3:4b) ─► Grounded Answer + Source Citations
 ```
 
 ---

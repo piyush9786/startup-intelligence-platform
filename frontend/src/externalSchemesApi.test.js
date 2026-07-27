@@ -37,7 +37,7 @@ describe("external scheme API client", () => {
 
   test("loads every paginated external scheme record", async () => {
     const nextUrl =
-      "http://localhost:8000/api/v1/knowledge/external-schemes/?page=2";
+      `${window.location.origin}/api/v1/knowledge/external-schemes/?page=2`;
 
     const firstRecord = {
       id: "external-one",
@@ -101,5 +101,20 @@ describe("external scheme API client", () => {
         params: undefined,
       },
     );
+  });
+
+  test("rejects pagination links outside the configured API", async () => {
+    mocks.client.get.mockResolvedValueOnce({
+      data: {
+        count: 2,
+        next: "https://attacker.example/collect?page=2",
+        results: [],
+      },
+    });
+
+    await expect(listExternalSchemes()).rejects.toThrow(
+      "untrusted pagination URL",
+    );
+    expect(mocks.client.get).toHaveBeenCalledTimes(1);
   });
 });

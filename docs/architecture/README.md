@@ -73,7 +73,7 @@ The platform integrates **9 Machine Learning models** to upgrade every decision 
 | # | Model | Algorithm | Engine | Function |
 |---|-------|-----------|--------|----------|
 | **1** | Transformer Embeddings | `embeddinggemma` | Ollama | Encodes scheme text chunks into 768-dim vectors in Qdrant |
-| **2** | Generative AI / LLM | `qwen3.5:9b` | Ollama | Site-wide chatbot, document auto-fill, grounded briefings |
+| **2** | Generative AI / LLM | `qwen3:4b` | Ollama | Site-wide chatbot, document auto-fill, grounded briefings |
 | **3** | K-Means Clustering | `KMeans(n_clusters=8)` | `scikit-learn` | Groups startups into cohorts by stage, sector, and turnover |
 | **4** | SVM Classifier | `CalibratedClassifierCV(SVC)` | `scikit-learn` | Predicts probability (0.0–1.0) of scheme acquisition success |
 | **5** | AdaBoost Classifier | `AdaBoostClassifier` | `scikit-learn` | Predicts probability of startup becoming READY in 30 days |
@@ -85,7 +85,7 @@ The platform integrates **9 Machine Learning models** to upgrade every decision 
 ### 3. Enhanced 3-Stage RAG Pipeline
 1. **Hybrid Retrieval**: Parallel search across Qdrant (dense vectors) + TF-IDF (sparse keywords), merged using Reciprocal Rank Fusion ($K=60$).
 2. **ML Re-Ranking**: Top candidates re-ranked by Calibrated SVM success probability ($0.40 \times \text{eligibility} + 0.40 \times \text{SVM} + 0.10 \times \text{rules} + 0.10 \times \text{status}$).
-3. **LLM Explanation**: Top 6 candidates passed to `qwen3.5:9b` with strict citation bounds.
+3. **LLM Explanation**: Top 6 candidates passed to `qwen3:4b` with strict citation bounds.
 
 ---
 

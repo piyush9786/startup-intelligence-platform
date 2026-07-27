@@ -30,6 +30,19 @@ class CompanyViewSet(ReadOnlyModelViewSet):
         queryset = Company.objects.annotate(
             provenance_count=Count("source_records", distinct=True)
         ).order_by("canonical_name", "id")
+        user = self.request.user
+        if not user.is_staff and not user.is_superuser:
+            queryset = queryset.filter(
+                verification_status__in=[
+                    Company.VerificationStatus.PARTIALLY_VERIFIED,
+                    Company.VerificationStatus.VERIFIED,
+                ],
+                source_records__source__active=True,
+                source_records__source__verification_status__in=[
+                    CompanyDataSource.VerificationStatus.REVIEWED,
+                    CompanyDataSource.VerificationStatus.VERIFIED,
+                ],
+            ).distinct()
         if self.action == "retrieve":
             return queryset.prefetch_related(
                 "aliases",
