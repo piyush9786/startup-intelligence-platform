@@ -554,10 +554,35 @@ function Workspace({ onSignOut }) {
           setGenerationStep(advisorJobProgress(latestJob));
           navigate("/advisor");
         } else if (latestJob?.status === "failed") {
-          setError(
-            latestJob.error_message ||
-              "The previous founder guidance generation failed.",
-          );
+          // worker_interrupted means the Celery worker restarted while this job
+          // was in-flight — automatically re-queue so the user doesn't see a
+          // dead-end error and has to manually click "Generate" again.
+          if (latestJob.error_code === "worker_interrupted" && active) {
+            try {
+              setGenerationStep("Resuming interrupted advisor generation…");
+              const queuedResponse = await generateGroundedBriefing(
+                selectedProfileId,
+                setGenerationStep,
+              );
+              if (queuedResponse?.job && active) {
+                setGenerationJob(queuedResponse.job);
+                setGenerationStep(advisorJobProgress(queuedResponse.job));
+                navigate("/advisor");
+              }
+            } catch (_retryErr) {
+              // Fall back to showing the original error if auto-retry fails
+              setGenerationStep("");
+              setError(
+                latestJob.error_message ||
+                  "The previous founder guidance generation failed.",
+              );
+            }
+          } else {
+            setError(
+              latestJob.error_message ||
+                "The previous founder guidance generation failed.",
+            );
+          }
         }
       } catch (err) {
         if (active) handleRequestError(err);
