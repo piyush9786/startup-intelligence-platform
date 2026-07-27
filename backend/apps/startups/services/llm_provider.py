@@ -127,6 +127,7 @@ class OllamaStartupAdvisorProvider:
         seed: int,
         max_output_tokens: int,
         keep_alive: str,
+        context_length: int = 4096,
         transport: httpx.BaseTransport | None = None,
     ):
         self.base_url = base_url.rstrip("/")
@@ -134,8 +135,9 @@ class OllamaStartupAdvisorProvider:
         self.timeout_seconds = timeout_seconds
         self.temperature = temperature
         self.seed = seed
-        self.max_output_tokens = max_output_tokens
+        self.max_output_tokens = max(256, int(max_output_tokens))
         self.keep_alive = keep_alive
+        self.context_length = max(1024, int(context_length))
         self.transport = transport
 
     @property
@@ -144,6 +146,7 @@ class OllamaStartupAdvisorProvider:
             "temperature": self.temperature,
             "seed": self.seed,
             "max_output_tokens": self.max_output_tokens,
+            "context_length": self.context_length,
             "think": False,
             "stream": False,
             "keep_alive": self.keep_alive,
@@ -170,6 +173,7 @@ class OllamaStartupAdvisorProvider:
             "options": {
                 "temperature": self.temperature,
                 "seed": self.seed,
+                "num_ctx": self.context_length,
                 "num_predict": self.max_output_tokens,
             },
         }
@@ -256,15 +260,19 @@ def _optional_nonnegative_int(value: Any) -> int | None:
 
 def get_startup_advisor_llm_provider() -> StartupAdvisorLLMProvider:
     provider_name = settings.STARTUP_ADVISOR_LLM_PROVIDER
+
     if provider_name != "ollama":
-        raise ImproperlyConfigured("STARTUP_ADVISOR_LLM_PROVIDER must be 'ollama'.")
+        raise ImproperlyConfigured(
+            "STARTUP_ADVISOR_LLM_PROVIDER must be 'ollama'."
+        )
 
     return OllamaStartupAdvisorProvider(
         base_url=settings.OLLAMA_BASE_URL,
         model_name=settings.STARTUP_ADVISOR_LLM_MODEL,
-        timeout_seconds=(settings.STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS),
-        temperature=(settings.STARTUP_ADVISOR_LLM_TEMPERATURE),
+        timeout_seconds=settings.STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS,
+        temperature=settings.STARTUP_ADVISOR_LLM_TEMPERATURE,
         seed=settings.STARTUP_ADVISOR_LLM_SEED,
-        max_output_tokens=(settings.STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS),
-        keep_alive=(settings.STARTUP_ADVISOR_LLM_KEEP_ALIVE),
+        max_output_tokens=settings.STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS,
+        keep_alive=settings.STARTUP_ADVISOR_LLM_KEEP_ALIVE,
+        context_length=settings.OLLAMA_CONTEXT_LENGTH,
     )

@@ -40,8 +40,6 @@ const hi = {
   "nav.schemes": "योजनाएं",
   "nav.requirements": "आवश्यकताएं",
   "requirements.kicker": "आवेदन की तैयारी",
-  "requirements.title": "आवश्यकताएं और प्रमाणन",
-  "requirements.subtitle": "आधिकारिक योजना अभिलेखों से एकत्र की गई स्पष्ट दस्तावेज, प्रमाणन और साक्ष्य आवश्यकताएं।",
   "nav.funding": "फंडिंग और लोन",
   "nav.advisor": "फाउंडर सलाहकार",
   "nav.reviewer_verification": "समीक्षक सत्यापन",

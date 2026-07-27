@@ -17,7 +17,6 @@ from apps.startups.views import (
     _visible_profiles as startup_visible_profiles,
 )
 
-
 User = get_user_model()
 
 

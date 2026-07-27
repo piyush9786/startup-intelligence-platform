@@ -6,8 +6,8 @@ keeps the MLModelRegistry up to date.
 """
 from __future__ import annotations
 
-import uuid
 import hashlib
+import uuid
 from pathlib import Path
 from typing import Any
 

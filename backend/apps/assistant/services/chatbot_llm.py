@@ -144,15 +144,49 @@ def _ollama_base_url() -> str:
 
 
 def _chatbot_model() -> str:
-    return getattr(settings, "STARTUP_ADVISOR_LLM_MODEL", "qwen3:4b-instruct")
+    return getattr(
+        settings,
+        "CHATBOT_LLM_MODEL",
+        getattr(settings, "STARTUP_ADVISOR_LLM_MODEL", "qwen3:4b"),
+    )
 
 
 def _chatbot_timeout() -> float:
-    return float(getattr(settings, "CHATBOT_LLM_TIMEOUT_SECONDS", 60))
+    return max(
+        10.0,
+        float(getattr(settings, "CHATBOT_LLM_TIMEOUT_SECONDS", 180)),
+    )
 
 
 def _chatbot_max_tokens() -> int:
-    return int(getattr(settings, "CHATBOT_LLM_MAX_OUTPUT_TOKENS", 1024))
+    return max(
+        64,
+        int(getattr(settings, "CHATBOT_LLM_MAX_OUTPUT_TOKENS", 512)),
+    )
+
+
+def _chatbot_context_length() -> int:
+    return max(
+        1024,
+        int(getattr(settings, "OLLAMA_CONTEXT_LENGTH", 4096)),
+    )
+
+
+def _chatbot_history_turns() -> int:
+    return max(
+        0,
+        int(getattr(settings, "CHATBOT_LLM_HISTORY_TURNS", 6)),
+    )
+
+
+def _chatbot_keep_alive() -> str:
+    return str(
+        getattr(
+            settings,
+            "CHATBOT_LLM_KEEP_ALIVE",
+            getattr(settings, "STARTUP_ADVISOR_LLM_KEEP_ALIVE", "10m"),
+        )
+    )
 
 
 def get_llm_chatbot_reply(
@@ -182,26 +216,51 @@ def get_llm_chatbot_reply(
         startup_profile=startup_profile,
     )
 
-    # Build Ollama messages array: system + history + current user turn.
-    # Filter to only user/assistant roles from history.
     ollama_messages: list[dict[str, str]] = [
-        {"role": "system", "content": system_prompt},
+        {
+            "role": "system",
+            "content": system_prompt,
+        },
     ]
-    for msg in history:
-        role = msg.get("role", "")
-        content = msg.get("content", "")
-        if role in ("user", "assistant") and content:
-            ollama_messages.append({"role": role, "content": content})
 
-    ollama_messages.append({"role": "user", "content": current_message})
+    # Do not send the complete lifetime conversation to a 4 GB GPU.
+    # Six turns means at most twelve previous user/assistant messages.
+    history_message_limit = _chatbot_history_turns() * 2
+
+    bounded_history = (
+        history[-history_message_limit:]
+        if history_message_limit > 0
+        else []
+    )
+
+    for msg in bounded_history:
+        role = msg.get("role", "")
+        content = str(msg.get("content", "")).strip()
+
+        if role in ("user", "assistant") and content:
+            ollama_messages.append(
+                {
+                    "role": role,
+                    "content": content,
+                }
+            )
+
+    ollama_messages.append(
+        {
+            "role": "user",
+            "content": current_message.strip(),
+        }
+    )
 
     request_payload = {
         "model": _chatbot_model(),
         "messages": ollama_messages,
         "stream": False,
         "think": False,
+        "keep_alive": _chatbot_keep_alive(),
         "options": {
-            "temperature": 0.4,
+            "temperature": 0.3,
+            "num_ctx": _chatbot_context_length(),
             "num_predict": _chatbot_max_tokens(),
         },
     }
@@ -209,42 +268,93 @@ def get_llm_chatbot_reply(
     base_url = _ollama_base_url()
 
     try:
-        with httpx.Client(timeout=_chatbot_timeout()) as client:
+        timeout_seconds = _chatbot_timeout()
+
+        timeout = httpx.Timeout(
+            timeout_seconds,
+            connect=min(10.0, timeout_seconds),
+        )
+
+        with httpx.Client(timeout=timeout) as client:
             response = client.post(
                 f"{base_url}/api/chat",
                 json=request_payload,
             )
             response.raise_for_status()
+
     except httpx.HTTPStatusError as exc:
+        response_body = exc.response.text[:1000]
+
         logger.warning(
-            "Ollama /api/chat HTTP error %s for chatbot request.",
+            "Ollama chatbot request returned HTTP %s. Response: %s",
             exc.response.status_code,
+            response_body,
         )
+
         raise ChatbotLLMError(
-            "The Ollama model service returned an error."
+            f"Ollama returned HTTP {exc.response.status_code}."
         ) from exc
-    except (httpx.ConnectError, httpx.TimeoutException) as exc:
-        logger.warning("Ollama /api/chat connection/timeout error: %s", exc)
+
+    except httpx.TimeoutException as exc:
+        logger.warning(
+            "Ollama chatbot request timed out after %.1f seconds.",
+            _chatbot_timeout(),
+        )
+
         raise ChatbotLLMError(
-            "The local Ollama model service is unavailable or timed out."
+            "The local model exceeded the chatbot generation timeout."
         ) from exc
+
+    except httpx.ConnectError as exc:
+        logger.warning(
+            "Could not connect to Ollama at %s: %s",
+            base_url,
+            exc,
+        )
+
+        raise ChatbotLLMError(
+            "The backend could not connect to the Ollama service."
+        ) from exc
+
     except httpx.HTTPError as exc:
-        logger.warning("Ollama /api/chat HTTP error: %s", exc)
-        raise ChatbotLLMError("Ollama request failed.") from exc
+        logger.warning(
+            "Ollama chatbot request failed: %s",
+            exc,
+        )
+
+        raise ChatbotLLMError(
+            "The local Ollama request failed."
+        ) from exc
 
     try:
         data = response.json()
-        reply_text: str = data["message"]["content"]
-    except (KeyError, TypeError, ValueError) as exc:
-        logger.warning("Ollama /api/chat invalid JSON structure: %s", exc)
+        message = data.get("message") or {}
+        reply_text = str(message.get("content") or "")
+    except (TypeError, ValueError) as exc:
+        logger.warning(
+            "Ollama returned invalid chatbot JSON: %s",
+            exc,
+        )
+
         raise ChatbotLLMError(
-            "The Ollama model returned an unexpected response format."
+            "The local model returned an invalid response."
         ) from exc
 
-    # Strip any accidental <think>...</think> blocks that Qwen3 may emit.
-    reply_text = _strip_think_tags(reply_text)
+    reply_text = _strip_think_tags(reply_text).strip()
 
-    return reply_text.strip()
+    if not reply_text:
+        done_reason = data.get("done_reason")
+
+        logger.warning(
+            "Ollama completed without response text. done_reason=%s",
+            done_reason,
+        )
+
+        raise ChatbotLLMError(
+            "The local model returned an empty response."
+        )
+
+    return reply_text
 
 
 def _strip_think_tags(text: str) -> str:

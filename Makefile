@@ -56,3 +56,24 @@ shell:
 
 reset:
 	docker compose down -v --remove-orphans
+
+GPU_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.gpu.yml
+
+.PHONY: up-gpu down-gpu gpu-check ollama-test llm-logs
+
+up-gpu:
+	$(GPU_COMPOSE) up -d --build
+
+down-gpu:
+	$(GPU_COMPOSE) down
+
+gpu-check:
+	nvidia-smi
+	$(GPU_COMPOSE) exec ollama ollama ps
+
+ollama-test:
+	$(GPU_COMPOSE) exec ollama \
+		ollama run qwen3:4b "Reply with exactly: MODEL_OK"
+
+llm-logs:
+	$(GPU_COMPOSE) logs -f ollama backend worker
