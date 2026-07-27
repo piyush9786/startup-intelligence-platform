@@ -1,80 +1,228 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import en from "./en.js";
 import hi from "./hi.js";
 import mr from "./mr.js";
 
-// ── Language registry ────────────────────────────────────────────────────────
 export const LANGUAGES = [
-  { code: "en", label: "English", nativeLabel: "English" },
-  { code: "hi", label: "Hindi", nativeLabel: "हिन्दी" },
-  { code: "mr", label: "Marathi", nativeLabel: "मराठी" },
+  {
+    code: "en",
+    label: "English",
+    nativeLabel: "English",
+  },
+  {
+    code: "hi",
+    label: "Hindi",
+    nativeLabel: "हिन्दी",
+  },
+  {
+    code: "mr",
+    label: "Marathi",
+    nativeLabel: "मराठी",
+  },
 ];
 
-const TRANSLATIONS = { en, hi, mr };
-const STORAGE_KEY = "si_language";
-const DEFAULT_LANG = "en";
+const TRANSLATIONS = {
+  en,
+  hi,
+  mr,
+};
 
-// ── Context ──────────────────────────────────────────────────────────────────
+const DEFAULT_LANGUAGE = "en";
+const STORAGE_KEY = "si_language";
+const LEGACY_STORAGE_KEYS = [
+  "startup_os_lang",
+];
+
+function validLanguage(code) {
+  return Boolean(
+    code &&
+    Object.prototype.hasOwnProperty.call(
+      TRANSLATIONS,
+      code,
+    ),
+  );
+}
+
+function readStoredLanguage() {
+  if (typeof window === "undefined") {
+    return DEFAULT_LANGUAGE;
+  }
+
+  try {
+    const currentValue =
+      window.localStorage.getItem(STORAGE_KEY);
+
+    if (validLanguage(currentValue)) {
+      return currentValue;
+    }
+
+    for (const key of LEGACY_STORAGE_KEYS) {
+      const legacyValue =
+        window.localStorage.getItem(key);
+
+      if (validLanguage(legacyValue)) {
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          legacyValue,
+        );
+
+        return legacyValue;
+      }
+    }
+  } catch {
+    // Storage may be unavailable in private browsing.
+  }
+
+  return DEFAULT_LANGUAGE;
+}
+
+const defaultT = (key, variables = {}) => {
+  let result = en[key] ?? key;
+  if (typeof result !== "string") {
+    return String(result);
+  }
+  for (const [name, value] of Object.entries(variables)) {
+    result = result.replace(new RegExp(`\\{${name}\\}`, "g"), String(value));
+  }
+  return result;
+};
+
 const LanguageContext = createContext({
-  language: DEFAULT_LANG,
+  language: DEFAULT_LANGUAGE,
   setLanguage: () => {},
-  t: (key) => key,
+  t: defaultT,
 });
 
-// ── Provider ─────────────────────────────────────────────────────────────────
-export function LanguageProvider({ children }) {
-  const [language, setLanguageState] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return TRANSLATIONS[stored] ? stored : DEFAULT_LANG;
-    } catch {
-      return DEFAULT_LANG;
-    }
-  });
+export function LanguageProvider({
+  children,
+}) {
+  const [language, setLanguageState] =
+    useState(readStoredLanguage);
 
-  // Apply lang attribute to <html> for proper font rendering and a11y
   useEffect(() => {
-    document.documentElement.setAttribute("lang", language);
+    document.documentElement.lang = language;
+    document.documentElement.dir = "ltr";
   }, [language]);
 
-  const setLanguage = useCallback((code) => {
-    if (!TRANSLATIONS[code]) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, code);
-    } catch {
-      // ignore storage errors
+  useEffect(() => {
+    function handleStorage(event) {
+      if (
+        event.key === STORAGE_KEY &&
+        validLanguage(event.newValue)
+      ) {
+        setLanguageState(event.newValue);
+      }
     }
+
+    window.addEventListener(
+      "storage",
+      handleStorage,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        handleStorage,
+      );
+    };
+  }, []);
+
+  const setLanguage = useCallback((code) => {
+    if (!validLanguage(code)) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        code,
+      );
+
+      for (const key of LEGACY_STORAGE_KEYS) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Continue with in-memory state.
+    }
+
     setLanguageState(code);
   }, []);
 
-  // Translation function — supports {variable} interpolation
   const t = useCallback(
-    (key, vars = {}) => {
-      const dict = TRANSLATIONS[language] || en;
-      let value = dict[key] ?? en[key] ?? key;
-      // Interpolate {variable} placeholders
-      Object.entries(vars).forEach(([k, v]) => {
-        value = value.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
-      });
-      return value;
+    (key, variables = {}) => {
+      const dictionary =
+        TRANSLATIONS[language] || en;
+
+      let result =
+        dictionary[key] ??
+        en[key] ??
+        key;
+
+      if (typeof result !== "string") {
+        return String(result);
+      }
+
+      for (const [name, value] of Object.entries(
+        variables,
+      )) {
+        result = result.replace(
+          new RegExp(
+            `\\{${name}\\}`,
+            "g",
+          ),
+          String(value),
+        );
+      }
+
+      return result;
     },
     [language],
   );
 
+  const contextValue = useMemo(
+    () => ({
+      language,
+      setLanguage,
+      t,
+    }),
+    [
+      language,
+      setLanguage,
+      t,
+    ],
+  );
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider
+      value={contextValue}
+    >
       {children}
     </LanguageContext.Provider>
   );
 }
 
-// ── Hook ─────────────────────────────────────────────────────────────────────
 export function useLanguage() {
   return useContext(LanguageContext);
 }
 
-// Convenience hook — returns just the t() function and language code
 export function useT() {
-  const { t, language } = useContext(LanguageContext);
-  return { t, language };
+  const {
+    language,
+    setLanguage,
+    t,
+  } = useContext(LanguageContext);
+
+  return {
+    language,
+    setLanguage,
+    t,
+  };
 }

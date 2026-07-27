@@ -5,6 +5,26 @@ const mr = {
   "brand.tagline": "Founder OS",
   "brand.tagline.public": "AI फाउंडर ऑपरेटिंग सिस्टम",
 
+  // ── Language ────────────────────────────────────────────────────────────
+  "language.select": "भाषा निवडा",
+  "language.change": "भाषा: {language}. बदलण्यासाठी क्लिक करा.",
+
+  // ── Dashboard ───────────────────────────────────────────────────────────
+  "dashboard.command_center": "फाउंडर कमांड सेंटर",
+  "dashboard.records_active": "सत्यापित नोंदी सक्रिय आहेत",
+  "dashboard.hero_title": "{startup} ला एका स्पष्ट पुढील पावलासह पुढे न्या.",
+  "dashboard.your_startup": "तुमच्या स्टार्टअप",
+  "dashboard.hero_workflow": "तुमची तयारी, योजना जुळणी, आवश्यकता आणि मार्गदर्शन व्यावहारिक फाउंडर कार्यप्रवाहात मांडले आहे.",
+  "dashboard.readiness_score": "तयारी गुण",
+  "dashboard.readiness_actions": "तयारी कृती",
+  "dashboard.recommended_schemes": "शिफारस केलेल्या योजना",
+  "dashboard.founder_guidance": "फाउंडर मार्गदर्शन",
+  "dashboard.open_actions": "तुमच्या पुढील सत्यापित कृती उघडा",
+  "dashboard.open_schemes": "क्रमवारीतील योजना जुळणी उघडा",
+  "dashboard.open_guidance": "पुरावा-आधारित फाउंडर मार्गदर्शन उघडा",
+  "dashboard.ready": "तयार",
+  "dashboard.pending": "प्रलंबित",
+
   // ── Navigation ─────────────────────────────────────────────────────────
   "nav.group.workspace": "तुमचे कार्यक्षेत्र",
   "nav.group.discover": "सहाय्य शोधा",
