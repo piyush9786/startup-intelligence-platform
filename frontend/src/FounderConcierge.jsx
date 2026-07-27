@@ -281,7 +281,7 @@ function ConciergeField({
 
 
 export default function FounderConcierge({
-  initialOpen = true,
+  initialOpen = false,
   onNavigate,
   startupProfileId,
 }) {
