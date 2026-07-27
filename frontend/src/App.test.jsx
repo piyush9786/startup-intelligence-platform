@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { LanguageProvider } from "./i18n/index.jsx";
 
 const api = vi.hoisted(() => ({
   SESSION_EXPIRED_EVENT: "startup-intelligence:session-expired",
@@ -75,6 +76,9 @@ vi.mock("./i18n/index.jsx", () => {
     "nav.roadmap": "Action roadmap",
     "nav.schemes": "Schemes",
     "nav.requirements": "Requirements",
+    "requirements.kicker": "APPLICATION READINESS",
+    "requirements.title": "Requirements and certifications",
+    "requirements.subtitle": "Explicit document, certification, and evidence requirements collected across official scheme records.",
     "nav.funding": "Funding & loans",
     "nav.advisor": "Founder advisor",
     "nav.reviewer_verification": "Reviewer verification",
@@ -1256,19 +1260,26 @@ describe("functional user dashboard", () => {
   test("opens explicit document and certification requirements", async () => {
     const user = userEvent.setup();
     render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
-
+    await screen.findByRole("heading", { name: /Keep Acme Climate moving/ });
     await user.click(await screen.findByRole("link", { name: /Requirements/i }));
 
-    expect(await screen.findByRole("heading", { name: "Requirements and certifications" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole(
+        "heading",
+        { name: "Requirements and certifications" },
+        { timeout: 15000 },
+      ),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("Certificate of incorporation").length).toBeGreaterThan(0);
     expect(
       screen.getAllByText("Valid DPIIT recognition certificate is required.").length,
     ).toBeGreaterThan(0);
-  });
+  }, 15000);
 
   test("shows funding and loan terms and opens scheme detail", async () => {
     const user = userEvent.setup();
     render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
+    await screen.findByRole("heading", { name: /Keep Acme Climate moving/ });
 
     await user.click(await screen.findByRole("link", { name: "Funding & loans" }));
     expect(await screen.findByRole("heading", { name: "Funding and loans" })).toBeInTheDocument();

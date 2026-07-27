@@ -553,6 +553,11 @@ function Workspace({ onSignOut }) {
           setGenerationJob(latestJob);
           setGenerationStep(advisorJobProgress(latestJob));
           navigate("/advisor");
+        } else if (latestJob?.status === "failed") {
+          setError(
+            latestJob.error_message ||
+              "The previous founder guidance generation failed.",
+          );
         }
       } catch (err) {
         if (active) handleRequestError(err);
@@ -583,18 +588,55 @@ function Workspace({ onSignOut }) {
         setGenerationStep(advisorJobProgress(nextJob));
 
         if (nextJob.status === "succeeded") {
-          if (!nextJob.briefing_id) throw new Error("Completed founder guidance job has no briefing record.");
-          const newBriefing = await getStartupAdvisorBriefing(nextJob.briefing_id, { signal: controller.signal });
+          if (!nextJob.briefing_id) {
+            throw new Error(
+              "Completed founder guidance job has no briefing record.",
+            );
+          }
+
+          const newBriefing =
+            await getStartupAdvisorBriefing(
+              nextJob.briefing_id,
+              {
+                signal: controller.signal,
+              },
+            );
+
           if (!active) return;
+
           setCurrentBriefing(newBriefing);
-          setSuccess("Founder guidance successfully generated.");
-          // Add to history list immediately to avoid a reload hop
-          setHistory((prev) => {
-            const updated = prev.filter((h) => h.id !== newBriefing.id);
-            return [newBriefing, ...updated];
+          setGenerationStep("");
+          setSuccess(
+            "Founder guidance successfully generated.",
+          );
+
+          setHistory((previous) => {
+            const updated = previous.filter(
+              (item) => item.id !== newBriefing.id,
+            );
+
+            return [
+              newBriefing,
+              ...updated,
+            ];
           });
+        } else if (nextJob.status === "failed") {
+          setGenerationStep("");
+
+          const failureMessage =
+            nextJob.error_message ||
+            "Founder guidance generation failed.";
+
+          setError(
+            nextJob.error_code
+              ? `${failureMessage} (${nextJob.error_code})`
+              : failureMessage,
+          );
         } else if (isActiveAdvisorJob(nextJob)) {
-          timerId = setTimeout(pollGenerationJob, 4000);
+          timerId = setTimeout(
+            pollGenerationJob,
+            4000,
+          );
         }
       } catch (err) {
         if (err.name === "AbortError") return;

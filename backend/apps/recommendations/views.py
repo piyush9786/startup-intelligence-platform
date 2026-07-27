@@ -26,13 +26,17 @@ from .services import (
 
 
 def _visible_profiles(user):
-    return StartupProfile.objects.filter(owner=user)
+    queryset = StartupProfile.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(owner=user)
+    return queryset
 
 
 def _visible_generation_runs(user):
-    return RecommendationGenerationRun.objects.filter(
-        startup_profile__owner=user,
-    )
+    queryset = RecommendationGenerationRun.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
 
 
 class EligibilityEvaluateView(APIView):

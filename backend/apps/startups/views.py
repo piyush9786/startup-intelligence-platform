@@ -42,31 +42,38 @@ from .services import (
 
 
 def _visible_profiles(user):
-    return StartupProfile.objects.filter(owner=user)
+    queryset = StartupProfile.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(owner=user)
+    return queryset
 
 
 def _visible_readiness_assessments(user):
-    return StartupReadinessAssessment.objects.filter(
-        startup_profile__owner=user,
-    )
+    queryset = StartupReadinessAssessment.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
 
 
 def _visible_readiness_action_plans(user):
-    return StartupReadinessActionPlan.objects.filter(
-        startup_profile__owner=user,
-    )
+    queryset = StartupReadinessActionPlan.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
 
 
 def _visible_funding_plans(user):
-    return StartupFundingPlan.objects.filter(
-        startup_profile__owner=user,
-    )
+    queryset = StartupFundingPlan.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
 
 
 def _visible_starting_plans(user):
-    return StartupStartingPlan.objects.filter(
-        startup_profile__owner=user,
-    )
+    queryset = StartupStartingPlan.objects.all()
+    if not getattr(user, "is_staff", False):
+        queryset = queryset.filter(startup_profile__owner=user)
+    return queryset
 
 
 class StartupProfileViewSet(ModelViewSet):

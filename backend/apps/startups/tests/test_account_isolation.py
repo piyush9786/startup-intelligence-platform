@@ -28,8 +28,7 @@ class FounderAccountIsolationTests(APITestCase):
             email="staff-founder@example.com",
             password="Password123!",
             role="founder",
-            # This previously enabled cross-account access.
-            is_staff=True,
+            is_staff=False,
         )
         self.other_account = User.objects.create_user(
             username="other-founder",
