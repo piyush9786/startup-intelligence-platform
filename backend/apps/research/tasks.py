@@ -25,8 +25,9 @@ def generate_research_report_task(
     """Execute research report generation asynchronously."""
     logger.info("Starting generate_research_report_task for request %s", research_request_id)
     report = generate_research_report(research_request_id)
+    report.research_request.refresh_from_db(fields=["status"])
     return {
         "research_request_id": research_request_id,
         "report_id": str(report.id),
-        "status": "succeeded",
+        "status": report.research_request.status,
     }

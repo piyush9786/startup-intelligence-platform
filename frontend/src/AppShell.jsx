@@ -102,6 +102,7 @@ const FundingPage = React.lazy(() => import("./FundingPage"));
 const FundingPlanPage = React.lazy(() => import("./FundingPlanPage"));
 const MyStartupPage = React.lazy(() => import("./MyStartupPage"));
 const RequirementsPage = React.lazy(() => import("./RequirementsPage"));
+const ResearchPage = React.lazy(() => import("./ResearchPage"));
 const ReviewerVerificationWorkspace = React.lazy(() => import("./ReviewerVerificationWorkspace"));
 const SchemeDetailPage = React.lazy(() => import("./SchemeDetailPage"));
 const SchemeExplorerPage = React.lazy(() => import("./SchemeExplorerPage"));
@@ -170,7 +171,10 @@ function Navigation({ canReviewEligibility, onLogout }) {
     },
     {
       label: t("nav.group.guidance"),
-      items: [["/advisor", "✦", t("nav.advisor")]],
+      items: [
+        ["/advisor", "✦", t("nav.advisor")],
+        ["/research", "⌕", "Research"],
+      ],
     },
   ];
 
@@ -876,6 +880,7 @@ export function AppRouter({ onSignOut }) {
         <Route path="funding/plans" element={<FundingPlanRoute />} />
         <Route path="starting-plan" element={<StartingPlanRoute />} />
         <Route path="advisor" element={<AdvisorRoute />} />
+        <Route path="research" element={<ResearchRoute />} />
         <Route path="intelligence" element={<IntelligenceRoute />} />
         <Route path="reviewer-verifications" element={<ReviewerRoute />} />
         <Route path="onboarding" element={<OnboardingRoute />} />
@@ -1107,6 +1112,11 @@ function AdvisorRoute() {
       onHistorySelection={handleHistorySelection}
     />
   );
+}
+
+function ResearchRoute() {
+  const ctx = useOutletContext();
+  return <ResearchPage startupProfileId={ctx.selectedProfileId} />;
 }
 
 function IntelligenceRoute() {

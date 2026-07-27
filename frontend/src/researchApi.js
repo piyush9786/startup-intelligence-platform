@@ -1,4 +1,4 @@
-import { client } from "./api";
+import { authenticatedApiClient as client } from "./api";
 
 export async function submitResearchRequest(startupProfileId, question) {
   const response = await client.post("/research/requests/", {

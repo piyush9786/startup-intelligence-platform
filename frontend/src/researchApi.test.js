@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { client } from "./api";
+import { authenticatedApiClient as client } from "./api";
 import {
   getResearchReport,
   getResearchRequest,
@@ -9,7 +9,7 @@ import {
 } from "./researchApi";
 
 vi.mock("./api", () => ({
-  client: {
+  authenticatedApiClient: {
     post: vi.fn(),
     get: vi.fn(),
   },

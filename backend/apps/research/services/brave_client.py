@@ -23,6 +23,28 @@ def search_web_brave(
         raise WebSearchError("A search query is required.")
 
     timeout_sec = float(getattr(settings, "WEB_SEARCH_TIMEOUT_SECONDS", 30.0))
+    time_range = str(getattr(settings, "WEB_SEARCH_TIME_RANGE", "")).strip()
+    freshness = {
+        "day": "pd",
+        "week": "pw",
+        "month": "pm",
+        "year": "py",
+        "": "",
+    }.get(time_range)
+    if freshness is None:
+        raise WebSearchError(
+            "WEB_SEARCH_TIME_RANGE must be day, week, month, year, or blank."
+        )
+    start_date = str(getattr(settings, "WEB_SEARCH_START_DATE", "")).strip()
+    end_date = str(getattr(settings, "WEB_SEARCH_END_DATE", "")).strip()
+    if start_date and end_date:
+        freshness = f"{start_date}to{end_date}"
+    search_params = {
+        "q": clean_query,
+        "count": min(max(max_results, 1), 10),
+    }
+    if freshness:
+        search_params["freshness"] = freshness
 
     try:
         with httpx.Client(
@@ -34,10 +56,7 @@ def search_web_brave(
                     "Accept": "application/json",
                     "X-Subscription-Token": api_key,
                 },
-                params={
-                    "q": clean_query,
-                    "count": min(max(max_results, 1), 10),
-                },
+                params=search_params,
             )
             response.raise_for_status()
     except httpx.HTTPError as exc:

@@ -36,6 +36,8 @@ class ResearchSearchQuerySerializer(serializers.ModelSerializer):
             "query",
             "provider",
             "result_count",
+            "status",
+            "error_message",
             "executed_at",
         ]
 

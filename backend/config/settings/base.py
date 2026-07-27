@@ -135,11 +135,21 @@ REST_FRAMEWORK = {
         "auth_refresh": os.getenv("AUTH_REFRESH_RATE", "30/minute"),
         "auth_logout": os.getenv("AUTH_LOGOUT_RATE", "30/minute"),
         "auth_register": os.getenv("AUTH_REGISTER_RATE", "5/hour"),
+        "research_hourly": os.getenv("RESEARCH_HOURLY_RATE", "5/hour"),
+        "research_daily": os.getenv("RESEARCH_DAILY_RATE", "20/day"),
         "assistant_chat_turn": os.getenv(
             "ASSISTANT_CHATBOT_TURN_RATE",
             "20/hour",
         ),
     },
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL", "redis://redis:6379/0"),
+        "TIMEOUT": 300,
+    }
 }
 
 SIMPLE_JWT = {
@@ -429,3 +439,8 @@ WEB_SEARCH_TIMEOUT_SECONDS = float(
 WEB_SEARCH_CACHE_SECONDS = int(
     os.environ.get("WEB_SEARCH_CACHE_SECONDS", "21600")
 )
+
+WEB_SEARCH_DEPTH = os.environ.get("WEB_SEARCH_DEPTH", "basic")
+WEB_SEARCH_TIME_RANGE = os.environ.get("WEB_SEARCH_TIME_RANGE", "year")
+WEB_SEARCH_START_DATE = os.environ.get("WEB_SEARCH_START_DATE", "")
+WEB_SEARCH_END_DATE = os.environ.get("WEB_SEARCH_END_DATE", "")

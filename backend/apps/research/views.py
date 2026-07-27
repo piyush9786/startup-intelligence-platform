@@ -1,6 +1,7 @@
 """REST API Views for research application."""
 from __future__ import annotations
 
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -16,6 +17,7 @@ from .serializers import (
     StartupResearchReportSerializer,
 )
 from .tasks import generate_research_report_task
+from .throttles import ResearchDailyThrottle, ResearchHourlyThrottle
 
 
 def _resolve_profile(user, profile_id):
@@ -26,6 +28,7 @@ def _resolve_profile(user, profile_id):
 
 class ResearchRequestCreateView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ResearchHourlyThrottle, ResearchDailyThrottle]
 
     def post(self, request):
         serializer = ResearchRequestCreateSerializer(data=request.data)
@@ -50,11 +53,35 @@ class ResearchRequestCreateView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        req_obj = ResearchRequest.objects.create(
-            startup_profile=profile,
-            requested_by=request.user,
-            question=serializer.validated_data["question"],
-        )
+        try:
+            with transaction.atomic():
+                req_obj = ResearchRequest.objects.create(
+                    startup_profile=profile,
+                    requested_by=request.user,
+                    question=serializer.validated_data["question"],
+                )
+        except IntegrityError:
+            active_job = ResearchRequest.objects.filter(
+                startup_profile=profile,
+                status__in=[
+                    ResearchRequest.Status.QUEUED,
+                    ResearchRequest.Status.RUNNING,
+                ],
+            ).first()
+            return Response(
+                {
+                    "detail": (
+                        "A research job is already in progress "
+                        "for this startup profile."
+                    ),
+                    "job": (
+                        ResearchRequestDetailSerializer(active_job).data
+                        if active_job
+                        else None
+                    ),
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
 
         try:
             async_res = generate_research_report_task.delay(str(req_obj.id))

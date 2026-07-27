@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 import httpx
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 
 class WebSearchError(RuntimeError):
@@ -39,9 +41,35 @@ def search_web(
     if not clean_query:
         raise WebSearchError("A search query is required.")
 
+    search_depth = str(getattr(settings, "WEB_SEARCH_DEPTH", "basic")).strip()
+    allowed_depths = {"basic", "advanced", "fast", "ultra-fast"}
+    if search_depth not in allowed_depths:
+        raise ImproperlyConfigured(
+            f"WEB_SEARCH_DEPTH must be one of {sorted(allowed_depths)}."
+        )
+
+    time_range = str(getattr(settings, "WEB_SEARCH_TIME_RANGE", "")).strip()
+    if time_range and time_range not in {"day", "week", "month", "year"}:
+        raise ImproperlyConfigured(
+            "WEB_SEARCH_TIME_RANGE must be day, week, month, year, or blank."
+        )
+    start_date = str(getattr(settings, "WEB_SEARCH_START_DATE", "")).strip()
+    end_date = str(getattr(settings, "WEB_SEARCH_END_DATE", "")).strip()
+    for setting_name, value in (
+        ("WEB_SEARCH_START_DATE", start_date),
+        ("WEB_SEARCH_END_DATE", end_date),
+    ):
+        if value:
+            try:
+                date.fromisoformat(value)
+            except ValueError as exc:
+                raise ImproperlyConfigured(
+                    f"{setting_name} must use YYYY-MM-DD."
+                ) from exc
+
     payload: dict[str, Any] = {
         "query": clean_query,
-        "search_depth": "advanced",
+        "search_depth": search_depth,
         "max_results": min(max(max_results, 1), 10),
         "include_answer": False,
         "include_raw_content": False,
@@ -49,6 +77,13 @@ def search_web(
 
     if include_domains:
         payload["include_domains"] = include_domains
+    if start_date or end_date:
+        if start_date:
+            payload["start_date"] = start_date
+        if end_date:
+            payload["end_date"] = end_date
+    elif time_range:
+        payload["time_range"] = time_range
 
     timeout_sec = float(getattr(settings, "WEB_SEARCH_TIMEOUT_SECONDS", 30.0))
 
