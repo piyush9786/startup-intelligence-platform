@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "apps.startups",
     "apps.recommendations",
     "apps.ml_engine",
+    "apps.research",
 ]
 
 MIDDLEWARE = [
@@ -395,4 +396,36 @@ CHATBOT_LLM_HISTORY_TURNS = max(
 CHATBOT_LLM_KEEP_ALIVE = os.environ.get(
     "CHATBOT_LLM_KEEP_ALIVE",
     STARTUP_ADVISOR_LLM_KEEP_ALIVE,
+)
+
+WEB_SEARCH_ENABLED = (
+    os.environ.get("WEB_SEARCH_ENABLED", "true").lower()
+    in {"1", "true", "yes"}
+)
+
+WEB_SEARCH_PROVIDER = os.environ.get(
+    "WEB_SEARCH_PROVIDER",
+    "tavily",
+)
+
+TAVILY_API_KEY = os.environ.get(
+    "TAVILY_API_KEY",
+    "",
+)
+
+BRAVE_API_KEY = os.environ.get(
+    "BRAVE_API_KEY",
+    "",
+)
+
+WEB_SEARCH_MAX_RESULTS = int(
+    os.environ.get("WEB_SEARCH_MAX_RESULTS", "8")
+)
+
+WEB_SEARCH_TIMEOUT_SECONDS = float(
+    os.environ.get("WEB_SEARCH_TIMEOUT_SECONDS", "30")
+)
+
+WEB_SEARCH_CACHE_SECONDS = int(
+    os.environ.get("WEB_SEARCH_CACHE_SECONDS", "21600")
 )
