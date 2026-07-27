@@ -148,6 +148,7 @@ services:
     command: >-
       bash -c "
       python manage.py migrate --noinput &&
+      python manage.py bootstrap_catalogs &&
       python manage.py collectstatic --noinput
       "
     volumes:
