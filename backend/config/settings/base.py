@@ -173,6 +173,23 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
+
+RESEARCH_TASK_SOFT_TIME_LIMIT_SECONDS = int(
+    os.environ.get("RESEARCH_TASK_SOFT_TIME_LIMIT_SECONDS", "540")
+)
+RESEARCH_TASK_TIME_LIMIT_SECONDS = int(
+    os.environ.get("RESEARCH_TASK_TIME_LIMIT_SECONDS", "600")
+)
+RESEARCH_JOB_QUEUE_TIMEOUT_SECONDS = int(
+    os.environ.get("RESEARCH_JOB_QUEUE_TIMEOUT_SECONDS", "900")
+)
+RESEARCH_JOB_RUNNING_TIMEOUT_SECONDS = int(
+    os.environ.get("RESEARCH_JOB_RUNNING_TIMEOUT_SECONDS", "660")
+)
+RESEARCH_STALE_RECOVERY_BATCH_SIZE = int(
+    os.environ.get("RESEARCH_STALE_RECOVERY_BATCH_SIZE", "100")
+)
+
 CELERY_BEAT_SCHEDULE = {
     "ml-nightly-feature-extraction": {
         "task": "ml_engine.nightly_feature_extraction",
@@ -186,6 +203,11 @@ CELERY_BEAT_SCHEDULE = {
         "task": "ml_engine.weekly_model_retraining",
         "schedule": 604800,  # every 7 days
     },
+}
+
+CELERY_BEAT_SCHEDULE["research-recover-stale-jobs"] = {
+    "task": "research.recover_stale_requests",
+    "schedule": 300,
 }
 
 # ML Engine configuration
@@ -313,7 +335,7 @@ STARTUP_ADVISOR_LLM_MODEL = os.environ.get(
 STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS = float(
     os.environ.get(
         "STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS",
-        "600",
+        "480",
     )
 )
 STARTUP_ADVISOR_JOB_QUEUE_TIMEOUT_SECONDS = int(
