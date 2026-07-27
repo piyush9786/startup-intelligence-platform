@@ -200,7 +200,7 @@ def test_database_constraint_allows_only_one_active_job_per_profile():
 
 
 @pytest.mark.django_db
-def test_research_request_api(client):
+def test_research_request_api(client, monkeypatch):
     user = User.objects.create_user(username="founder_user", password="password123")
     profile = StartupProfile.objects.create(
         owner=user,
@@ -209,6 +209,10 @@ def test_research_request_api(client):
     )
 
     client.force_login(user)
+    monkeypatch.setattr(
+        "apps.research.views.generate_research_report_task.delay",
+        lambda *args, **kwargs: SimpleNamespace(id="research-task-123"),
+    )
 
     # Create request
     response = client.post(
