@@ -36,6 +36,20 @@ class ResearchRequestCreateView(APIView):
             serializer.validated_data["startup_profile_id"],
         )
 
+        active_job = ResearchRequest.objects.filter(
+            startup_profile=profile,
+            status__in=[ResearchRequest.Status.QUEUED, ResearchRequest.Status.RUNNING],
+        ).first()
+
+        if active_job:
+            return Response(
+                {
+                    "detail": "A research job is already in progress for this startup profile.",
+                    "job": ResearchRequestDetailSerializer(active_job).data,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
         req_obj = ResearchRequest.objects.create(
             startup_profile=profile,
             requested_by=request.user,

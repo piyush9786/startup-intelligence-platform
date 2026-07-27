@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from celery import shared_task
 
@@ -14,8 +15,8 @@ logger = logging.getLogger(__name__)
     bind=True,
     acks_late=True,
     reject_on_worker_lost=True,
-    soft_time_limit=300,
-    time_limit=360,
+    soft_time_limit=540,
+    time_limit=600,
 )
 def generate_research_report_task(
     self,

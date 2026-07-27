@@ -32,17 +32,7 @@ def search_web(
     api_key = getattr(settings, "TAVILY_API_KEY", "").strip()
 
     if not api_key:
-        # Return fallback mock result if key is not provided (e.g. local test environment)
-        return [
-            SearchResult(
-                title=f"Sample Market Reference for {query[:30]}",
-                url="https://example.gov.in/market-reference",
-                content=f"Official market intelligence reference related to {query}.",
-                score=0.85,
-                published_at="2026-06-15",
-                publisher="Official Portal",
-            )
-        ]
+        raise WebSearchError("TAVILY_API_KEY is not configured in backend environment.")
 
     clean_query = " ".join(query.split())
 

@@ -16,16 +16,7 @@ def search_web_brave(
     api_key = getattr(settings, "BRAVE_API_KEY", "").strip()
 
     if not api_key:
-        return [
-            SearchResult(
-                title=f"Brave Reference for {query[:30]}",
-                url="https://brave.example.com/search",
-                content=f"Brave search context for {query}.",
-                score=0.8,
-                published_at="2026-06-15",
-                publisher="Brave Index",
-            )
-        ]
+        raise WebSearchError("BRAVE_API_KEY is not configured in backend environment.")
 
     clean_query = " ".join(query.split())
     if not clean_query:
