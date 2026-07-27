@@ -12,6 +12,7 @@ requires it.
 ## Core Architecture Documents
 
 - **[Combined System Architecture & MCP Integration Blueprint](COMBINED_ARCHITECTURE_V2.md)**
+- **[Hybrid Research & Live Web Search RAG Architecture](HYBRID_RESEARCH_RAG_ARCHITECTURE.md)**
 - **[9-Model Machine Learning Engine & Data Engineering Pipeline](ML_ENGINE_V1.md)**
 - **[Modular App Routing, Settings Package & Default-Deny Security](MODULAR_ROUTING_AND_SECURITY_V1.md)**
 - **[Verified Scheme Prerequisite Graph](SCHEME_PREREQUISITE_GRAPH_V1.md)**
@@ -105,3 +106,6 @@ Owns startup profiles, assessment drafts, readiness plans, capital plans (integr
 
 ### ML Engine (`apps.ml_engine`)
 Owns feature engineering, model registry, model persistence (`.joblib`), batch training tasks, synthetic data generation, and inference endpoints for all 7 scikit-learn models.
+
+### Research (`apps.research`)
+Owns live web search RAG integration, query planning, intent classification, source authority validation, content hash deduplication, pre-computed analytics assembly, and grounded Ollama report generation.
