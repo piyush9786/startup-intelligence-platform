@@ -15,7 +15,7 @@ from apps.research.models import (
     ResearchSearchQuery,
     StartupResearchReport,
 )
-from apps.schemes.models import Scheme
+from apps.schemes.models import Scheme, SchemeVersion
 from apps.startups.services.llm_provider import get_startup_advisor_llm_provider
 
 from .answer_context import assemble_research_context
@@ -54,6 +54,7 @@ RESEARCH_REPORT_SCHEMA = {
         "recommended_next_actions": {"type": "array", "items": {"type": "string"}},
         "sources": {"type": "array", "items": {"type": "string"}},
         "confidence_score": {"type": "number"},
+        "research_metadata": {"type": "object"},
     },
 }
 
@@ -63,7 +64,7 @@ def _retrieve_local_verified_knowledge(profile) -> list[dict[str, Any]]:
     local_items: list[dict[str, Any]] = [
         {
             "title": f"Verified Profile: {profile.startup_name}",
-            "url": "internal://startups/profile",
+            "url": f"internal://startups/{profile.id}",
             "source_type": "verified_internal",
             "content_excerpt": (
                 f"Stage: {profile.stage}, State: {profile.state}, "
@@ -72,39 +73,81 @@ def _retrieve_local_verified_knowledge(profile) -> list[dict[str, Any]]:
         }
     ]
 
-    # Query matching canonical company profiles
-    try:
-        sectors = profile.sectors or []
-        query_set = Company.objects.all()
-        if sectors:
-            query_set = query_set.filter(sector__icontains=sectors[0])
-        companies = list(query_set[:3])
-        for c in companies:
-            local_items.append(
-                {
-                    "title": f"Historical Peer: {c.company_name}",
-                    "url": f"internal://companies/{c.id}",
-                    "source_type": "verified_internal",
-                    "content_excerpt": f"Sector: {c.sector}, Stage: {c.stage}, Headcount: {c.headcount_exact or 'N/A'}",
-                }
+    sectors = profile.sectors or []
+    company_query = Company.objects.filter(
+        verification_status__in=[
+            Company.VerificationStatus.VERIFIED,
+            Company.VerificationStatus.PARTIALLY_VERIFIED,
+        ],
+    )
+    if sectors:
+        company_query = company_query.filter(industry__icontains=sectors[0])
+    companies = list(
+        company_query.prefetch_related("metrics", "outcomes")[:5]
+    )
+    for company in companies:
+        recent_metrics = ", ".join(
+            (
+                f"{metric.get_metric_name_display()}: "
+                f"{metric.metric_value:g} {metric.metric_unit} "
+                f"({metric.observation_date.isoformat()})"
             )
-    except Exception as err:
-        logger.warning("Local company database query error: %s", err)
+            for metric in list(company.metrics.all())[:3]
+        )
+        recent_outcomes = ", ".join(
+            (
+                f"{outcome.get_outcome_type_display()}"
+                + (
+                    f" ({outcome.outcome_date.isoformat()})"
+                    if outcome.outcome_date
+                    else ""
+                )
+            )
+            for outcome in list(company.outcomes.all())[:3]
+        )
+        local_items.append(
+            {
+                "title": f"Historical Peer: {company.canonical_name}",
+                "url": f"internal://companies/{company.id}",
+                "source_type": "verified_internal",
+                "content_excerpt": (
+                    f"Industry: {company.industry}; "
+                    f"Sub-industry: {company.sub_industry or 'Not specified'}; "
+                    f"Business model: {company.business_model}; "
+                    f"Operating status: {company.operating_status}; "
+                    f"Verification: {company.verification_status}; "
+                    f"Recent metrics: {recent_metrics or 'None recorded'}; "
+                    f"Outcomes: {recent_outcomes or 'None recorded'}"
+                ),
+            }
+        )
 
-    # Query matching government schemes
-    try:
-        schemes = list(Scheme.objects.filter(is_active=True)[:3])
-        for s in schemes:
-            local_items.append(
-                {
-                    "title": f"Official Scheme: {s.title}",
-                    "url": f"internal://schemes/{s.slug}",
-                    "source_type": "official_portal",
-                    "content_excerpt": f"Scheme {s.title} ({s.ministry_name or 'DPIIT'}). Summary: {s.summary[:150]}",
-                }
-            )
-    except Exception as err:
-        logger.warning("Local scheme database query error: %s", err)
+    schemes = list(
+        Scheme.objects.filter(
+            lifecycle_status=Scheme.LifecycleStatus.ACTIVE,
+            current_version__verification_status=(
+                SchemeVersion.VerificationStatus.VERIFIED
+            ),
+        )
+        .select_related("authority", "current_version")[:5]
+    )
+    for scheme in schemes:
+        version = scheme.current_version
+        local_items.append(
+            {
+                "title": f"Official Scheme: {scheme.canonical_name}",
+                "url": version.official_url,
+                "source_type": "verified_internal",
+                "content_excerpt": (
+                    f"Authority: {scheme.authority.name}; "
+                    f"Ministry: {scheme.authority.ministry or 'Not specified'}; "
+                    f"Description: {version.description[:300]}; "
+                    f"Eligible sectors: {version.eligible_sectors}; "
+                    f"Eligible stages: {version.eligible_stages}; "
+                    f"Application status: {version.application_status}"
+                ),
+            }
+        )
 
     return local_items
 
@@ -117,7 +160,11 @@ def generate_research_report(research_request_id: str) -> StartupResearchReport:
             .select_related("startup_profile", "requested_by")
             .get(pk=research_request_id)
         )
-        if request.status in (ResearchRequest.Status.SUCCEEDED, ResearchRequest.Status.FAILED):
+        if request.status in (
+            ResearchRequest.Status.SUCCEEDED,
+            ResearchRequest.Status.PARTIAL,
+            ResearchRequest.Status.FAILED,
+        ):
             if hasattr(request, "generated_report"):
                 return request.generated_report
             raise RuntimeError("Research request has finished without report.")
@@ -130,11 +177,17 @@ def generate_research_report(research_request_id: str) -> StartupResearchReport:
         profile = request.startup_profile
         profile_data = {
             "startup_name": profile.startup_name,
+            "description": profile.description,
             "stage": profile.stage,
             "state": profile.state,
             "sectors": profile.sectors,
             "technologies": profile.technologies,
             "readiness_score": getattr(profile, "readiness_score", None),
+            "target_customer": profile.profile_data.get("target_customer"),
+            "customer_segment": profile.profile_data.get("customer_segment"),
+            "sub_industry": profile.profile_data.get("sub_industry"),
+            "business_model": profile.profile_data.get("business_model"),
+            "revenue_model": profile.profile_data.get("revenue_model"),
         }
 
         # Step 1: Search Router intent decision
@@ -148,6 +201,7 @@ def generate_research_report(research_request_id: str) -> StartupResearchReport:
         queries = generate_search_queries(idea, request.question)
 
         raw_evidence_list: list[dict[str, Any]] = []
+        search_failures: list[dict[str, str]] = []
         provider_name = str(getattr(settings, "WEB_SEARCH_PROVIDER", "tavily")).lower()
 
         if decision.required:
@@ -159,11 +213,24 @@ def generate_research_report(research_request_id: str) -> StartupResearchReport:
                         query=q,
                         provider=provider_name,
                         result_count=len(search_results),
+                        status=ResearchSearchQuery.Status.SUCCEEDED,
                     )
                     extracted = extract_and_score_evidence(search_results, q)
                     raw_evidence_list.extend(extracted)
                 except Exception as search_err:
                     logger.warning("Search execution failed for query %r: %s", q, search_err)
+                    error_message = str(search_err)
+                    search_failures.append(
+                        {"query": q, "error": error_message}
+                    )
+                    ResearchSearchQuery.objects.create(
+                        research_request=request,
+                        query=q,
+                        provider=provider_name,
+                        result_count=0,
+                        status=ResearchSearchQuery.Status.FAILED,
+                        error_message=error_message,
+                    )
 
         # Step 3: Rank & deduplicate live evidence
         ranked_live_evidence = rank_and_deduplicate_evidence(raw_evidence_list, max_items=8)
@@ -219,6 +286,11 @@ def generate_research_report(research_request_id: str) -> StartupResearchReport:
         ]
 
         valid_urls = {ev["url"] for ev in ranked_live_evidence} | {ev["url"] for ev in local_evidence}
+        fallback_sources = (
+            [ev["url"] for ev in ranked_live_evidence[:3]]
+            or [local_evidence[0]["url"]]
+        )
+        llm_status = "generated"
 
         try:
             generation_result = llm_provider.generate(
@@ -232,13 +304,14 @@ def generate_research_report(research_request_id: str) -> StartupResearchReport:
             if isinstance(report_data.get("sources"), list):
                 report_data["sources"] = [
                     u for u in report_data["sources"]
-                    if isinstance(u, str) and (u in valid_urls or u.startswith("internal://"))
+                    if isinstance(u, str) and u in valid_urls
                 ]
                 if not report_data["sources"]:
-                    report_data["sources"] = [ev["url"] for ev in ranked_live_evidence[:3]] or ["internal://startups/profile"]
+                    report_data["sources"] = fallback_sources
 
         except Exception as llm_err:
             logger.warning("Ollama generation failed; outputting honest fallback: %s", llm_err)
+            llm_status = "fallback"
             model_name = getattr(llm_provider, "model_name", "qwen3:4b")
             report_data = {
                 "startup_summary": f"Research assessment initiated for {profile.startup_name} ({idea['product']}).",
@@ -250,9 +323,47 @@ def generate_research_report(research_request_id: str) -> StartupResearchReport:
                 "market_gaps": ["Detailed market gap analysis requires active LLM reasoning."],
                 "capital_scenarios": f"Lean Prototype: {context_payload['pre_computed_analytics']['estimated_capital_scenarios']['lean_prototype']}",
                 "recommended_next_actions": ["Review verified profile facts", "Re-run research when live search is connected."],
-                "sources": [ev["url"] for ev in ranked_live_evidence[:3]] or ["internal://startups/profile"],
+                "sources": fallback_sources,
                 "confidence_score": 0.35 if decision.required and not ranked_live_evidence else 0.60,
             }
+
+        if not decision.required:
+            live_search_status = "not_required"
+        elif ranked_live_evidence and search_failures:
+            live_search_status = "partial"
+        elif ranked_live_evidence:
+            live_search_status = "available"
+        else:
+            live_search_status = "unavailable"
+
+        research_metadata = {
+            "live_search_status": live_search_status,
+            "llm_status": llm_status,
+            "local_evidence_status": (
+                "available" if local_evidence else "unavailable"
+            ),
+            "local_evidence_count": len(local_evidence),
+            "live_evidence_count": len(ranked_live_evidence),
+            "search_failure_count": len(search_failures),
+        }
+        report_data["research_metadata"] = research_metadata
+        context_payload["research_metadata"] = research_metadata
+        partial_results = (
+            live_search_status in {"partial", "unavailable"}
+            or llm_status == "fallback"
+        )
+        partial_messages = [
+            f"{failure['query']}: {failure['error']}"
+            for failure in search_failures
+        ]
+        if live_search_status == "unavailable" and not partial_messages:
+            partial_messages.append(
+                "No verified live web evidence was retrieved."
+            )
+        if llm_status == "fallback":
+            partial_messages.append(
+                "Model generation was unavailable; a deterministic fallback was returned."
+            )
 
         # Step 7: Save final report & complete job
         with transaction.atomic():
@@ -261,17 +372,25 @@ def generate_research_report(research_request_id: str) -> StartupResearchReport:
                 startup_profile=profile,
                 research_request=request,
                 local_data_cutoff=now,
-                live_search_date=now if decision.required else None,
+                live_search_date=now if ranked_live_evidence else None,
                 model_name=model_name,
-                algorithm_version="v1.0",
+                algorithm_version="v1.1",
                 report=report_data,
                 source_snapshot=context_payload,
             )
 
-            request.status = ResearchRequest.Status.SUCCEEDED
+            request.status = (
+                ResearchRequest.Status.PARTIAL
+                if partial_results
+                else ResearchRequest.Status.SUCCEEDED
+            )
             request.completed_at = now
-            request.error_code = ""
-            request.error_message = ""
+            request.error_code = "partial_results" if partial_results else ""
+            request.error_message = (
+                "; ".join(partial_messages)
+                if partial_results
+                else ""
+            )
             request.save(update_fields=["status", "completed_at", "error_code", "error_message", "updated_at"])
 
             return report_record

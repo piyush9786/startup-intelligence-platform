@@ -23,3 +23,14 @@ def test_query_planner():
     queries = generate_search_queries(idea, question)
     assert len(queries) >= 3
     assert any("HealthPulse" in q for q in queries)
+
+
+def test_query_planner_does_not_treat_question_grammar_as_industry():
+    idea = extract_structured_idea(
+        {},
+        "What are current competitors for logistics software?",
+    )
+
+    assert idea["sub_industry"] == "logistics software"
+    assert "are" not in idea["target_users"]
+    assert idea["revenue_model"] == "unspecified"

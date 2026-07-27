@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.core.models import TimeStampedModel
@@ -14,6 +15,7 @@ class ResearchRequest(TimeStampedModel):
         QUEUED = "queued", "Queued"
         RUNNING = "running", "Running"
         SUCCEEDED = "succeeded", "Succeeded"
+        PARTIAL = "partial", "Partial results"
         FAILED = "failed", "Failed"
 
     startup_profile = models.ForeignKey(
@@ -43,12 +45,23 @@ class ResearchRequest(TimeStampedModel):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["startup_profile"],
+                condition=Q(status__in=["queued", "running"]),
+                name="research_one_active_request_per_profile",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"ResearchRequest({self.id}, status={self.status})"
 
 
 class ResearchSearchQuery(TimeStampedModel):
+    class Status(models.TextChoices):
+        SUCCEEDED = "succeeded", "Succeeded"
+        FAILED = "failed", "Failed"
+
     research_request = models.ForeignKey(
         ResearchRequest,
         on_delete=models.CASCADE,
@@ -57,6 +70,12 @@ class ResearchSearchQuery(TimeStampedModel):
     query = models.TextField()
     provider = models.CharField(max_length=64, default="tavily")
     result_count = models.IntegerField(default=0)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.SUCCEEDED,
+    )
+    error_message = models.TextField(blank=True, default="")
     executed_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self) -> str:
