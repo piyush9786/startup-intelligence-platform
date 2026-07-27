@@ -483,9 +483,13 @@ export default function SchemeDetailPage({
           {rules.length ? (
             <ul className="detail-list">
               {rules.map((rule, idx) => (
-                <li key={idx}>
-                  <strong>{rule.field_path}</strong>: {rule.operator} {JSON.stringify(rule.expected_value)}
-                  {rule.evidence_text && <small> ({rule.evidence_text})</small>}
+                <li key={rule.id || `eligibility-rule-${idx}`}>
+                  <span>
+                    {rule.label ||
+                      "Eligibility requirement details are not published."}
+                  </span>
+
+                  {rule.mandatory && <small> Mandatory</small>}
                 </li>
               ))}
             </ul>
