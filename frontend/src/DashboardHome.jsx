@@ -1,5 +1,6 @@
 import React from "react";
 import * as m from "motion/react-m";
+import { useT } from "./i18n/index.jsx";
 import {
   actionItemStatus,
   actionItemTitle,
@@ -365,6 +366,7 @@ export function DashboardHome({
   query,
   schemes,
 }) {
+  const { t } = useT();
   const metrics = dashboardMetrics(dashboardData, briefing);
   const recommendationSection = dashboardData?.recommendations || {};
   const recommendationGeneration = recommendationSection.generation;
@@ -414,19 +416,19 @@ export function DashboardHome({
       >
         <div className="dashboard-hero-copy">
           <div className="dashboard-hero-topline">
-            <span className="eyebrow">FOUNDER COMMAND CENTER</span>
+            <span className="eyebrow">{t("dashboard.command_center")}</span>
             <span className="hero-live-status">
               <i aria-hidden="true" />
-              Verified records active
+              {t("dashboard.records_active")}
             </span>
           </div>
           <h1>
-            Keep <span>{profile?.startup_name || "your startup"}</span>{" "}
-            moving with one clear next step.
+            {t("dashboard.hero_title", {
+              startup: profile?.startup_name || t("dashboard.your_startup"),
+            })}
           </h1>
           <p>
-            Your readiness, scheme matches, requirements, and guidance are
-            ordered into a practical founder workflow.
+            {t("dashboard.hero_workflow")}
           </p>
           <div className="hero-badges">
             <span>✓ Evidence-backed</span>
@@ -513,34 +515,34 @@ export function DashboardHome({
           <MetricAction
             detail={metrics.readinessStatus}
             icon="◔"
-            label="Readiness score"
+            label={t("dashboard.readiness_score")}
             onClick={() => onNavigate("startup")}
             tone="blue"
             value={metrics.readinessScore === null ? "—" : `${metrics.readinessScore}%`}
           />
           <MetricAction
-            detail="Open your next verified actions"
+            detail={t("dashboard.open_actions")}
             icon="↗"
-            label="Readiness actions"
+            label={t("dashboard.readiness_actions")}
             onClick={() => onNavigate("roadmap")}
             tone="amber"
             value={metrics.actions}
           />
           <MetricAction
-            detail="Open your ranked scheme matches"
+            detail={t("dashboard.open_schemes")}
             icon="◇"
-            label="Recommended schemes"
+            label={t("dashboard.recommended_schemes")}
             onClick={() => onNavigate("schemes")}
             tone="green"
             value={metrics.recommendations}
           />
           <MetricAction
-            detail="Open evidence-backed founder guidance"
+            detail={t("dashboard.open_guidance")}
             icon="✦"
-            label="Founder guidance"
+            label={t("dashboard.founder_guidance")}
             onClick={() => onNavigate("advisor")}
             tone="violet"
-            value={metrics.hasBriefing ? "Ready" : "Pending"}
+            value={metrics.hasBriefing ? t("dashboard.ready") : t("dashboard.pending")}
           />
         </div>
       </m.section>

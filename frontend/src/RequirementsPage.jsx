@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useT } from "./i18n/index.jsx";
 import {
   AUTHORITIES,
   calculateAuthorityMetrics,
@@ -23,6 +24,7 @@ export default function RequirementsPage({
   query = "",
   schemes = [],
 }) {
+  const { t } = useT();
   const [selectedAuthority, setSelectedAuthority] = useState("all");
 
   const applicableSchemes = filterSchemes(schemes, query).filter(
@@ -67,10 +69,10 @@ export default function RequirementsPage({
     <div className="page-stack requirements-page">
       <header className="page-header">
         <div>
-          <span className="section-kicker">APPLICATION READINESS</span>
-          <h1>Requirements and certifications</h1>
+          <span className="section-kicker">{t("requirements.kicker") || "APPLICATION READINESS"}</span>
+          <h1>{t("requirements.title")}</h1>
           <p>
-            Review verified scheme requirements separately from external certification records awaiting verification.
+            {t("requirements.subtitle")}
           </p>
         </div>
       </header>

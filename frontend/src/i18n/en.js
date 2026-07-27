@@ -5,6 +5,26 @@ const en = {
   "brand.tagline": "Founder OS",
   "brand.tagline.public": "AI founder operating system",
 
+  // ── Language ────────────────────────────────────────────────────────────
+  "language.select": "Select language",
+  "language.change": "Language: {language}. Click to change.",
+
+  // ── Dashboard ───────────────────────────────────────────────────────────
+  "dashboard.command_center": "Founder command center",
+  "dashboard.records_active": "Verified records active",
+  "dashboard.hero_title": "Keep {startup} moving with one clear next step.",
+  "dashboard.your_startup": "your startup",
+  "dashboard.hero_workflow": "Your readiness, scheme matches, requirements, and guidance are ordered into a practical founder workflow.",
+  "dashboard.readiness_score": "Readiness score",
+  "dashboard.readiness_actions": "Readiness actions",
+  "dashboard.recommended_schemes": "Recommended schemes",
+  "dashboard.founder_guidance": "Founder guidance",
+  "dashboard.open_actions": "Open your next verified actions",
+  "dashboard.open_schemes": "Open your ranked scheme matches",
+  "dashboard.open_guidance": "Open evidence-backed founder guidance",
+  "dashboard.ready": "Ready",
+  "dashboard.pending": "Pending",
+
   // ── Navigation ─────────────────────────────────────────────────────────
   "nav.group.workspace": "Your workspace",
   "nav.group.discover": "Discover support",

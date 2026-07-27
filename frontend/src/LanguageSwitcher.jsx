@@ -6,7 +6,7 @@ import { LANGUAGES, useLanguage } from "./i18n/index.jsx";
  * Opens a glassmorphism popup to select English / हिन्दी / मराठी.
  */
 export default function LanguageSwitcher() {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -43,7 +43,12 @@ export default function LanguageSwitcher() {
       <button
         aria-expanded={open}
         aria-haspopup="listbox"
-        aria-label={`Language: ${current.nativeLabel}. Click to change.`}
+        aria-label={t(
+          "language.change",
+          {
+            language: current.nativeLabel,
+          },
+        )}
         className={`lang-trigger ${open ? "lang-trigger-open" : ""}`}
         id="lang-switcher-btn"
         onClick={() => setOpen((v) => !v)}
@@ -60,7 +65,7 @@ export default function LanguageSwitcher() {
           className="lang-menu"
           role="listbox"
         >
-          <div className="lang-menu-header">Select language</div>
+          <div className="lang-menu-header">{t("language.select")}</div>
           {LANGUAGES.map((lang) => (
             <button
               aria-selected={language === lang.code}
