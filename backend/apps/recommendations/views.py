@@ -26,17 +26,43 @@ from .services import (
 
 
 def _visible_profiles(user):
-    queryset = StartupProfile.objects.all()
-    if not getattr(user, "is_staff", False):
-        queryset = queryset.filter(owner=user)
-    return queryset
+    if getattr(user, "is_staff", False):
+        return StartupProfile.objects.all()
+    return StartupProfile.objects.filter(owner=user)
 
 
 def _visible_generation_runs(user):
-    queryset = RecommendationGenerationRun.objects.all()
-    if not getattr(user, "is_staff", False):
-        queryset = queryset.filter(startup_profile__owner=user)
-    return queryset
+    if getattr(user, "is_staff", False):
+        return RecommendationGenerationRun.objects.all()
+    return RecommendationGenerationRun.objects.filter(
+        startup_profile__owner=user,
+    )
+
+
+def _resolve_target_profile(user, profile_id):
+    if getattr(user, "is_staff", False):
+        return get_object_or_404(StartupProfile.objects.all(), pk=profile_id)
+    return get_object_or_404(StartupProfile.objects.filter(owner=user), pk=profile_id)
+
+
+def _resolve_target_generation_run(user, run_id):
+    if getattr(user, "is_staff", False):
+        return get_object_or_404(
+            RecommendationGenerationRun.objects.select_related(
+                "startup_profile",
+                "requested_by",
+            ),
+            pk=run_id,
+        )
+    return get_object_or_404(
+        RecommendationGenerationRun.objects.filter(
+            startup_profile__owner=user,
+        ).select_related(
+            "startup_profile",
+            "requested_by",
+        ),
+        pk=run_id,
+    )
 
 
 class EligibilityEvaluateView(APIView):
@@ -61,9 +87,9 @@ class EligibilityEvaluateView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
         )
 
         assessment = create_eligibility_assessment(
@@ -91,9 +117,9 @@ class RecommendationGenerateView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
         )
 
         generation = generate_recommendations(
@@ -143,9 +169,9 @@ class RecommendationCurrentView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
         )
 
         try:
@@ -202,13 +228,17 @@ class RecommendationRunListView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
+        )
+        runs_qs = (
+            RecommendationGenerationRun.objects.all()
+            if request.user.is_staff
+            else _visible_generation_runs(request.user)
         )
         runs = (
-            _visible_generation_runs(request.user)
-            .filter(startup_profile=startup_profile)
+            runs_qs.filter(startup_profile=startup_profile)
             .select_related(
                 "startup_profile",
                 "requested_by",
@@ -237,13 +267,7 @@ class RecommendationRunDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, run_id):
-        generation_run = get_object_or_404(
-            _visible_generation_runs(request.user).select_related(
-                "startup_profile",
-                "requested_by",
-            ),
-            pk=run_id,
-        )
+        generation_run = _resolve_target_generation_run(request.user, run_id)
         response_serializer = RecommendationGenerationRunDetailSerializer(
             generation_run,
         )

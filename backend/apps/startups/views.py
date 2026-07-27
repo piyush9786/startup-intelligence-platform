@@ -42,38 +42,77 @@ from .services import (
 
 
 def _visible_profiles(user):
-    queryset = StartupProfile.objects.all()
-    if not getattr(user, "is_staff", False):
-        queryset = queryset.filter(owner=user)
-    return queryset
+    return StartupProfile.objects.filter(owner=user)
 
 
 def _visible_readiness_assessments(user):
-    queryset = StartupReadinessAssessment.objects.all()
-    if not getattr(user, "is_staff", False):
-        queryset = queryset.filter(startup_profile__owner=user)
-    return queryset
+    return StartupReadinessAssessment.objects.filter(
+        startup_profile__owner=user,
+    )
 
 
 def _visible_readiness_action_plans(user):
-    queryset = StartupReadinessActionPlan.objects.all()
-    if not getattr(user, "is_staff", False):
-        queryset = queryset.filter(startup_profile__owner=user)
-    return queryset
+    return StartupReadinessActionPlan.objects.filter(
+        startup_profile__owner=user,
+    )
 
 
 def _visible_funding_plans(user):
-    queryset = StartupFundingPlan.objects.all()
-    if not getattr(user, "is_staff", False):
-        queryset = queryset.filter(startup_profile__owner=user)
-    return queryset
+    return StartupFundingPlan.objects.filter(
+        startup_profile__owner=user,
+    )
 
 
 def _visible_starting_plans(user):
-    queryset = StartupStartingPlan.objects.all()
-    if not getattr(user, "is_staff", False):
-        queryset = queryset.filter(startup_profile__owner=user)
-    return queryset
+    return StartupStartingPlan.objects.filter(
+        startup_profile__owner=user,
+    )
+
+
+def _resolve_target_profile(user, profile_id):
+    if getattr(user, "is_staff", False):
+        return get_object_or_404(StartupProfile.objects.all(), pk=profile_id)
+    return get_object_or_404(StartupProfile.objects.filter(owner=user), pk=profile_id)
+
+
+def _resolve_target_readiness_assessment(user, assessment_id):
+    if getattr(user, "is_staff", False):
+        return get_object_or_404(
+            StartupReadinessAssessment.objects.select_related(
+                "startup_profile",
+                "requested_by",
+            ),
+            pk=assessment_id,
+        )
+    return get_object_or_404(
+        StartupReadinessAssessment.objects.filter(
+            startup_profile__owner=user,
+        ).select_related(
+            "startup_profile",
+            "requested_by",
+        ),
+        pk=assessment_id,
+    )
+
+
+def _resolve_target_readiness_action_plan(user, plan_id):
+    if getattr(user, "is_staff", False):
+        return get_object_or_404(
+            StartupReadinessActionPlan.objects.select_related(
+                "startup_profile",
+                "requested_by",
+            ),
+            pk=plan_id,
+        )
+    return get_object_or_404(
+        StartupReadinessActionPlan.objects.filter(
+            startup_profile__owner=user,
+        ).select_related(
+            "startup_profile",
+            "requested_by",
+        ),
+        pk=plan_id,
+    )
 
 
 class StartupProfileViewSet(ModelViewSet):
@@ -131,9 +170,9 @@ class StartupReadinessEvaluateView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
         )
         assessment = create_startup_readiness_assessment(
             startup_profile=startup_profile,
@@ -155,12 +194,17 @@ class StartupReadinessCurrentView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
+        )
+        assessments_qs = (
+            StartupReadinessAssessment.objects.all()
+            if request.user.is_staff
+            else _visible_readiness_assessments(request.user)
         )
         assessment = (
-            StartupReadinessAssessment.objects.filter(
+            assessments_qs.filter(
                 startup_profile=startup_profile,
             )
             .select_related("startup_profile", "requested_by")
@@ -191,13 +235,17 @@ class StartupReadinessAssessmentListView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
+        )
+        assessments_qs = (
+            StartupReadinessAssessment.objects.all()
+            if request.user.is_staff
+            else _visible_readiness_assessments(request.user)
         )
         assessments = (
-            _visible_readiness_assessments(request.user)
-            .filter(startup_profile=startup_profile)
+            assessments_qs.filter(startup_profile=startup_profile)
             .select_related("startup_profile", "requested_by")
             .order_by("-created_at", "-id")
         )
@@ -219,12 +267,9 @@ class StartupReadinessAssessmentDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, assessment_id):
-        assessment = get_object_or_404(
-            _visible_readiness_assessments(request.user).select_related(
-                "startup_profile",
-                "requested_by",
-            ),
-            pk=assessment_id,
+        assessment = _resolve_target_readiness_assessment(
+            request.user,
+            assessment_id,
         )
         return Response(
             StartupReadinessAssessmentSerializer(assessment).data,
@@ -241,12 +286,9 @@ class StartupReadinessActionPlanGenerateView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        source_assessment = get_object_or_404(
-            _visible_readiness_assessments(request.user).select_related(
-                "startup_profile",
-                "requested_by",
-            ),
-            pk=request_serializer.validated_data["readiness_assessment_id"],
+        source_assessment = _resolve_target_readiness_assessment(
+            request.user,
+            request_serializer.validated_data["readiness_assessment_id"],
         )
         action_plan = create_startup_readiness_action_plan(
             source_assessment=source_assessment,
@@ -267,13 +309,17 @@ class StartupReadinessActionPlanCurrentView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
+        )
+        plans_qs = (
+            StartupReadinessActionPlan.objects.all()
+            if request.user.is_staff
+            else _visible_readiness_action_plans(request.user)
         )
         action_plan = (
-            _visible_readiness_action_plans(request.user)
-            .filter(startup_profile=startup_profile)
+            plans_qs.filter(startup_profile=startup_profile)
             .select_related(
                 "startup_profile",
                 "source_assessment",
@@ -306,13 +352,17 @@ class StartupReadinessActionPlanListView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
+        )
+        plans_qs = (
+            StartupReadinessActionPlan.objects.all()
+            if request.user.is_staff
+            else _visible_readiness_action_plans(request.user)
         )
         action_plans = (
-            _visible_readiness_action_plans(request.user)
-            .filter(startup_profile=startup_profile)
+            plans_qs.filter(startup_profile=startup_profile)
             .select_related(
                 "startup_profile",
                 "source_assessment",
@@ -338,13 +388,9 @@ class StartupReadinessActionPlanDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, action_plan_id):
-        action_plan = get_object_or_404(
-            _visible_readiness_action_plans(request.user).select_related(
-                "startup_profile",
-                "source_assessment",
-                "requested_by",
-            ),
-            pk=action_plan_id,
+        action_plan = _resolve_target_readiness_action_plan(
+            request.user,
+            action_plan_id,
         )
         return Response(
             StartupReadinessActionPlanSerializer(action_plan).data,

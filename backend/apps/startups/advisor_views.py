@@ -42,31 +42,58 @@ from .services.advisor_briefing_jobs import (
 
 
 def _visible_profiles(user):
-    queryset = StartupProfile.objects.all()
-    if not getattr(user, "is_staff", False):
-        queryset = queryset.filter(owner=user)
-    return queryset
+    return StartupProfile.objects.filter(owner=user)
 
 
 def _visible_advisor_briefings(user):
-    queryset = StartupAdvisorBriefing.objects.all()
-    if not getattr(user, "is_staff", False):
-        queryset = queryset.filter(startup_profile__owner=user)
-    return queryset
+    return StartupAdvisorBriefing.objects.filter(
+        startup_profile__owner=user,
+    )
 
 
 def _visible_advisor_briefing_jobs(user):
-    queryset = StartupAdvisorBriefingJob.objects.all()
-    if not getattr(user, "is_staff", False):
-        queryset = queryset.filter(startup_profile__owner=user)
-    return queryset
+    return StartupAdvisorBriefingJob.objects.filter(
+        startup_profile__owner=user,
+    )
 
 
 def _visible_advisor_snapshots(user):
-    queryset = StartupAdvisorSnapshot.objects.all()
-    if not getattr(user, "is_staff", False):
-        queryset = queryset.filter(startup_profile__owner=user)
-    return queryset
+    return StartupAdvisorSnapshot.objects.filter(
+        startup_profile__owner=user,
+    )
+
+
+def _resolve_target_profile(user, profile_id):
+    if getattr(user, "is_staff", False):
+        return get_object_or_404(StartupProfile.objects.all(), pk=profile_id)
+    return get_object_or_404(StartupProfile.objects.filter(owner=user), pk=profile_id)
+
+
+def _resolve_target_snapshot(user, snapshot_id):
+    if getattr(user, "is_staff", False):
+        return get_object_or_404(StartupAdvisorSnapshot.objects.all(), pk=snapshot_id)
+    return get_object_or_404(
+        StartupAdvisorSnapshot.objects.filter(startup_profile__owner=user),
+        pk=snapshot_id,
+    )
+
+
+def _resolve_target_job(user, job_id):
+    if getattr(user, "is_staff", False):
+        return get_object_or_404(StartupAdvisorBriefingJob.objects.all(), pk=job_id)
+    return get_object_or_404(
+        StartupAdvisorBriefingJob.objects.filter(startup_profile__owner=user),
+        pk=job_id,
+    )
+
+
+def _resolve_target_briefing(user, briefing_id):
+    if getattr(user, "is_staff", False):
+        return get_object_or_404(StartupAdvisorBriefing.objects.all(), pk=briefing_id)
+    return get_object_or_404(
+        StartupAdvisorBriefing.objects.filter(startup_profile__owner=user),
+        pk=briefing_id,
+    )
 
 
 class StartupAdvisorCurrentView(APIView):
@@ -78,9 +105,9 @@ class StartupAdvisorCurrentView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
         )
 
         readiness_assessment = (
@@ -189,9 +216,9 @@ class StartupAdvisorSnapshotGenerateView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
         )
 
         try:
@@ -220,12 +247,9 @@ class StartupAdvisorBriefingGenerateView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        source_snapshot = get_object_or_404(
-            _visible_advisor_snapshots(request.user).select_related(
-                "startup_profile",
-                "requested_by",
-            ),
-            pk=request_serializer.validated_data["advisor_snapshot_id"],
+        source_snapshot = _resolve_target_snapshot(
+            request.user,
+            request_serializer.validated_data["advisor_snapshot_id"],
         )
 
         try:
@@ -257,9 +281,9 @@ class StartupAdvisorBriefingJobCurrentView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
         )
 
         job = (
@@ -294,15 +318,7 @@ class StartupAdvisorBriefingJobDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, job_id):
-        job = get_object_or_404(
-            _visible_advisor_briefing_jobs(request.user).select_related(
-                "startup_profile",
-                "source_snapshot",
-                "requested_by",
-                "briefing",
-            ),
-            pk=job_id,
-        )
+        job = _resolve_target_job(request.user, job_id)
         job = reconcile_startup_advisor_briefing_job(
             job_id=job.id,
         )
@@ -322,9 +338,9 @@ class StartupAdvisorBriefingCurrentView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
         )
         briefing = (
             _visible_advisor_briefings(request.user)
@@ -357,13 +373,17 @@ class StartupAdvisorBriefingListView(APIView):
         )
         request_serializer.is_valid(raise_exception=True)
 
-        startup_profile = get_object_or_404(
-            _visible_profiles(request.user),
-            pk=request_serializer.validated_data["startup_profile_id"],
+        startup_profile = _resolve_target_profile(
+            request.user,
+            request_serializer.validated_data["startup_profile_id"],
+        )
+        briefings_qs = (
+            StartupAdvisorBriefing.objects.all()
+            if request.user.is_staff
+            else _visible_advisor_briefings(request.user)
         )
         briefings = (
-            _visible_advisor_briefings(request.user)
-            .filter(startup_profile=startup_profile)
+            briefings_qs.filter(startup_profile=startup_profile)
             .select_related(
                 "startup_profile",
                 "source_snapshot",
@@ -389,14 +409,7 @@ class StartupAdvisorBriefingDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, briefing_id):
-        briefing = get_object_or_404(
-            _visible_advisor_briefings(request.user).select_related(
-                "startup_profile",
-                "source_snapshot",
-                "requested_by",
-            ),
-            pk=briefing_id,
-        )
+        briefing = _resolve_target_briefing(request.user, briefing_id)
         return Response(
             StartupAdvisorBriefingSerializer(briefing).data,
             status=status.HTTP_200_OK,
