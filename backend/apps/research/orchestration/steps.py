@@ -6,13 +6,18 @@ from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.utils import timezone
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError as SchemaValidationError
 
 from apps.research.models import ResearchEvidence, ResearchSearchQuery
-from apps.research.services.report_schema import RESEARCH_REPORT_SCHEMA
+from apps.research.services.report_schema import (
+    FINAL_RESEARCH_REPORT_SCHEMA,
+    LLM_RESEARCH_REPORT_SCHEMA,
+)
 from apps.research.services.search_router import decide_live_search
 from apps.research.services.tavily_client import WebSearchError
+from apps.research.services.vector_retrieval import VectorRetrievalError
 from apps.startups.services.llm_provider import LLMProviderError
 
 from .dependencies import ResearchDependencies
@@ -20,7 +25,38 @@ from .state import ResearchState, SearchFailure
 
 logger = logging.getLogger(__name__)
 
-REPORT_VALIDATOR = Draft202012Validator(RESEARCH_REPORT_SCHEMA)
+LLM_REPORT_VALIDATOR = Draft202012Validator(
+    LLM_RESEARCH_REPORT_SCHEMA,
+)
+FINAL_REPORT_VALIDATOR = Draft202012Validator(
+    FINAL_RESEARCH_REPORT_SCHEMA,
+)
+
+
+def _persist_evidence_items(
+    state: ResearchState,
+    evidence_items: list[dict[str, Any]],
+) -> None:
+    objects = [
+        ResearchEvidence(
+            research_request=state.request,
+            title=item["title"],
+            url=item["url"],
+            publisher=item.get("publisher") or "",
+            published_at=item.get("published_at") or "",
+            source_type=item["source_type"],
+            content_excerpt=item["content_excerpt"],
+            content_hash=item["content_hash"],
+            confidence_score=item["confidence_score"],
+            verification_status=item["verification_status"],
+        )
+        for item in evidence_items
+    ]
+    if objects:
+        ResearchEvidence.objects.bulk_create(
+            objects,
+            ignore_conflicts=True,
+        )
 
 
 def route_live_search(
@@ -101,12 +137,16 @@ def retrieve_live_evidence(
                 query,
                 max_results=5,
             )
-            ResearchSearchQuery.objects.create(
+            ResearchSearchQuery.objects.update_or_create(
                 research_request=state.request,
                 query=query,
                 provider=provider_name,
-                result_count=len(search_results),
-                status=ResearchSearchQuery.Status.SUCCEEDED,
+                defaults={
+                    "result_count": len(search_results),
+                    "status": ResearchSearchQuery.Status.SUCCEEDED,
+                    "error_message": "",
+                    "executed_at": timezone.now(),
+                },
             )
             state.raw_live_evidence.extend(
                 dependencies.extract_evidence(
@@ -127,13 +167,16 @@ def retrieve_live_evidence(
                     error=error_message,
                 )
             )
-            ResearchSearchQuery.objects.create(
+            ResearchSearchQuery.objects.update_or_create(
                 research_request=state.request,
                 query=query,
                 provider=provider_name,
-                result_count=0,
-                status=ResearchSearchQuery.Status.FAILED,
-                error_message=error_message,
+                defaults={
+                    "result_count": 0,
+                    "status": ResearchSearchQuery.Status.FAILED,
+                    "error_message": error_message,
+                    "executed_at": timezone.now(),
+                },
             )
 
     return state
@@ -147,26 +190,7 @@ def rank_and_persist_live_evidence(
         state.raw_live_evidence,
         max_items=8,
     )
-    evidence_objects = [
-        ResearchEvidence(
-            research_request=state.request,
-            title=item["title"],
-            url=item["url"],
-            publisher=item.get("publisher") or "",
-            published_at=item.get("published_at") or "",
-            source_type=item["source_type"],
-            content_excerpt=item["content_excerpt"],
-            content_hash=item["content_hash"],
-            confidence_score=item["confidence_score"],
-            verification_status=item["verification_status"],
-        )
-        for item in state.live_evidence
-    ]
-    if evidence_objects:
-        ResearchEvidence.objects.bulk_create(
-            evidence_objects,
-            ignore_conflicts=True,
-        )
+    _persist_evidence_items(state, state.live_evidence)
     return state
 
 
@@ -180,13 +204,48 @@ def retrieve_local_evidence(
     return state
 
 
+def retrieve_vector_evidence(
+    state: ResearchState,
+    dependencies: ResearchDependencies,
+) -> ResearchState:
+    if not settings.STARTUP_ADVISOR_RAG_ENABLED:
+        state.vector_retrieval_status = "disabled"
+        return state
+
+    try:
+        state.vector_evidence = dependencies.retrieve_vector_evidence(
+            startup_profile_id=str(state.profile.id),
+            query=state.question,
+            top_k=settings.STARTUP_ADVISOR_RAG_TOP_K,
+        )
+    except VectorRetrievalError as exc:
+        logger.warning(
+            "Vector retrieval unavailable for request %s: %s",
+            state.request_id,
+            exc,
+        )
+        state.vector_retrieval_status = "unavailable"
+        state.vector_retrieval_error = str(exc)
+        return state
+
+    state.vector_retrieval_status = (
+        "available" if state.vector_evidence else "empty"
+    )
+    _persist_evidence_items(state, state.vector_evidence)
+    return state
+
+
 def assemble_generation_context(
     state: ResearchState,
     dependencies: ResearchDependencies,
 ) -> ResearchState:
+    combined_local_evidence = [
+        *state.local_evidence,
+        *state.vector_evidence,
+    ]
     state.context_payload = dependencies.assemble_context(
         idea=state.idea,
-        local_evidence=state.local_evidence,
+        local_evidence=combined_local_evidence,
         live_evidence=state.live_evidence,
         readiness_score=getattr(
             state.profile,
@@ -194,16 +253,24 @@ def assemble_generation_context(
             50,
         ),
     )
+    state.context_payload["vector_retrieval"] = {
+        "status": state.vector_retrieval_status,
+        "evidence_count": len(state.vector_evidence),
+    }
     return state
+
+
+def _fallback_sources(state: ResearchState) -> list[str]:
+    return (
+        [item["url"] for item in state.live_evidence[:3]]
+        or [item["url"] for item in state.vector_evidence[:3]]
+        or [state.local_evidence[0]["url"]]
+    )
 
 
 def _fallback_report(
     state: ResearchState,
 ) -> dict[str, Any]:
-    fallback_sources = (
-        [item["url"] for item in state.live_evidence[:3]]
-        or [state.local_evidence[0]["url"]]
-    )
     analytics = state.context_payload.get(
         "pre_computed_analytics",
         {},
@@ -260,7 +327,7 @@ def _fallback_report(
             "Re-run research when live search and model generation "
             "are available.",
         ],
-        "sources": fallback_sources,
+        "sources": _fallback_sources(state),
         "confidence_score": (
             0.35
             if state.requires_live_search
@@ -274,18 +341,13 @@ def generate_grounded_report(
     state: ResearchState,
     dependencies: ResearchDependencies,
 ) -> ResearchState:
-    provider = dependencies.llm_provider_factory()
-    valid_urls = {
-        item["url"]
-        for item in [
-            *state.live_evidence,
-            *state.local_evidence,
-        ]
-    }
-    fallback_sources = (
-        [item["url"] for item in state.live_evidence[:3]]
-        or [state.local_evidence[0]["url"]]
-    )
+    all_evidence = [
+        *state.live_evidence,
+        *state.vector_evidence,
+        *state.local_evidence,
+    ]
+    valid_urls = {item["url"] for item in all_evidence}
+    provider = None
 
     system_prompt = (
         "You are a grounded startup intelligence analyst. "
@@ -302,6 +364,7 @@ def generate_grounded_report(
     )
 
     try:
+        provider = dependencies.llm_provider_factory()
         generation_result = provider.generate(
             messages=[
                 {
@@ -313,10 +376,10 @@ def generate_grounded_report(
                     "content": user_prompt,
                 },
             ],
-            response_schema=RESEARCH_REPORT_SCHEMA,
+            response_schema=LLM_RESEARCH_REPORT_SCHEMA,
         )
         report_data = generation_result.payload
-        REPORT_VALIDATOR.validate(report_data)
+        LLM_REPORT_VALIDATOR.validate(report_data)
 
         report_data["sources"] = [
             source
@@ -324,12 +387,16 @@ def generate_grounded_report(
             if source in valid_urls
         ]
         if not report_data["sources"]:
-            report_data["sources"] = fallback_sources
+            report_data["sources"] = _fallback_sources(state)
 
         state.report_data = report_data
         state.model_name = generation_result.model_name
         state.llm_status = "generated"
-    except (LLMProviderError, SchemaValidationError) as exc:
+    except (
+        ImproperlyConfigured,
+        LLMProviderError,
+        SchemaValidationError,
+    ) as exc:
         logger.warning(
             "Model generation failed; using grounded fallback: %s",
             exc,
@@ -368,7 +435,11 @@ def finalize_research_metadata(
             if state.local_evidence
             else "unavailable"
         ),
+        "vector_retrieval_status": (
+            state.vector_retrieval_status
+        ),
         "local_evidence_count": len(state.local_evidence),
+        "vector_evidence_count": len(state.vector_evidence),
         "live_evidence_count": len(state.live_evidence),
         "search_failure_count": len(state.search_failures),
     }
@@ -378,6 +449,7 @@ def finalize_research_metadata(
     state.partial_results = (
         state.live_search_status in {"partial", "unavailable"}
         or state.llm_status == "fallback"
+        or state.vector_retrieval_status == "unavailable"
     )
     state.partial_messages = [
         f"{failure.query}: {failure.error}"
@@ -390,11 +462,19 @@ def finalize_research_metadata(
         state.partial_messages.append(
             "No verified live web evidence was retrieved.",
         )
+    if state.vector_retrieval_status == "unavailable":
+        state.partial_messages.append(
+            "Startup document vector retrieval was unavailable.",
+        )
     if state.llm_status == "fallback":
         state.partial_messages.append(
             "Model generation was unavailable; a deterministic "
             "fallback was returned.",
         )
+
+    # Validate the exact object that will be persisted, including
+    # Python-owned metadata.
+    FINAL_REPORT_VALIDATOR.validate(state.report_data)
     return state
 
 
@@ -404,6 +484,7 @@ DEFAULT_RESEARCH_STEPS = (
     retrieve_live_evidence,
     rank_and_persist_live_evidence,
     retrieve_local_evidence,
+    retrieve_vector_evidence,
     assemble_generation_context,
     generate_grounded_report,
     finalize_research_metadata,

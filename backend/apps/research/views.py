@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -89,9 +90,29 @@ class ResearchRequestCreateView(APIView):
             req_obj.save(update_fields=["celery_task_id", "updated_at"])
         except Exception as exc:
             req_obj.status = ResearchRequest.Status.FAILED
+            req_obj.completed_at = timezone.now()
             req_obj.error_code = "dispatch_failed"
-            req_obj.error_message = f"Failed to dispatch research worker: {exc}"
-            req_obj.save(update_fields=["status", "error_code", "error_message", "updated_at"])
+            req_obj.error_message = (
+                f"Failed to dispatch research worker: {exc}"
+            )
+            req_obj.save(
+                update_fields=[
+                    "status",
+                    "completed_at",
+                    "error_code",
+                    "error_message",
+                    "updated_at",
+                ]
+            )
+            return Response(
+                {
+                    "detail": (
+                        "The research worker is currently unavailable."
+                    ),
+                    "job": ResearchRequestDetailSerializer(req_obj).data,
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         return Response(
             {

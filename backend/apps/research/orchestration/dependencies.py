@@ -12,6 +12,9 @@ from apps.research.services.local_retrieval import (
     retrieve_local_verified_knowledge,
 )
 from apps.research.services.search_provider import execute_web_search
+from apps.research.services.vector_retrieval import (
+    retrieve_startup_vector_evidence,
+)
 from apps.startups.services.llm_provider import (
     StartupAdvisorLLMProvider,
     get_startup_advisor_llm_provider,
@@ -29,6 +32,9 @@ class ResearchDependencies:
     )
     retrieve_local_evidence: Callable[..., list[dict[str, Any]]] = (
         retrieve_local_verified_knowledge
+    )
+    retrieve_vector_evidence: Callable[..., list[dict[str, Any]]] = (
+        retrieve_startup_vector_evidence
     )
     assemble_context: Callable[..., dict[str, Any]] = (
         assemble_research_context

@@ -78,6 +78,14 @@ class ResearchSearchQuery(TimeStampedModel):
     error_message = models.TextField(blank=True, default="")
     executed_at = models.DateTimeField(default=timezone.now)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["research_request", "query", "provider"],
+                name="research_unique_search_query",
+            ),
+        ]
+
     def __str__(self) -> str:
         return f"ResearchSearchQuery({self.query[:30]}, count={self.result_count})"
 
@@ -109,6 +117,14 @@ class ResearchEvidence(TimeStampedModel):
         choices=VerificationStatus.choices,
         default=VerificationStatus.UNVERIFIED_LIVE,
     )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["research_request", "content_hash"],
+                name="research_unique_evidence_per_request",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"ResearchEvidence({self.title[:30]}, status={self.verification_status})"

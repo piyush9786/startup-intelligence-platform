@@ -2,6 +2,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "unsafe-development-key")
@@ -178,7 +180,7 @@ RESEARCH_TASK_SOFT_TIME_LIMIT_SECONDS = int(
     os.environ.get("RESEARCH_TASK_SOFT_TIME_LIMIT_SECONDS", "540")
 )
 RESEARCH_TASK_TIME_LIMIT_SECONDS = int(
-    os.environ.get("RESEARCH_TASK_TIME_LIMIT_SECONDS", "600")
+    os.environ.get("RESEARCH_TASK_TIME_LIMIT_SECONDS", "570")
 )
 RESEARCH_JOB_QUEUE_TIMEOUT_SECONDS = int(
     os.environ.get("RESEARCH_JOB_QUEUE_TIMEOUT_SECONDS", "900")
@@ -189,6 +191,17 @@ RESEARCH_JOB_RUNNING_TIMEOUT_SECONDS = int(
 RESEARCH_STALE_RECOVERY_BATCH_SIZE = int(
     os.environ.get("RESEARCH_STALE_RECOVERY_BATCH_SIZE", "100")
 )
+
+if not (
+    0
+    < RESEARCH_TASK_SOFT_TIME_LIMIT_SECONDS
+    < RESEARCH_TASK_TIME_LIMIT_SECONDS
+    < RESEARCH_JOB_RUNNING_TIMEOUT_SECONDS
+):
+    raise ImproperlyConfigured(
+        "Research timeout settings must satisfy "
+        "0 < soft_limit < hard_limit < stale_running_timeout."
+    )
 
 CELERY_BEAT_SCHEDULE = {
     "ml-nightly-feature-extraction": {
@@ -219,6 +232,11 @@ EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "1025"))
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@startup.local")
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://qdrant:6333")
+QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "")
+STARTUP_ADVISOR_QDRANT_PROFILE_FIELD = os.environ.get(
+    "STARTUP_ADVISOR_QDRANT_PROFILE_FIELD",
+    "startup_profile_id",
+)
 STARTUP_ADVISOR_RAG_ENABLED = (
     os.environ.get("STARTUP_ADVISOR_RAG_ENABLED", "false").lower() == "true"
 )
@@ -229,7 +247,7 @@ STARTUP_ADVISOR_QDRANT_COLLECTION = os.environ.get(
 STARTUP_ADVISOR_QDRANT_TIMEOUT_SECONDS = float(
     os.environ.get(
         "STARTUP_ADVISOR_QDRANT_TIMEOUT_SECONDS",
-        "30",
+        "15",
     )
 )
 STARTUP_ADVISOR_EMBEDDING_MODEL = os.environ.get(
@@ -243,7 +261,7 @@ STARTUP_ADVISOR_EMBEDDING_VERSION = os.environ.get(
 STARTUP_ADVISOR_EMBEDDING_TIMEOUT_SECONDS = float(
     os.environ.get(
         "STARTUP_ADVISOR_EMBEDDING_TIMEOUT_SECONDS",
-        "120",
+        "30",
     )
 )
 STARTUP_ADVISOR_EMBEDDING_BATCH_SIZE = int(
@@ -335,7 +353,7 @@ STARTUP_ADVISOR_LLM_MODEL = os.environ.get(
 STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS = float(
     os.environ.get(
         "STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS",
-        "480",
+        "420",
     )
 )
 STARTUP_ADVISOR_JOB_QUEUE_TIMEOUT_SECONDS = int(
@@ -455,7 +473,7 @@ WEB_SEARCH_MAX_RESULTS = int(
 )
 
 WEB_SEARCH_TIMEOUT_SECONDS = float(
-    os.environ.get("WEB_SEARCH_TIMEOUT_SECONDS", "30")
+    os.environ.get("WEB_SEARCH_TIMEOUT_SECONDS", "15")
 )
 
 WEB_SEARCH_CACHE_SECONDS = int(

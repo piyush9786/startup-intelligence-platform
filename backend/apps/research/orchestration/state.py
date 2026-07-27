@@ -26,8 +26,11 @@ class ResearchState:
     raw_live_evidence: list[dict[str, Any]] = field(default_factory=list)
     live_evidence: list[dict[str, Any]] = field(default_factory=list)
     local_evidence: list[dict[str, Any]] = field(default_factory=list)
+    vector_evidence: list[dict[str, Any]] = field(default_factory=list)
     search_failures: list[SearchFailure] = field(default_factory=list)
 
+    vector_retrieval_status: str = "disabled"
+    vector_retrieval_error: str = ""
     context_payload: dict[str, Any] = field(default_factory=dict)
     report_data: dict[str, Any] = field(default_factory=dict)
     model_name: str = ""
