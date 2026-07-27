@@ -133,7 +133,11 @@ def _parse_year(value: str, row_number: int) -> int | None:
     return year
 
 
-def read_company_csv(path: Path) -> list[ParsedCompanyRow]:
+def read_company_csv(
+    path: Path,
+    *,
+    max_rows: int | None = None,
+) -> list[ParsedCompanyRow]:
     with path.open(newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
         columns = set(reader.fieldnames or [])
@@ -141,7 +145,13 @@ def read_company_csv(path: Path) -> list[ParsedCompanyRow]:
         if missing:
             raise CompanyCSVError(f"CSV is missing required columns: {sorted(missing)}")
 
-        rows = [_parse_row(row, row_number) for row_number, row in enumerate(reader, start=2)]
+        rows = []
+        for row_number, row in enumerate(reader, start=2):
+            if max_rows is not None and len(rows) >= max_rows:
+                raise CompanyCSVError(
+                    f"CSV exceeds the maximum of {max_rows} company rows"
+                )
+            rows.append(_parse_row(row, row_number))
 
     if not rows:
         raise CompanyCSVError("CSV contains no company rows")
@@ -254,6 +264,50 @@ def _validate_repeated_external_ids(rows: list[ParsedCompanyRow]) -> None:
             )
 
 
+def _identity_candidates(row: ParsedCompanyRow):
+    queryset = Company.objects.filter(
+        country__iexact=row.country,
+    )
+    if row.founded_year is None:
+        queryset = queryset.filter(founded_year__isnull=True)
+    else:
+        queryset = queryset.filter(founded_year=row.founded_year)
+    return queryset
+
+
+def _resolve_company(row: ParsedCompanyRow) -> Company | None:
+    """Resolve only high-confidence exact identities across data sources."""
+    normalized_names = {
+        normalize_company_name(name)
+        for name in (row.canonical_name, *row.aliases)
+        if normalize_company_name(name)
+    }
+    candidates = list(
+        _identity_candidates(row)
+        .select_for_update()
+        .filter(normalized_name__in=normalized_names)
+        .order_by("id")[:2]
+    )
+    if not candidates:
+        candidate_ids = list(
+            _identity_candidates(row)
+            .filter(aliases__normalized_alias__in=normalized_names)
+            .values_list("id", flat=True)
+            .distinct()[:2]
+        )
+        candidates = list(
+            Company.objects.select_for_update()
+            .filter(id__in=candidate_ids)
+            .order_by("id")[:2]
+        )
+    if len(candidates) > 1:
+        raise CompanyCSVError(
+            f"row {row.row_number}: company identity is ambiguous; "
+            "review the matching canonical names and aliases"
+        )
+    return candidates[0] if candidates else None
+
+
 def import_company_rows(
     *,
     source: CompanyDataSource,
@@ -286,13 +340,17 @@ def import_company_rows(
                 "verification_status": row.verification_status,
             }
             if source_record is None:
-                company = Company.objects.create(**company_defaults)
+                company = _resolve_company(row)
+                if company is None:
+                    company = Company.objects.create(**company_defaults)
+                    companies_created += 1
+                else:
+                    companies_updated += 1
                 source_record = CompanySourceRecord(
                     company=company,
                     source=source,
                     external_id=row.external_id,
                 )
-                companies_created += 1
             else:
                 company = source_record.company
                 for field, value in company_defaults.items():
@@ -306,7 +364,9 @@ def import_company_rows(
             source_record.raw_data = row.raw_data
             source_record.save()
 
-            for alias in row.aliases:
+            # Process the source's canonical name last so it wins when an
+            # alias normalizes to the same identity within that source.
+            for alias in (*row.aliases, row.canonical_name):
                 CompanyAlias.objects.update_or_create(
                     company=company,
                     source=source,

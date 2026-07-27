@@ -187,7 +187,7 @@ def test_owner_uploads_submission_evidence(monkeypatch):
     submission_id = submission_response.data["id"]
 
     monkeypatch.setattr(
-        "apps.recommendations.services.verification.upload_bytes",
+        "apps.recommendations.services.verification.upload_stream",
         lambda **kwargs: kwargs["object_key"],
     )
 
@@ -199,7 +199,7 @@ def test_owner_uploads_submission_evidence(monkeypatch):
         {
             "file": SimpleUploadedFile(
                 "endorsement.pdf",
-                b"endorsement evidence",
+                b"%PDF-1.7 endorsement evidence",
                 content_type="application/pdf",
             ),
         },
@@ -209,8 +209,50 @@ def test_owner_uploads_submission_evidence(monkeypatch):
     assert response.status_code == status.HTTP_201_CREATED
     assert response.data["filename"] == "endorsement.pdf"
     assert response.data["mime_type"] == "application/pdf"
-    assert response.data["size_bytes"] == len(b"endorsement evidence")
+    assert response.data["size_bytes"] == len(b"%PDF-1.7 endorsement evidence")
     assert EligibilityVerificationEvidence.objects.count() == 1
+
+
+def test_evidence_upload_rejects_spoofed_file_type(monkeypatch):
+    founder, profile, scheme, manual_rule, _ = make_context(suffix="spoofed")
+    client = authenticated_client(founder)
+    submission_response = client.post(
+        reverse("eligibility-verification-submission-create"),
+        {
+            "startup_profile_id": str(profile.id),
+            "scheme_id": str(scheme.id),
+            "eligibility_rule_id": str(manual_rule.id),
+            "claim_value": True,
+        },
+        format="json",
+    )
+    upload_called = False
+
+    def fake_upload(**kwargs):
+        nonlocal upload_called
+        upload_called = True
+
+    monkeypatch.setattr(
+        "apps.recommendations.services.verification.upload_stream",
+        fake_upload,
+    )
+    response = client.post(
+        reverse(
+            "eligibility-verification-evidence-upload",
+            kwargs={"submission_id": submission_response.data["id"]},
+        ),
+        {
+            "file": SimpleUploadedFile(
+                "not-really.pdf",
+                b"<script>not a PDF</script>",
+                content_type="application/pdf",
+            ),
+        },
+        format="multipart",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert upload_called is False
 
 
 def test_other_founder_cannot_access_private_verification():

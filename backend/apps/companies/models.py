@@ -17,7 +17,13 @@ def normalize_company_name(value: str) -> str:
         r"\b(private|pvt|limited|ltd|llp|incorporated|inc|corp|corporation)\b"
     )
     value = re.sub(legal_suffix, " ", value)
-    return re.sub(r"[^a-z0-9]+", " ", value).strip()
+    value = "".join(
+        character
+        if unicodedata.category(character)[0] in {"L", "M", "N"}
+        else " "
+        for character in value
+    )
+    return re.sub(r"\s+", " ", value).strip()
 
 
 class CompanyDataSource(TimeStampedModel):

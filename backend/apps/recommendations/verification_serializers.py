@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -51,6 +54,40 @@ class EligibilityVerificationEvidenceUploadSerializer(
     serializers.Serializer,
 ):
     file = serializers.FileField()
+
+    _ALLOWED_TYPES = {
+        ".pdf": ("application/pdf", lambda header: header.startswith(b"%PDF-")),
+        ".png": ("image/png", lambda header: header.startswith(b"\x89PNG\r\n\x1a\n")),
+        ".jpg": ("image/jpeg", lambda header: header.startswith(b"\xff\xd8\xff")),
+        ".jpeg": ("image/jpeg", lambda header: header.startswith(b"\xff\xd8\xff")),
+    }
+
+    def validate_file(self, uploaded_file):
+        if uploaded_file.size > settings.ELIGIBILITY_EVIDENCE_MAX_BYTES:
+            max_mib = settings.ELIGIBILITY_EVIDENCE_MAX_BYTES / (1024 * 1024)
+            raise serializers.ValidationError(
+                f"Evidence files must be no larger than {max_mib:g} MiB."
+            )
+
+        extension = Path(uploaded_file.name).suffix.casefold()
+        allowed = self._ALLOWED_TYPES.get(extension)
+        if allowed is None:
+            raise serializers.ValidationError(
+                "Evidence must be a PDF, PNG, or JPEG file."
+            )
+
+        expected_mime_type, signature_matches = allowed
+        header = uploaded_file.read(16)
+        uploaded_file.seek(0)
+        if not signature_matches(header):
+            raise serializers.ValidationError(
+                "The file contents do not match the selected file type."
+            )
+        if uploaded_file.content_type != expected_mime_type:
+            raise serializers.ValidationError(
+                f"The declared content type must be {expected_mime_type}."
+            )
+        return uploaded_file
 
 
 class EligibilityVerificationEvidenceSerializer(

@@ -113,13 +113,13 @@ def test_owner_can_upload_evidence_metadata(monkeypatch):
     content = b"verified evidence content"
     uploaded = {}
 
-    def fake_upload_bytes(**kwargs):
+    def fake_upload_stream(**kwargs):
         uploaded.update(kwargs)
         return kwargs["object_key"]
 
     monkeypatch.setattr(
-        "apps.recommendations.services.verification.upload_bytes",
-        fake_upload_bytes,
+        "apps.recommendations.services.verification.upload_stream",
+        fake_upload_stream,
     )
 
     evidence = add_verification_evidence(
@@ -139,7 +139,8 @@ def test_owner_can_upload_evidence_metadata(monkeypatch):
     assert evidence.storage_key.startswith(
         f"eligibility/{submission.startup_profile_id}/{submission.id}/"
     )
-    assert uploaded["content"] == content
+    assert uploaded["length"] == len(content)
+    assert uploaded["stream"].read() == content
     assert uploaded["content_type"] == "application/pdf"
     assert uploaded["bucket_name"] == ("startup-eligibility-evidence")
 
@@ -153,13 +154,13 @@ def test_non_owner_cannot_upload_evidence(monkeypatch):
     )
     upload_called = False
 
-    def fake_upload_bytes(**kwargs):
+    def fake_upload_stream(**kwargs):
         nonlocal upload_called
         upload_called = True
 
     monkeypatch.setattr(
-        "apps.recommendations.services.verification.upload_bytes",
-        fake_upload_bytes,
+        "apps.recommendations.services.verification.upload_stream",
+        fake_upload_stream,
     )
 
     with pytest.raises(ValidationError):
@@ -200,13 +201,13 @@ def test_reviewed_submission_rejects_additional_evidence(
 
     upload_called = False
 
-    def fake_upload_bytes(**kwargs):
+    def fake_upload_stream(**kwargs):
         nonlocal upload_called
         upload_called = True
 
     monkeypatch.setattr(
-        "apps.recommendations.services.verification.upload_bytes",
-        fake_upload_bytes,
+        "apps.recommendations.services.verification.upload_stream",
+        fake_upload_stream,
     )
 
     with pytest.raises(ValidationError):
@@ -232,7 +233,7 @@ def test_database_failure_removes_uploaded_object(monkeypatch):
     removed = []
 
     monkeypatch.setattr(
-        "apps.recommendations.services.verification.upload_bytes",
+        "apps.recommendations.services.verification.upload_stream",
         lambda **kwargs: kwargs["object_key"],
     )
 

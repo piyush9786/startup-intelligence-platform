@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "django_filters",
     "drf_spectacular",
@@ -129,6 +130,10 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 25,
     "DEFAULT_THROTTLE_RATES": {
+        "auth_login": os.getenv("AUTH_LOGIN_RATE", "10/minute"),
+        "auth_refresh": os.getenv("AUTH_REFRESH_RATE", "30/minute"),
+        "auth_logout": os.getenv("AUTH_LOGOUT_RATE", "30/minute"),
+        "auth_register": os.getenv("AUTH_REGISTER_RATE", "5/hour"),
         "assistant_chat_turn": os.getenv(
             "ASSISTANT_CHATBOT_TURN_RATE",
             "20/hour",
@@ -140,7 +145,7 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": False,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 SPECTACULAR_SETTINGS = {
@@ -232,6 +237,13 @@ MINIO_BUCKET_STARTUP_EVIDENCE = os.environ.get(
     "MINIO_BUCKET_STARTUP_EVIDENCE",
     "startup-eligibility-evidence",
 )
+ELIGIBILITY_EVIDENCE_MAX_BYTES = int(
+    os.environ.get("ELIGIBILITY_EVIDENCE_MAX_BYTES", str(10 * 1024 * 1024))
+)
+COMPANY_IMPORT_MAX_BYTES = int(
+    os.environ.get("COMPANY_IMPORT_MAX_BYTES", str(100 * 1024 * 1024))
+)
+COMPANY_IMPORT_MAX_ROWS = int(os.environ.get("COMPANY_IMPORT_MAX_ROWS", "250000"))
 COLLECTOR_USER_AGENT = os.environ.get(
     "COLLECTOR_USER_AGENT",
     "StartupIntelligenceCollector/0.1 (+http://localhost:5173)",

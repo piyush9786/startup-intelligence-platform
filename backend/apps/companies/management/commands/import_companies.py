@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
@@ -42,6 +43,11 @@ class Command(BaseCommand):
         path = Path(options["file"]).expanduser().resolve()
         if not path.is_file():
             raise CommandError(f"Company CSV does not exist: {path}")
+        if path.stat().st_size > settings.COMPANY_IMPORT_MAX_BYTES:
+            raise CommandError(
+                "Company CSV exceeds the configured "
+                f"{settings.COMPANY_IMPORT_MAX_BYTES}-byte limit."
+            )
 
         checksum = file_sha256(path)
         dataset_id = options["dataset_id"] or f"{options['source_slug']}-{checksum[:16]}"
@@ -82,7 +88,10 @@ class Command(BaseCommand):
             dataset.error_message = ""
             dataset.save(update_fields=["parsing_status", "error_message", "updated_at"])
 
-            rows = read_company_csv(path)
+            rows = read_company_csv(
+                path,
+                max_rows=settings.COMPANY_IMPORT_MAX_ROWS,
+            )
             if options["skip_storage_upload"]:
                 storage_path = path.as_uri()
             else:

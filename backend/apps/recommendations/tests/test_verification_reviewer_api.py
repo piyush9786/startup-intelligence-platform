@@ -279,8 +279,8 @@ def test_reviewer_can_download_evidence(monkeypatch):
     downloaded = b"reviewable content"
 
     monkeypatch.setattr(
-        ("apps.recommendations.verification_reviewer_views.download_bytes"),
-        lambda object_key, **kwargs: downloaded,
+        ("apps.recommendations.verification_reviewer_views.stream_object"),
+        lambda object_key, **kwargs: iter([downloaded]),
     )
 
     client = authenticated_client(reviewer)

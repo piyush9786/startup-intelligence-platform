@@ -17,7 +17,7 @@ export default [
         sourceType: 'module',
       },
     },
-    settings: { react: { version: '18.3' } },
+    settings: { react: { version: 'detect' } },
     plugins: {
       react,
       'react-hooks': reactHooks,
@@ -38,8 +38,8 @@ export default [
       'react-hooks/set-state-in-effect': 'warn',
       'no-useless-escape': 'warn',
       'react/prop-types': 'off',
-      'no-unused-vars': 'off',
-      'no-use-before-define': 'off',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-use-before-define': ['warn', { functions: false }],
     },
   },
 ]

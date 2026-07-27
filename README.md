@@ -29,7 +29,7 @@ The platform embeds **9 specialized ML models** across 4 functional layers:
 | # | Model | Algorithm | Engine / Library | Purpose |
 |---|-------|-----------|------------------|---------|
 | **1** | **Transformer Embeddings** | `embeddinggemma` | Ollama | **RAG Vector Search** — encodes scheme PDFs & queries into Qdrant dense vectors |
-| **2** | **Generative AI / LLM** | `qwen3.5:9b` | Ollama | **Reasoning & Chat** — site-wide copilot, document parsing, scheme summaries |
+| **2** | **Generative AI / LLM** | `qwen3:4b` | Ollama | **Reasoning & Chat** — site-wide copilot, document parsing, scheme summaries |
 | **3** | **K-Means Clustering** | `KMeans(n_clusters=8)` | `scikit-learn` | **Startup Cohort Segmentation** — groups startups into cohorts by stage, sector, & turnover |
 | **4** | **SVM Classifier** | `CalibratedClassifierCV(SVC)` | `scikit-learn` | **Scheme Success Ranking** — predicts probability (0.0–1.0) of a startup successfully acquiring a scheme |
 | **5** | **AdaBoost Classifier** | `AdaBoostClassifier` | `scikit-learn` | **Readiness Predictor** — predicts probability of a startup becoming "READY" within 30 days |
@@ -51,7 +51,7 @@ Stage 2: ML RE-RANKING
   Top 20 Candidates ─► Calibrated SVM Ranker (Model 4) ─► Success Probability Ranking [Top 6]
 
 Stage 3: LLM GROUNDED EXPLANATION
-  Top 6 Chunks + Startup Profile ─► LLM (qwen3.5:9b) ─► Grounded Answer + Source Citations
+  Top 6 Chunks + Startup Profile ─► LLM (qwen3:4b) ─► Grounded Answer + Source Citations
 ```
 
 ---
@@ -74,7 +74,7 @@ Stage 3: LLM GROUNDED EXPLANATION
 React 19 / Vite (React Router v7, TanStack Query v5, i18n context)
       │
       ▼ (HTTP / REST API — Default-Deny IsAuthenticated Permission Policy)
-Django REST Framework 5.2 (Modular app-level urls.py routing)
+Django 5.2 + Django REST Framework 3.16 (modular app-level `urls.py` routing)
       │
       ├── PostgreSQL — Authoritative business data, MLFeatureStore & MLModelRegistry
       ├── Redis / Celery — Asynchronous tasks & scheduled ML retraining
@@ -82,7 +82,7 @@ Django REST Framework 5.2 (Modular app-level urls.py routing)
       ├── Qdrant — Vector database for dense RAG embeddings
       ├── Neo4j — Verified dependency graph projection
       ├── MinIO — Raw document storage & private evidence uploads
-      └── Ollama — Local LLM (qwen3.5:9b) & Embeddings (embeddinggemma)
+      └── Ollama — Local LLM (qwen3:4b) & Embeddings (embeddinggemma)
 ```
 
 ---
@@ -127,7 +127,7 @@ startup-intelligence-platform/
 │   │   ├── main.jsx          # Root entry wrapping AppShell in BrowserRouter & QueryClientProvider
 │   │   └── components/ui.jsx # Shared UI primitives
 │   ├── package.json          # Frontend dependencies (react-router-dom, @tanstack/react-query)
-│   └── vite.config.js        # Vite configuration (outDir: "build")
+│   └── vite.config.js        # Vite configuration (outDir: "dist")
 ├── docs/                     # Comprehensive architecture and domain documentation
 └── infrastructure/           # Deployment scripts
 ```
@@ -157,7 +157,7 @@ docker compose exec backend python manage.py createsuperuser
 
 # 6. Import a historical company CSV (archives the original in MinIO)
 docker compose exec backend python manage.py import_companies \
-  --file /app/catalog/companies.csv \
+  --file /data/samples/indian_b2b_saas_demo.csv \
   --source-slug example-company-source \
   --source-name "Example company source" \
   --reliability-score 0.800

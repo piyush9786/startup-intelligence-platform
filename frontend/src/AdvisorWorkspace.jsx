@@ -1,6 +1,7 @@
 import React from "react";
-import { PageHeader, BriefingDocument } from "./App.jsx";
+import BriefingDocument from "./BriefingDocument.jsx";
 import { formatDateTime } from "./advisor";
+import { PageHeader } from "./components/ui";
 
 function HistoryPanel({ history, loading, onSelect, selectedId }) {
   return (

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from io import BytesIO
+from typing import BinaryIO
 
 from django.conf import settings
 from minio import Minio
@@ -43,6 +45,43 @@ def upload_bytes(
         content_type=content_type or "application/octet-stream",
     )
     return object_key
+
+
+def upload_stream(
+    *,
+    object_key: str,
+    stream: BinaryIO,
+    length: int,
+    content_type: str,
+    bucket_name: str | None = None,
+) -> str:
+    selected_bucket = bucket_name or settings.MINIO_BUCKET_RAW
+    client = ensure_bucket(selected_bucket)
+    client.put_object(
+        selected_bucket,
+        object_key,
+        stream,
+        length=length,
+        content_type=content_type or "application/octet-stream",
+    )
+    return object_key
+
+
+def stream_object(
+    object_key: str,
+    *,
+    bucket_name: str | None = None,
+    chunk_size: int = 64 * 1024,
+) -> Iterator[bytes]:
+    selected_bucket = bucket_name or settings.MINIO_BUCKET_RAW
+    client = minio_client()
+    response = client.get_object(selected_bucket, object_key)
+    try:
+        while chunk := response.read(chunk_size):
+            yield chunk
+    finally:
+        response.close()
+        response.release_conn()
 
 
 def download_bytes(
