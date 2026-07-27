@@ -74,10 +74,13 @@ def _resolve_startup_profile(
     if startup_profile_id is None:
         return None
 
-    profile = StartupProfile.objects.filter(
-        pk=startup_profile_id,
-        owner=user,
-    ).first()
+    if getattr(user, "is_staff", False):
+        profile = StartupProfile.objects.filter(pk=startup_profile_id).first()
+    else:
+        profile = StartupProfile.objects.filter(
+            pk=startup_profile_id,
+            owner=user,
+        ).first()
 
     if profile is None:
         raise Http404("The startup profile was not found.")
