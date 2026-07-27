@@ -9,7 +9,10 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from apps.startups.models import StartupAdvisorBriefingJob
+from apps.startups.models import (
+    StartupAdvisorBriefing,
+    StartupAdvisorBriefingJob,
+)
 from apps.startups.services.advisor_briefing import (
     AdvisorSnapshotChangedError,
     generate_startup_advisor_briefing,
@@ -25,13 +28,27 @@ from apps.startups.services.llm_provider import (
 logger = logging.getLogger(__name__)
 
 FAILURE_DETAILS = {
-    "queue_timeout": ("The advisor generation job did not start in time. Please try again."),
-    "task_timeout": ("The advisor generation job exceeded its time limit. Please try again."),
-    "provider_unavailable": ("The local advisor model is temporarily unavailable."),
-    "provider_response_invalid": ("The advisor model returned an invalid response."),
-    "briefing_validation_failed": ("Generated guidance did not pass validation."),
-    "snapshot_changed": ("The source snapshot changed during generation."),
-    "unexpected_error": ("Advisor generation failed unexpectedly."),
+    "queue_timeout": (
+        "The advisor generation job did not start in time. Please try again."
+    ),
+    "task_timeout": (
+        "The advisor generation job exceeded its time limit. Please try again."
+    ),
+    "provider_unavailable": (
+        "The local advisor model is temporarily unavailable."
+    ),
+    "provider_response_invalid": (
+        "The advisor model returned an invalid response."
+    ),
+    "briefing_validation_failed": (
+        "Generated guidance did not pass validation."
+    ),
+    "snapshot_changed": (
+        "The source snapshot changed during generation."
+    ),
+    "unexpected_error": (
+        "Advisor generation failed unexpectedly."
+    ),
 }
 
 
@@ -41,7 +58,11 @@ def _terminal_result(
     return {
         "job_id": str(job.id),
         "status": job.status,
-        "briefing_id": (str(job.briefing_id) if job.briefing_id else None),
+        "briefing_id": (
+            str(job.briefing_id)
+            if job.briefing_id
+            else None
+        ),
         "error_code": job.error_code,
     }
 
@@ -100,15 +121,62 @@ def _mark_job_failed(
 
 
 def _request_was_redelivered(task) -> bool:
-    delivery_info = getattr(task.request, "delivery_info", None) or {}
+    delivery_info = (
+        getattr(task.request, "delivery_info", None)
+        or {}
+    )
     return bool(delivery_info.get("redelivered"))
+
+
+def _ensure_auto_research_handoff(
+    briefing_id: str,
+) -> None:
+    """Perform an idempotent handoff without changing advisor success."""
+    try:
+        from apps.research.services.advisor_trigger import (
+            queue_research_after_advisor,
+        )
+
+        briefing = (
+            StartupAdvisorBriefing.objects.select_related(
+                "requested_by",
+                "startup_profile",
+            ).get(pk=briefing_id)
+        )
+        research_request, dispatched = (
+            queue_research_after_advisor(
+                briefing=briefing,
+                requested_by=briefing.requested_by,
+            )
+        )
+        logger.info(
+            "Advisor-to-research handoff reconciled",
+            extra={
+                "advisor_briefing_id": str(briefing.id),
+                "research_request_id": (
+                    str(research_request.id)
+                    if research_request is not None
+                    else None
+                ),
+                "research_dispatched": dispatched,
+            },
+        )
+    except Exception:
+        logger.exception(
+            "Advisor-to-research handoff failed",
+            extra={
+                "advisor_briefing_id": str(briefing_id),
+            },
+        )
 
 
 @shared_task(
     bind=True,
     acks_late=True,
     reject_on_worker_lost=True,
-    soft_time_limit=(settings.STARTUP_ADVISOR_TASK_SOFT_TIME_LIMIT_SECONDS),
+    soft_time_limit=(
+        settings.STARTUP_ADVISOR_TASK_SOFT_TIME_LIMIT_SECONDS
+    ),
     time_limit=settings.STARTUP_ADVISOR_TASK_TIME_LIMIT_SECONDS,
 )
 def generate_startup_advisor_briefing_task(
@@ -116,21 +184,35 @@ def generate_startup_advisor_briefing_task(
     job_id: str,
 ) -> dict[str, object]:
     with transaction.atomic():
-        job = StartupAdvisorBriefingJob.objects.select_for_update().get(
-            pk=job_id,
+        job = (
+            StartupAdvisorBriefingJob.objects.select_for_update()
+            .get(pk=job_id)
         )
 
         if job.status in (
             StartupAdvisorBriefingJob.Status.SUCCEEDED,
             StartupAdvisorBriefingJob.Status.FAILED,
         ):
+            if (
+                job.status
+                == StartupAdvisorBriefingJob.Status.SUCCEEDED
+                and job.briefing_id
+            ):
+                briefing_id = str(job.briefing_id)
+                transaction.on_commit(
+                    lambda: _ensure_auto_research_handoff(
+                        briefing_id,
+                    )
+                )
             return _terminal_result(job)
 
         now = timezone.now()
 
         if job.status == StartupAdvisorBriefingJob.Status.QUEUED:
             queue_cutoff = now - timedelta(
-                seconds=(settings.STARTUP_ADVISOR_JOB_QUEUE_TIMEOUT_SECONDS),
+                seconds=(
+                    settings.STARTUP_ADVISOR_JOB_QUEUE_TIMEOUT_SECONDS
+                ),
             )
             if job.created_at <= queue_cutoff:
                 _apply_failure(
@@ -146,9 +228,15 @@ def generate_startup_advisor_briefing_task(
                 return _terminal_result(job)
 
             timeout_cutoff = now - timedelta(
-                seconds=(settings.STARTUP_ADVISOR_TASK_SOFT_TIME_LIMIT_SECONDS),
+                seconds=(
+                    settings
+                    .STARTUP_ADVISOR_TASK_SOFT_TIME_LIMIT_SECONDS
+                ),
             )
-            if job.started_at is not None and job.started_at <= timeout_cutoff:
+            if (
+                job.started_at is not None
+                and job.started_at <= timeout_cutoff
+            ):
                 _apply_failure(
                     job,
                     error_code="task_timeout",
@@ -229,14 +317,26 @@ def generate_startup_advisor_briefing_task(
         return _terminal_result(failed_job)
 
     with transaction.atomic():
-        job = StartupAdvisorBriefingJob.objects.select_for_update().get(
-            pk=job_id,
+        job = (
+            StartupAdvisorBriefingJob.objects.select_for_update()
+            .get(pk=job_id)
         )
 
         if job.status in (
             StartupAdvisorBriefingJob.Status.SUCCEEDED,
             StartupAdvisorBriefingJob.Status.FAILED,
         ):
+            if (
+                job.status
+                == StartupAdvisorBriefingJob.Status.SUCCEEDED
+                and job.briefing_id
+            ):
+                briefing_id = str(job.briefing_id)
+                transaction.on_commit(
+                    lambda: _ensure_auto_research_handoff(
+                        briefing_id,
+                    )
+                )
             return _terminal_result(job)
 
         job.status = StartupAdvisorBriefingJob.Status.SUCCEEDED
@@ -255,31 +355,11 @@ def generate_startup_advisor_briefing_task(
             ],
         )
 
-    try:
-        from apps.research.services.advisor_trigger import (
-            queue_research_after_advisor,
-        )
-
-        research_request, research_created = queue_research_after_advisor(
-            briefing=briefing,
-            requested_by=requested_by,
-        )
-        logger.info(
-            "Advisor-to-research handoff completed",
-            extra={
-                "advisor_briefing_id": str(briefing.id),
-                "research_request_id": (
-                    str(research_request.id)
-                    if research_request is not None
-                    else None
-                ),
-                "research_created": research_created,
-            },
-        )
-    except Exception:
-        logger.exception(
-            "Advisor-to-research handoff failed",
-            extra={"advisor_briefing_id": str(briefing.id)},
+        briefing_id = str(briefing.id)
+        transaction.on_commit(
+            lambda: _ensure_auto_research_handoff(
+                briefing_id,
+            )
         )
 
     return _terminal_result(job)

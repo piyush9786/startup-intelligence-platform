@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 echo "Running database migrations..."
 python manage.py migrate --noinput
+
+case "${BOOTSTRAP_BUNDLED_CATALOGS_ON_START:-true}" in
+  1|true|TRUE|yes|YES)
+    echo "Importing bundled scheme, requirement, funding, and loan catalogs..."
+    python manage.py bootstrap_catalogs
+    ;;
+esac
 
 echo "Collecting static files..."
 python manage.py collectstatic --noinput

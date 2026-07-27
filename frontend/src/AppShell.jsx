@@ -1057,6 +1057,7 @@ function RequirementsRoute() {
     <RequirementsPage 
       profile={ctx.selectedProfile} 
       schemes={ctx.schemes}
+      query={ctx.query}
       externalRequirements={ctx.externalCertificationRequirements}
       onOpenScheme={(target) => openSchemeRoute(navigate, target)}
     />
@@ -1070,6 +1071,7 @@ function FundingRoute() {
     <FundingPage 
       profile={ctx.selectedProfile} 
       schemes={ctx.schemes}
+      query={ctx.query}
       externalCapitalSupport={ctx.externalCapitalSupport}
       onNavigate={(target) => navigate(`/${target}`)}
       onOpenScheme={(target) => openSchemeRoute(navigate, target)}

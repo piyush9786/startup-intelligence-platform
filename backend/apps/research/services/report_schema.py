@@ -1,6 +1,14 @@
 """Schemas for generated and persisted grounded research reports."""
 from __future__ import annotations
 
+
+def _string_list() -> dict:
+    return {
+        "type": "array",
+        "items": {"type": "string"},
+    }
+
+
 LLM_RESEARCH_REPORT_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -10,6 +18,9 @@ LLM_RESEARCH_REPORT_SCHEMA = {
         "current_competitors",
         "recent_market_developments",
         "government_schemes",
+        "compliance_requirements",
+        "funding_opportunities",
+        "loan_options",
         "risks",
         "market_gaps",
         "capital_scenarios",
@@ -22,42 +33,21 @@ LLM_RESEARCH_REPORT_SCHEMA = {
             "type": "string",
             "minLength": 1,
         },
-        "historical_peers": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
-        "current_competitors": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
-        "recent_market_developments": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
-        "government_schemes": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
-        "risks": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
-        "market_gaps": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
+        "historical_peers": _string_list(),
+        "current_competitors": _string_list(),
+        "recent_market_developments": _string_list(),
+        "government_schemes": _string_list(),
+        "compliance_requirements": _string_list(),
+        "funding_opportunities": _string_list(),
+        "loan_options": _string_list(),
+        "risks": _string_list(),
+        "market_gaps": _string_list(),
         "capital_scenarios": {
             "type": "string",
             "minLength": 1,
         },
-        "recommended_next_actions": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
-        "sources": {
-            "type": "array",
-            "items": {"type": "string"},
-        },
+        "recommended_next_actions": _string_list(),
+        "sources": _string_list(),
         "confidence_score": {
             "type": "number",
             "minimum": 0,
@@ -138,6 +128,4 @@ FINAL_RESEARCH_REPORT_SCHEMA = {
     },
 }
 
-# Backward-compatible name for existing imports. The model only generates
-# the LLM-owned portion; Python adds and validates research_metadata later.
 RESEARCH_REPORT_SCHEMA = LLM_RESEARCH_REPORT_SCHEMA

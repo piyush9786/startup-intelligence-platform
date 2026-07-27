@@ -59,7 +59,9 @@ function ReportSection({ title, value }) {
             ))}
           </ul>
         ) : (
-          <p className="muted">No evidence-backed findings were returned.</p>
+          <p className="muted">
+            No evidence-backed findings were returned.
+          </p>
         )
       ) : (
         <p>{String(value)}</p>
@@ -72,7 +74,9 @@ function ResearchReport({ report }) {
   if (!report) return null;
   const payload = report.report || {};
   const metadata = payload.research_metadata || {};
-  const sources = Array.isArray(payload.sources) ? payload.sources : [];
+  const sources = Array.isArray(payload.sources)
+    ? payload.sources
+    : [];
   const partial =
     metadata.live_search_status === "partial"
     || metadata.live_search_status === "unavailable"
@@ -88,25 +92,58 @@ function ResearchReport({ report }) {
       )}
       <header className="research-report-hero">
         <div>
-          <span className="section-kicker">Grounded research report</span>
+          <span className="section-kicker">
+            Grounded research report
+          </span>
           <h1>{payload.startup_summary || "Research report"}</h1>
         </div>
         <div className="research-status-grid">
-          <span>Live search: {humanize(metadata.live_search_status)}</span>
+          <span>
+            Live search: {humanize(metadata.live_search_status)}
+          </span>
           <span>Model: {humanize(metadata.llm_status)}</span>
-          <span>Evidence: {metadata.live_evidence_count || 0} live</span>
+          <span>
+            Evidence: {metadata.live_evidence_count || 0} live
+          </span>
         </div>
       </header>
-      <ReportSection title="Historical peers" value={payload.historical_peers} />
-      <ReportSection title="Current competitors" value={payload.current_competitors} />
+      <ReportSection
+        title="Historical peers"
+        value={payload.historical_peers}
+      />
+      <ReportSection
+        title="Current competitors"
+        value={payload.current_competitors}
+      />
       <ReportSection
         title="Recent market developments"
         value={payload.recent_market_developments}
       />
-      <ReportSection title="Government schemes" value={payload.government_schemes} />
+      <ReportSection
+        title="Government schemes"
+        value={payload.government_schemes}
+      />
+      <ReportSection
+        title="Compliance and certification requirements"
+        value={payload.compliance_requirements}
+      />
+      <ReportSection
+        title="Funding opportunities"
+        value={payload.funding_opportunities}
+      />
+      <ReportSection
+        title="Loans and credit support"
+        value={payload.loan_options}
+      />
       <ReportSection title="Risks" value={payload.risks} />
-      <ReportSection title="Market gaps" value={payload.market_gaps} />
-      <ReportSection title="Capital scenarios" value={payload.capital_scenarios} />
+      <ReportSection
+        title="Market gaps"
+        value={payload.market_gaps}
+      />
+      <ReportSection
+        title="Capital scenarios"
+        value={payload.capital_scenarios}
+      />
       <ReportSection
         title="Recommended next actions"
         value={payload.recommended_next_actions}
@@ -118,7 +155,11 @@ function ResearchReport({ report }) {
             {sources.map((source) => (
               <li key={source}>
                 {/^https?:\/\//i.test(source) ? (
-                  <a href={source} rel="noopener noreferrer" target="_blank">
+                  <a
+                    href={source}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
                     {source}
                   </a>
                 ) : (
@@ -140,14 +181,26 @@ export default function ResearchPage({ startupProfileId }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const active = ACTIVE_STATUSES.has(job?.status);
 
   useEffect(() => {
     let cancelled = false;
+
+    setQuestion("");
+    setJob(null);
+    setReport(null);
+    setHistory([]);
+    setLoading(false);
+    setError("");
+
     if (!startupProfileId) {
       return () => {
         cancelled = true;
       };
     }
+
+    const selectedProfileId = String(startupProfileId);
+
     Promise.all([
       listResearchReports(startupProfileId),
       getCurrentResearchRequest(startupProfileId),
@@ -157,7 +210,11 @@ export default function ResearchPage({ startupProfileId }) {
 
         setHistory(records || []);
         const currentJob = currentPayload?.job || null;
-        if (currentJob) {
+
+        if (
+          currentJob
+          && String(currentJob.startup_profile) === selectedProfileId
+        ) {
           setJob(currentJob);
           if (currentJob.generated_report) {
             setReport(currentJob.generated_report);
@@ -165,21 +222,42 @@ export default function ResearchPage({ startupProfileId }) {
         }
       })
       .catch((requestError) => {
-        if (!cancelled) setError(describeApiFailure(requestError));
+        if (!cancelled) {
+          setError(describeApiFailure(requestError));
+        }
       });
+
     return () => {
       cancelled = true;
     };
   }, [startupProfileId]);
 
   useEffect(() => {
-    if (!job?.id || !ACTIVE_STATUSES.has(job.status)) return undefined;
+    if (
+      !job?.id
+      || !ACTIVE_STATUSES.has(job.status)
+      || !startupProfileId
+    ) {
+      return undefined;
+    }
+
     let cancelled = false;
-    const timer = window.setTimeout(async () => {
+    let timer = null;
+    const selectedProfileId = String(startupProfileId);
+    const jobId = job.id;
+
+    const poll = async () => {
       try {
-        const nextJob = await getResearchRequest(job.id);
-        if (cancelled) return;
+        const nextJob = await getResearchRequest(jobId);
+        if (
+          cancelled
+          || String(nextJob.startup_profile) !== selectedProfileId
+        ) {
+          return;
+        }
+
         setJob(nextJob);
+
         if (
           ["succeeded", "partial"].includes(nextJob.status)
           && nextJob.generated_report
@@ -192,31 +270,57 @@ export default function ResearchPage({ startupProfileId }) {
             ),
           ]);
         }
+
         if (nextJob.status === "failed") {
-          setError(nextJob.error_message || "Research generation failed.");
+          setError(
+            nextJob.error_message || "Research generation failed.",
+          );
+        }
+
+        if (ACTIVE_STATUSES.has(nextJob.status)) {
+          timer = window.setTimeout(poll, 2000);
         }
       } catch (requestError) {
-        if (!cancelled) setError(describeApiFailure(requestError));
+        if (!cancelled) {
+          setError(describeApiFailure(requestError));
+          timer = window.setTimeout(poll, 4000);
+        }
       }
-    }, 2000);
+    };
+
+    timer = window.setTimeout(poll, 2000);
+
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
     };
-  }, [job]);
+  }, [job?.id, startupProfileId]);
 
   async function handleSubmit(event) {
     event.preventDefault();
     if (!startupProfileId || question.trim().length < 5) return;
+
     setLoading(true);
     setError("");
     setReport(null);
+
     try {
       const response = await submitResearchRequest(
         startupProfileId,
         question.trim(),
       );
-      setJob(response.job);
+      if (
+        response.job
+        && (
+          !response.job.startup_profile
+          || String(response.job.startup_profile)
+            === String(startupProfileId)
+        )
+      ) {
+        setJob(response.job);
+      }
     } catch (requestError) {
       setError(describeApiFailure(requestError));
     } finally {
@@ -227,8 +331,16 @@ export default function ResearchPage({ startupProfileId }) {
   async function handleHistorySelection(reportId) {
     setLoading(true);
     setError("");
+
     try {
-      setReport(await getResearchReport(reportId));
+      const selectedReport = await getResearchReport(reportId);
+      if (
+        !selectedReport.startup_profile
+        || String(selectedReport.startup_profile)
+          === String(startupProfileId)
+      ) {
+        setReport(selectedReport);
+      }
     } catch (requestError) {
       setError(describeApiFailure(requestError));
     } finally {
@@ -236,7 +348,6 @@ export default function ResearchPage({ startupProfileId }) {
     }
   }
 
-  const active = ACTIVE_STATUSES.has(job?.status);
   return (
     <div className="page-stack research-page">
       <PageHeader
@@ -249,28 +360,51 @@ export default function ResearchPage({ startupProfileId }) {
           Select or create a startup profile before requesting research.
         </div>
       )}
-      {error && <div className="notice notice-danger" role="alert">{error}</div>}
+      {error && (
+        <div className="notice notice-danger" role="alert">
+          {error}
+        </div>
+      )}
       <div className="research-layout">
         <aside className="research-sidebar">
-          <form className="research-question-card" onSubmit={handleSubmit}>
-            <label htmlFor="research-question">Research question</label>
+          <form
+            className="research-question-card"
+            onSubmit={handleSubmit}
+          >
+            <label htmlFor="research-question">
+              Research question
+            </label>
             <textarea
               id="research-question"
               maxLength={2000}
-              onChange={(event) => setQuestion(event.target.value)}
+              onChange={(event) =>
+                setQuestion(event.target.value)
+              }
               placeholder="Who are our current competitors, and which verified schemes fit our stage?"
               rows={6}
               value={question}
             />
             <button
               className="button button-primary"
-              disabled={!startupProfileId || loading || active || question.trim().length < 5}
+              disabled={
+                !startupProfileId
+                || loading
+                || active
+                || question.trim().length < 5
+              }
               type="submit"
             >
-              {active ? "Research in progress…" : loading ? "Submitting…" : "Start research"}
+              {active
+                ? "Research in progress…"
+                : loading
+                  ? "Submitting…"
+                  : "Start research"}
             </button>
             {active && (
-              <div className="research-job-status" role="status">
+              <div
+                className="research-job-status"
+                role="status"
+              >
                 <span className="spinner" aria-hidden="true" />
                 <span>{humanize(job.status)}</span>
               </div>
@@ -284,21 +418,30 @@ export default function ResearchPage({ startupProfileId }) {
           <section className="research-history">
             <div className="sidebar-heading">
               <h2>Report history</h2>
-              <span className="count-badge">{history.length}</span>
+              <span className="count-badge">
+                {history.length}
+              </span>
             </div>
             {history.map((item) => (
               <button
                 key={item.id}
-                onClick={() => handleHistorySelection(item.id)}
+                onClick={() =>
+                  handleHistorySelection(item.id)
+                }
                 type="button"
               >
                 <strong>
-                  {item.report?.startup_summary || "Founder research report"}
+                  {item.report?.startup_summary
+                    || "Founder research report"}
                 </strong>
-                <span>{new Date(item.created_at).toLocaleString()}</span>
+                <span>
+                  {new Date(item.created_at).toLocaleString()}
+                </span>
               </button>
             ))}
-            {!history.length && <p className="muted">No saved reports yet.</p>}
+            {!history.length && (
+              <p className="muted">No saved reports yet.</p>
+            )}
           </section>
         </aside>
         <section className="research-results">
@@ -306,13 +449,18 @@ export default function ResearchPage({ startupProfileId }) {
             <section>
               <div className="section-heading">
                 <div>
-                  <span className="section-kicker">Retrieved evidence</span>
+                  <span className="section-kicker">
+                    Retrieved evidence
+                  </span>
                   <h2>Source records</h2>
                 </div>
               </div>
               <div className="research-evidence-grid">
                 {job.evidence_items.map((evidence) => (
-                  <EvidenceCard evidence={evidence} key={evidence.id} />
+                  <EvidenceCard
+                    evidence={evidence}
+                    key={evidence.id}
+                  />
                 ))}
               </div>
             </section>
@@ -320,11 +468,14 @@ export default function ResearchPage({ startupProfileId }) {
           <ResearchReport report={report} />
           {!report && !active && (
             <div className="empty-state">
-              <span className="empty-icon" aria-hidden="true">⌕</span>
+              <span className="empty-icon" aria-hidden="true">
+                ⌕
+              </span>
               <h2>Ask an evidence-backed question</h2>
               <p>
-                Reports combine verified platform records with explicitly
-                labelled live sources and persist their evidence snapshot.
+                Reports combine verified platform records with
+                explicitly labelled live sources and persist their
+                evidence snapshot.
               </p>
             </div>
           )}
