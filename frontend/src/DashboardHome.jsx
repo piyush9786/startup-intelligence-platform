@@ -423,9 +423,8 @@ export function DashboardHome({
             </span>
           </div>
           <h1>
-            {t("dashboard.hero_title", {
-              startup: profile?.startup_name || t("dashboard.your_startup"),
-            })}
+            Keep <span>{profile?.startup_name || t("dashboard.your_startup")}</span>{" "}
+            moving with one clear next step.
           </h1>
           <p>
             {t("dashboard.hero_workflow")}
