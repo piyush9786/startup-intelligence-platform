@@ -7,6 +7,10 @@ from typing import Any
 from billiard.exceptions import SoftTimeLimitExceeded
 from celery import shared_task
 from django.conf import settings
+from django.db.models import Q
+
+from apps.research.models import ResearchRequest
+from apps.startups.models import StartupAdvisorBriefing
 
 from .services.job_state import (
     mark_research_failed,
@@ -68,6 +72,71 @@ def generate_research_report_task(
         "report_id": str(report.id),
         "status": report.research_request.status,
     }
+
+
+@shared_task(
+    name="research.reconcile_advisor_handoffs",
+    ignore_result=True,
+)
+def reconcile_advisor_research_handoffs_task() -> int:
+    """Repair advisor briefings whose automatic research was not dispatched."""
+    if not getattr(
+        settings,
+        "AUTO_RESEARCH_AFTER_ADVISOR_ENABLED",
+        True,
+    ):
+        return 0
+
+    from apps.research.services.advisor_trigger import (
+        queue_research_after_advisor,
+    )
+
+    batch_size = max(
+        1,
+        int(
+            getattr(
+                settings,
+                "AUTO_RESEARCH_HANDOFF_RECONCILE_BATCH_SIZE",
+                50,
+            )
+        ),
+    )
+
+    briefings = list(
+        StartupAdvisorBriefing.objects.filter(
+            generation_job__status="succeeded",
+        )
+        .filter(
+            Q(automatic_research_request__isnull=True)
+            | Q(
+                automatic_research_request__status=(
+                    ResearchRequest.Status.FAILED
+                ),
+                automatic_research_request__error_code="dispatch_failed",
+            )
+        )
+        .select_related(
+            "requested_by",
+            "startup_profile",
+        )
+        .order_by("completed_at", "id")[:batch_size]
+    )
+
+    dispatched = 0
+    for briefing in briefings:
+        _, created_or_redispatched = queue_research_after_advisor(
+            briefing=briefing,
+            requested_by=briefing.requested_by,
+        )
+        if created_or_redispatched:
+            dispatched += 1
+
+    if dispatched:
+        logger.info(
+            "Reconciled %s advisor-to-research handoff(s).",
+            dispatched,
+        )
+    return dispatched
 
 
 @shared_task(

@@ -21,7 +21,16 @@ function warningLabels(entries, results) {
       result: results[index],
     }))
     .filter(({ result }) => result.status === "rejected")
-    .map(({ label }) => label);
+    .map(({ label, result }) => {
+      const status = responseStatus(result.reason);
+      const detail = result.reason?.response?.data?.detail;
+      const statusText = status
+        ? `HTTP ${status}`
+        : "request failed";
+      return detail
+        ? `${label} (${statusText}: ${detail})`
+        : `${label} (${statusText})`;
+    });
 }
 
 export async function loadCatalogData(api) {

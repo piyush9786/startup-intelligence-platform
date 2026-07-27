@@ -222,6 +222,10 @@ CELERY_BEAT_SCHEDULE["research-recover-stale-jobs"] = {
     "task": "research.recover_stale_requests",
     "schedule": 300,
 }
+CELERY_BEAT_SCHEDULE["research-reconcile-advisor-handoffs"] = {
+    "task": "research.reconcile_advisor_handoffs",
+    "schedule": 120,
+}
 
 # ML Engine configuration
 ML_MODELS_DIR = os.environ.get("ML_MODELS_DIR", str(BASE_DIR / "ml_models"))
@@ -439,6 +443,15 @@ AUTO_RESEARCH_AFTER_ADVISOR_ENABLED = os.environ.get(
     "AUTO_RESEARCH_AFTER_ADVISOR_ENABLED",
     "true",
 ).lower() in ("1", "true", "yes")
+AUTO_RESEARCH_HANDOFF_RECONCILE_BATCH_SIZE = max(
+    1,
+    int(
+        os.environ.get(
+            "AUTO_RESEARCH_HANDOFF_RECONCILE_BATCH_SIZE",
+            "50",
+        )
+    ),
+)
 
 STARTUP_ADVISOR_LLM_SEED = int(
     os.environ.get(
