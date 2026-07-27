@@ -180,8 +180,9 @@ const en = {
   "schemes.official_link": "Official link",
 
   // ── Requirements ─────────────────────────────────────────────────────────────
-  "requirements.title": "Requirements",
-  "requirements.subtitle": "Documents and certifications needed for scheme applications.",
+  "requirements.kicker": "APPLICATION READINESS",
+  "requirements.title": "Requirements and certifications",
+  "requirements.subtitle": "Review verified scheme requirements separately from external certification records awaiting verification.",
 
   // ── Funding ──────────────────────────────────────────────────────────────────
   "funding.title": "Funding & Loans",
