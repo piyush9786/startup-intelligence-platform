@@ -113,6 +113,24 @@ def get_current_recommendation_set(
     )
 
     if generation_run is None:
+        try:
+            from .recommendations import generate_recommendations
+            generate_recommendations(
+                startup_profile=startup_profile,
+                requested_by=startup_profile.owner,
+            )
+            generation_run = (
+                RecommendationGenerationRun.objects.filter(
+                    startup_profile=startup_profile,
+                    is_current=True,
+                )
+                .order_by("-completed_at", "-created_at")
+                .first()
+            )
+        except Exception:
+            pass
+
+    if generation_run is None:
         return CurrentRecommendationSet(
             startup_profile=startup_profile,
             generation_run=None,

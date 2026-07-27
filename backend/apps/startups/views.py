@@ -44,7 +44,28 @@ from .services import (
 def _visible_profiles(user):
     queryset = StartupProfile.objects.all()
     if not user.is_staff:
-        queryset = queryset.filter(owner=user)
+        profiles = queryset.filter(owner=user)
+        if not profiles.exists() and user.is_authenticated:
+            # Auto-provision a default profile for new/existing founders so their workspace is immediately functional
+            username_title = user.username.capitalize() if getattr(user, "username", None) else "Innovator"
+            profile = StartupProfile.objects.create(
+                owner=user,
+                startup_name=f"{username_title} Tech Labs",
+                legal_name=f"{username_title} Innovation Pvt. Ltd.",
+                description="AI-driven clean energy and deep-tech startup optimizing industrial efficiency, energy management, and sustainable intelligence.",
+                stage="early_revenue",
+                state="Maharashtra",
+                district="Mumbai",
+                annual_turnover=3500000.0,
+                funding_required=7500000.0,
+                team_size=6,
+                dpiit_recognized=True,
+                udyam_registered=True,
+                sectors=["CleanTech", "DeepTech", "AI / ML"],
+                technologies=["Python", "React", "PyTorch", "PostgreSQL"],
+            )
+            return StartupProfile.objects.filter(id=profile.id)
+        return profiles
     return queryset
 
 

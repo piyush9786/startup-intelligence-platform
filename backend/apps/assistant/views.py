@@ -202,7 +202,12 @@ def _resolve_bound_or_open_draft(
     )
 
     if draft is None:
-        raise Http404("An open assessment draft was not found.")
+        draft = StartupAssessmentDraft.objects.create(
+            owner=user,
+            startup_profile=startup_profile,
+            status=StartupAssessmentDraft.Status.DRAFT,
+            data={},
+        )
 
     return draft
 
