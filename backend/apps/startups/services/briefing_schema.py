@@ -7,7 +7,7 @@ from jsonschema import Draft202012Validator
 
 from apps.startups.models import StartupAdvisorSnapshot
 
-BRIEFING_SCHEMA_VERSION = "startup-advisor-briefing-schema-v3"
+BRIEFING_SCHEMA_VERSION = "startup-advisor-briefing-schema-v4"
 BRIEFING_DISCLAIMER = (
     "AI-generated guidance grounded in the cited persisted snapshot and "
     "retrieved official evidence; verify official requirements before acting."
@@ -92,7 +92,6 @@ STARTUP_ADVISOR_BRIEFING_SCHEMA = {
                     },
                     "source_references": {
                         "type": "array",
-                        "minItems": 1,
                         "maxItems": 10,
                         "items": SOURCE_REFERENCE_SCHEMA,
                     },
@@ -125,7 +124,6 @@ STARTUP_ADVISOR_BRIEFING_SCHEMA = {
                     },
                     "source_references": {
                         "type": "array",
-                        "minItems": 1,
                         "maxItems": 10,
                         "items": SOURCE_REFERENCE_SCHEMA,
                     },
@@ -161,7 +159,6 @@ STARTUP_ADVISOR_BRIEFING_SCHEMA = {
                     },
                     "source_references": {
                         "type": "array",
-                        "minItems": 1,
                         "maxItems": 10,
                         "items": SOURCE_REFERENCE_SCHEMA,
                     },
