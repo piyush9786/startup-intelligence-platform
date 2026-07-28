@@ -6,6 +6,7 @@ import App from "./App";
 import { LanguageProvider } from "./i18n/index.jsx";
 import { queryClient } from "./queryClient";
 import "./styles.css";
+import "./responsive.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
