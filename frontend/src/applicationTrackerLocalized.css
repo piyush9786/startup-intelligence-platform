@@ -1,0 +1,218 @@
+.application-verification-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.application-verification-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.application-board-five-columns {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(230px, 1fr));
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.application-stage-column {
+  min-width: 230px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.application-stage-heading,
+.application-workflow-header,
+.application-proposal-header,
+.application-task-card,
+.application-budget-card > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.application-stage-heading {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.application-stage-items,
+.application-card-actions,
+.application-task-list,
+.application-history-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.application-stage-items {
+  min-height: 200px;
+}
+
+.application-stage-card {
+  padding: 0.9rem;
+  background: var(--card-bg);
+}
+
+.application-stage-card h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.92rem;
+}
+
+.application-stage-card p {
+  margin: 0 0 0.6rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.application-stage-empty {
+  padding: 2rem 0.5rem;
+  text-align: center;
+}
+
+.application-workflow-panel,
+.application-proposal-panel {
+  padding: 1.5rem;
+}
+
+.application-workflow-header {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.application-workflow-header h2,
+.application-proposal-panel h2 {
+  margin: 0.25rem 0;
+}
+
+.application-workflow-header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.application-workflow-detail {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.application-task-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.application-task-card {
+  padding: 0.75rem;
+}
+
+.application-task-card small {
+  display: block;
+  color: var(--muted);
+}
+
+.application-history-card {
+  padding: 0.75rem;
+}
+
+.application-history-card p {
+  margin: 0.35rem 0;
+  color: var(--muted);
+}
+
+.application-proposal-panel {
+  border: 1px solid var(--lime);
+}
+
+.application-proposal-header {
+  margin-bottom: 1rem;
+}
+
+.application-proposal-summary {
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.application-budget-section {
+  margin-top: 1rem;
+}
+
+.application-budget-section h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.application-budget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.application-budget-card {
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.application-budget-card > div {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.application-budget-card > div span:last-child {
+  color: var(--lime);
+}
+
+.application-budget-card small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 900px) {
+  .application-workflow-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .application-task-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .application-verification-form,
+  .application-verification-form input,
+  .application-verification-form button {
+    width: 100%;
+  }
+
+  .application-board-five-columns {
+    grid-template-columns: 1fr;
+    overflow-x: visible;
+  }
+
+  .application-stage-column {
+    min-width: 0;
+  }
+
+  .application-task-card,
+  .application-workflow-header,
+  .application-proposal-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

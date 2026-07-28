@@ -22,6 +22,29 @@ observations, outcome evidence, and idempotent CSV ingestion. See
 
 ---
 
+## Founder Operations Workflows
+
+The authenticated API now includes founder-owned operational workflows rather
+than read-only discovery alone:
+
+- `GET|POST /api/v1/compliance-records/` — compliance registrations, issue and
+  expiry dates, renewal reminders, status and summary counts.
+- `GET|POST /api/v1/founder-vault-documents/` — private MinIO-backed founder
+  document vault with owner-scoped listing and authenticated downloads.
+- `GET|POST /api/v1/consultant-profiles/` — consultant marketplace profiles,
+  expertise, languages, state coverage, availability and verification state.
+- `GET|POST /api/v1/application-tasks/` — due-dated tasks attached to the
+  existing scheme application tracker.
+- `GET /api/v1/application-stage-events/` — immutable application-stage audit
+  history.
+- `POST /api/v1/application-workflows/{id}/transition/` — validated transitions
+  through draft, submitted, under-review, approved and rejected stages.
+
+Every founder-owned queryset is scoped to the authenticated account. A founder
+cannot list, download, update or transition another founder's records.
+
+---
+
 ## 🤖 Integrated 9 ML Models Architecture
 
 The platform embeds **9 specialized ML models** across 4 functional layers:
@@ -110,7 +133,7 @@ startup-intelligence-platform/
 │   │   ├── recommendations/  # Eligibility engine & SVM scheme ranking (urls.py)
 │   │   ├── schemes/          # Scheme catalog & dependency graph (urls.py)
 │   │   ├── sources/          # Data source registry (urls.py)
-│   │   └── startups/         # Startup profiles, readiness, & AI Capital Planner (urls.py)
+│   │   └── startups/         # Profiles, operations, readiness, vault, consultant marketplace, and capital planning
 │   ├── catalog/              # Data source discovery catalog
 │   ├── config/               # Django config, Celery, & modular settings/ package
 │   │   ├── settings/         # Base, Development, & Production settings (base.py, development.py, production.py)
@@ -125,6 +148,7 @@ startup-intelligence-platform/
 │   │   ├── AppShell.jsx      # URL-based route container with route adapters (React Router v7)
 │   │   ├── DashboardHome.jsx # Standalone decoupled Founder Command Center dashboard view
 │   │   ├── main.jsx          # Root entry wrapping AppShell in BrowserRouter & QueryClientProvider
+│   │   ├── responsive.css    # Mobile-first founder workspace overrides
 │   │   └── components/ui.jsx # Shared UI primitives
 │   ├── package.json          # Frontend dependencies (react-router-dom, @tanstack/react-query)
 │   └── vite.config.js        # Vite configuration (outDir: "dist")
@@ -168,12 +192,37 @@ docker compose exec backend python manage.py import_companies \
 # 1. Configure production environment variables
 cp .env.production.example .env.production
 
-# 2. Start production stack via Gunicorn & Nginx
-docker compose -f docker-compose.prod.yml up -d --build
+# 2. Build deployable images
+docker compose \
+  --env-file .env.production \
+  -f docker-compose.prod.yml \
+  build
 
-# 3. Perform production security check
-docker compose -f docker-compose.prod.yml exec backend python manage.py check --deploy
+# 3. Run the mandatory one-time release phase
+#    This applies migrations, imports bundled catalogs, and collects static files.
+docker compose \
+  --env-file .env.production \
+  -f docker-compose.prod.yml \
+  --profile release \
+  run --rm release
+
+# 4. Start Gunicorn, Nginx, workers, databases, and supporting services
+docker compose \
+  --env-file .env.production \
+  -f docker-compose.prod.yml \
+  up -d
+
+# 5. Perform production security check
+docker compose \
+  --env-file .env.production \
+  -f docker-compose.prod.yml \
+  exec backend python manage.py check --deploy
 ```
+
+Production startup rejects missing, short, or placeholder values for
+`DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD`, `NEO4J_PASSWORD`, and
+`MINIO_SECRET_KEY`. `DJANGO_ALLOWED_HOSTS` and `MINIO_ACCESS_KEY` must also be
+set explicitly.
 
 ### ML Management Command Usage
 ```bash
@@ -206,9 +255,10 @@ docker compose exec backend python manage.py train_ml_models --model kmeans
 ## 🧪 Validation & Testing
 
 ```bash
-# Backend pytest suite, ruff linting, & deployment check
+# Backend pytest suite, ruff linting, migration drift, & deployment check
 docker compose exec -T backend pytest -q
 docker compose exec -T backend ruff check .
+docker compose exec -T backend python manage.py makemigrations --check --dry-run
 docker compose exec -T backend python manage.py check --deploy --settings=config.settings.production
 
 # Frontend test suite, linting & production build validation

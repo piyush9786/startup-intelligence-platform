@@ -37,29 +37,98 @@ jobs:
           python-version: "3.13"
       - run: pip install -r requirements.txt
       - run: python manage.py check
-      - run: DJANGO_SETTINGS_MODULE=config.settings.production DJANGO_SECRET_KEY=ci-secret-key-1234567890-must-be-long-enough python manage.py check --deploy
+      - name: Check hardened production settings
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.production
+          DJANGO_SECRET_KEY: ci-secret-key-1234567890-must-be-long-enough
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+          POSTGRES_PASSWORD: ci-postgres-password-2026
+          NEO4J_PASSWORD: ci-neo4j-password-2026
+          MINIO_ACCESS_KEY: ci-minio-admin
+          MINIO_SECRET_KEY: ci-minio-secret-2026
+        run: python manage.py check --deploy
       - run: python manage.py makemigrations --check --dry-run
+      - name: Apply migrations to PostgreSQL smoke database
+        run: python manage.py migrate --noinput
+      - run: pytest
+      - name: Run Ruff
+        run: |
+          set -o pipefail
+          ruff check . 2>&1 | tee ../ruff-output.txt
+      - name: Upload Ruff diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-output
+          path: ruff-output.txt
+          if-no-files-found: ignore
+          retention-days: 7
       - run: |
           cat << 'EOF' > ../.env.production
           POSTGRES_DB=startup_test
           POSTGRES_USER=startup
-          POSTGRES_PASSWORD=startup
+          POSTGRES_PASSWORD=ci-postgres-password-2026
           DJANGO_SECRET_KEY=ci-secret-key-1234567890-must-be-long-enough
           DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
           DJANGO_CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1
           DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1
           NEO4J_USER=neo4j
-          NEO4J_PASSWORD=startup
-          MINIO_ACCESS_KEY=admin
-          MINIO_SECRET_KEY=password
+          NEO4J_PASSWORD=ci-neo4j-password-2026
+          MINIO_ACCESS_KEY=ci-minio-admin
+          MINIO_SECRET_KEY=ci-minio-secret-2026
           MINIO_BUCKET_RAW=startup-raw
           MINIO_BUCKET_STARTUP_EVIDENCE=startup-evidence
           STARTUP_ADVISOR_RAG_ENABLED=false
           WEB_SEARCH_ENABLED=false
           EOF
-      - name: Run production release tasks
-        run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml --profile release run --rm release
+      - name: Build production release image
+        env:
+          POSTGRES_PASSWORD: ci-postgres-password-2026
+        run: >-
+          docker compose --env-file ../.env.production
+          -f ../docker-compose.prod.yml --profile release
+          build release backend
+      - name: Validate production container settings
+        env:
+          POSTGRES_PASSWORD: ci-postgres-password-2026
+        run: >-
+          docker compose --env-file ../.env.production
+          -f ../docker-compose.prod.yml --profile release
+          run --rm --no-deps release python manage.py check --deploy
+      - name: Apply production migrations
+        env:
+          POSTGRES_PASSWORD: ci-postgres-password-2026
+        run: |
+          set -o pipefail
+          docker compose --env-file ../.env.production \
+            -f ../docker-compose.prod.yml --profile release \
+            run --rm release python manage.py migrate --noinput \
+            2>&1 | tee ../production-migration.log
+      - name: Upload production migration diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-migration-log
+          path: production-migration.log
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Bootstrap production catalogs
+        env:
+          POSTGRES_PASSWORD: ci-postgres-password-2026
+        run: >-
+          docker compose --env-file ../.env.production
+          -f ../docker-compose.prod.yml --profile release
+          run --rm release python manage.py bootstrap_catalogs
+      - name: Collect production static files
+        env:
+          POSTGRES_PASSWORD: ci-postgres-password-2026
+        run: >-
+          docker compose --env-file ../.env.production
+          -f ../docker-compose.prod.yml --profile release
+          run --rm release python manage.py collectstatic --noinput
       - name: Start production stack
+        env:
+          POSTGRES_PASSWORD: ci-postgres-password-2026
         run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml up -d --build
       - name: Verify production backend health
         run: |
@@ -83,12 +152,14 @@ jobs:
           '
       - name: Show production logs on failure
         if: failure()
+        env:
+          POSTGRES_PASSWORD: ci-postgres-password-2026
         run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml logs
       - name: Stop production stack
         if: always()
+        env:
+          POSTGRES_PASSWORD: ci-postgres-password-2026
         run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml down -v
-      - run: pytest
-      - run: ruff check .
 
   frontend:
     runs-on: ubuntu-latest
