@@ -128,10 +128,54 @@ def _request_was_redelivered(task) -> bool:
     return bool(delivery_info.get("redelivered"))
 
 
+def _ensure_auto_research_job_handoff(
+    job_id: str,
+) -> None:
+    """Queue idempotent founder research from the advisor job itself."""
+    try:
+        from apps.research.services.advisor_trigger import (
+            queue_research_after_advisor_job,
+        )
+
+        job = (
+            StartupAdvisorBriefingJob.objects.select_related(
+                "briefing",
+                "requested_by",
+                "startup_profile",
+                "startup_profile__owner",
+            ).get(pk=job_id)
+        )
+        research_request, dispatched = (
+            queue_research_after_advisor_job(
+                job=job,
+                requested_by=job.requested_by,
+            )
+        )
+        logger.info(
+            "Advisor-job research handoff reconciled",
+            extra={
+                "advisor_briefing_job_id": str(job.id),
+                "research_request_id": (
+                    str(research_request.id)
+                    if research_request is not None
+                    else None
+                ),
+                "research_dispatched": dispatched,
+            },
+        )
+    except Exception:
+        logger.exception(
+            "Advisor-job research handoff failed",
+            extra={
+                "advisor_briefing_job_id": str(job_id),
+            },
+        )
+
+
 def _ensure_auto_research_handoff(
     briefing_id: str,
 ) -> None:
-    """Perform an idempotent handoff without changing advisor success."""
+    """Link a successful briefing without changing advisor success."""
     try:
         from apps.research.services.advisor_trigger import (
             queue_research_after_advisor,
@@ -193,6 +237,12 @@ def generate_startup_advisor_briefing_task(
             StartupAdvisorBriefingJob.Status.SUCCEEDED,
             StartupAdvisorBriefingJob.Status.FAILED,
         ):
+            handoff_job_id = str(job.id)
+            transaction.on_commit(
+                lambda: _ensure_auto_research_job_handoff(
+                    handoff_job_id,
+                )
+            )
             if (
                 job.status
                 == StartupAdvisorBriefingJob.Status.SUCCEEDED
@@ -221,10 +271,22 @@ def generate_startup_advisor_briefing_task(
                     completed_at=now,
                 )
                 _save_failed_job(job)
+                handoff_job_id = str(job.id)
+                transaction.on_commit(
+                    lambda: _ensure_auto_research_job_handoff(
+                        handoff_job_id,
+                    )
+                )
                 return _terminal_result(job)
 
         if job.status == StartupAdvisorBriefingJob.Status.RUNNING:
             if not _request_was_redelivered(self):
+                handoff_job_id = str(job.id)
+                transaction.on_commit(
+                    lambda: _ensure_auto_research_job_handoff(
+                        handoff_job_id,
+                    )
+                )
                 return _terminal_result(job)
 
             timeout_cutoff = now - timedelta(
@@ -243,6 +305,12 @@ def generate_startup_advisor_briefing_task(
                     completed_at=now,
                 )
                 _save_failed_job(job)
+                handoff_job_id = str(job.id)
+                transaction.on_commit(
+                    lambda: _ensure_auto_research_job_handoff(
+                        handoff_job_id,
+                    )
+                )
                 return _terminal_result(job)
 
         job.status = StartupAdvisorBriefingJob.Status.RUNNING
@@ -267,6 +335,12 @@ def generate_startup_advisor_briefing_task(
 
         source_snapshot = job.source_snapshot
         requested_by = job.requested_by
+        handoff_job_id = str(job.id)
+        transaction.on_commit(
+            lambda: _ensure_auto_research_job_handoff(
+                handoff_job_id,
+            )
+        )
 
     try:
         briefing = generate_startup_advisor_briefing(
@@ -326,6 +400,12 @@ def generate_startup_advisor_briefing_task(
             StartupAdvisorBriefingJob.Status.SUCCEEDED,
             StartupAdvisorBriefingJob.Status.FAILED,
         ):
+            handoff_job_id = str(job.id)
+            transaction.on_commit(
+                lambda: _ensure_auto_research_job_handoff(
+                    handoff_job_id,
+                )
+            )
             if (
                 job.status
                 == StartupAdvisorBriefingJob.Status.SUCCEEDED
@@ -355,7 +435,13 @@ def generate_startup_advisor_briefing_task(
             ],
         )
 
+        handoff_job_id = str(job.id)
         briefing_id = str(briefing.id)
+        transaction.on_commit(
+            lambda: _ensure_auto_research_job_handoff(
+                handoff_job_id,
+            )
+        )
         transaction.on_commit(
             lambda: _ensure_auto_research_handoff(
                 briefing_id,
