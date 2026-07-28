@@ -5,7 +5,6 @@ import uuid
 from pathlib import Path
 
 from django.conf import settings
-from django.db import IntegrityError
 from rest_framework import serializers
 
 from apps.sources.services.storage import (
@@ -172,7 +171,7 @@ class FounderVaultDocumentSerializer(serializers.ModelSerializer):
                 bucket_name=bucket_name,
                 **validated_data,
             )
-        except (IntegrityError, Exception):
+        except Exception:  # noqa: BLE001
             delete_object(object_key, bucket_name=bucket_name)
             raise
 
