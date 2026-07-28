@@ -1,0 +1,238 @@
+.founder-operations-panel {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.operations-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.operations-header h2 {
+  margin: 0.25rem 0;
+}
+
+.operations-header p {
+  max-width: 52rem;
+  margin: 0;
+}
+
+.operations-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.operations-tabs button {
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.12));
+  border-radius: 999px;
+  background: var(--surface, #fff);
+  padding: 0.65rem 0.9rem;
+  white-space: nowrap;
+}
+
+.operations-tabs button span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  margin-left: 0.35rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  font-size: 0.78rem;
+}
+
+.operations-tabs .operations-tab-active {
+  border-color: currentColor;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12);
+  font-weight: 700;
+}
+
+.operations-loading {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  min-height: 8rem;
+}
+
+.operations-section-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.operations-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.operations-summary-card {
+  display: grid;
+  gap: 0.2rem;
+  padding: 1rem;
+  border: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.12));
+  border-radius: 1rem;
+  background: var(--surface, #fff);
+}
+
+.operations-summary-card strong {
+  font-size: clamp(1.45rem, 3vw, 2rem);
+}
+
+.operations-summary-card span {
+  color: var(--text-muted, #64748b);
+  font-size: 0.88rem;
+}
+
+.operations-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+  align-items: end;
+}
+
+.operations-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.operations-form label span {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.operations-form-wide {
+  grid-column: span 3;
+}
+
+.operations-record-list,
+.operations-document-grid,
+.operations-expert-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.operations-document-grid,
+.operations-expert-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.operations-record {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(14rem, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.operations-record h3,
+.operations-document h3,
+.operations-expert h3 {
+  margin: 0.35rem 0;
+}
+
+.operations-record p,
+.operations-document p,
+.operations-expert p {
+  margin: 0;
+  color: var(--text-muted, #64748b);
+}
+
+.operations-record dl,
+.operations-expert dl {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.operations-record dl div,
+.operations-expert dl div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.operations-record dt,
+.operations-expert dt {
+  color: var(--text-muted, #64748b);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.operations-record dd,
+.operations-expert dd {
+  margin: 0;
+}
+
+.operations-record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.operations-document {
+  display: grid;
+  gap: 0.6rem;
+  align-content: start;
+}
+
+.operations-document .operations-record-actions {
+  margin-top: auto;
+}
+
+.operations-expert {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.operations-expert-heading {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.operations-expert footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.12));
+}
+
+@media (max-width: 1100px) {
+  .operations-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operations-form-wide {
+    grid-column: span 2;
+  }
+
+  .operations-document-grid,
+  .operations-expert-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .operations-summary-grid,
+  .operations-form,
+  .operations-document-grid,
+  .operations-expert-grid,
+  .operations-record {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .operations-form-wide {
+    grid-column: auto;
+  }
+
+  .operations-record-actions .button,
+  .operations-form .button {
+    width: 100%;
+  }
+}
