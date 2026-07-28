@@ -26,6 +26,8 @@ function HistoryPanel({ history, loading, onSelect, selectedId }) {
 }
 
 export function AdvisorWorkspace({
+  aiReady,
+  aiReadinessLoading,
   briefing,
   generating,
   generationLabel,
@@ -43,11 +45,21 @@ export function AdvisorWorkspace({
         actions={
           <button
             className="button button-primary"
-            disabled={generating || loading}
+            disabled={
+              generating ||
+              loading ||
+              aiReadinessLoading ||
+              !aiReady
+            }
             onClick={onGenerate}
             type="button"
           >
-            {generationLabel || "Generate new guidance"}
+            {generationLabel ||
+              (aiReadinessLoading
+                ? "Checking AI model…"
+                : aiReady
+                  ? "Generate new guidance"
+                  : "AI model unavailable")}
           </button>
         }
       />

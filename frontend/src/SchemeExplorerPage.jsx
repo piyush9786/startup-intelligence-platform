@@ -18,6 +18,7 @@ import {
   isExternalFundingScheme,
   isExternalLoanScheme,
 } from "./externalSchemes";
+import { useT } from "./i18n/index.jsx";
 
 const SECTORS = [
   "All Sectors",
@@ -33,15 +34,19 @@ const SECTORS = [
 ];
 
 const STAGES = [
-  "All Stages",
-  "Ideation",
-  "Validation",
-  "Early Revenue",
-  "Scaling",
+  ["all", "schemes.filter.stage_all"],
+  ["idea", "schemes.filter.stage_idea"],
+  ["validation", "schemes.filter.stage_validation"],
+  ["prototype", "schemes.filter.stage_prototype"],
+  ["mvp", "schemes.filter.stage_mvp"],
+  ["pilot", "schemes.filter.stage_pilot"],
+  ["early_revenue", "schemes.filter.stage_early_revenue"],
+  ["growth", "schemes.filter.stage_growth"],
+  ["expansion", "schemes.filter.stage_expansion"],
 ];
 
 const STATES = [
-  "All India",
+  "all",
   "Karnataka",
   "Maharashtra",
   "Delhi",
@@ -52,12 +57,41 @@ const STATES = [
 ];
 
 const SUPPORT_TYPES = [
-  "All Types",
-  "Grants",
-  "Loans",
-  "Tax Exemptions",
-  "Incubation",
+  ["all", "schemes.filter.type_all"],
+  ["grant", "schemes.filter.type_grant"],
+  ["loan", "schemes.filter.type_loan"],
+  ["tax exemption", "schemes.filter.type_tax"],
+  ["incubation", "schemes.filter.type_incubation"],
 ];
+
+function normalizedFacetValue(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function matchesFacet(values, selected) {
+  if (selected === "all") return true;
+
+  const collection = Array.isArray(values)
+    ? values.filter(Boolean)
+    : [];
+
+  // An empty structured list means the source did not restrict this facet.
+  if (!collection.length) return true;
+
+  const expected = normalizedFacetValue(selected);
+  return collection.some((value) => {
+    const candidate = normalizedFacetValue(value);
+    return (
+      candidate === expected ||
+      candidate.includes(expected) ||
+      expected.includes(candidate)
+    );
+  });
+}
 
 function ExternalSchemeCard({ onOpen, scheme }) {
   const tags = externalSchemeTags(scheme);
@@ -227,11 +261,12 @@ export default function SchemeExplorerPage({
   recommendations = [],
   schemes = [],
 }) {
+  const { t } = useT();
   const [filter, setFilter] = useState("all");
   const [selectedSector, setSelectedSector] = useState("All Sectors");
-  const [selectedStage, setSelectedStage] = useState("All Stages");
-  const [selectedState, setSelectedState] = useState("All India");
-  const [selectedType, setSelectedType] = useState("All Types");
+  const [selectedStage, setSelectedStage] = useState("all");
+  const [selectedState, setSelectedState] = useState("all");
+  const [selectedType, setSelectedType] = useState("all");
 
   const recommendationMap = useMemo(() => {
     const map = new Map();
@@ -264,27 +299,40 @@ export default function SchemeExplorerPage({
   const facetFilteredCanonical = useMemo(() => {
     return searchedCanonical.filter((scheme) => {
       const version = currentSchemeVersion(scheme) || {};
-      const desc = (version.description || "").toLowerCase();
+      const sectorValues = (
+        version.eligible_sectors?.length
+          ? version.eligible_sectors
+          : version.categories
+      ) || [];
 
-      if (selectedSector !== "All Sectors") {
-        const categories = version.categories || [];
-        const hasSector = categories.some((c) =>
-          c.toLowerCase().includes(selectedSector.toLowerCase()),
-        );
-        if (!hasSector && !desc.includes(selectedSector.toLowerCase())) return false;
+      if (
+        selectedSector !== "All Sectors" &&
+        !matchesFacet(sectorValues, selectedSector)
+      ) {
+        return false;
       }
 
-      if (selectedType !== "All Types") {
-        const types = version.support_types || [];
-        const hasType = types.some((t) =>
-          t.toLowerCase().includes(selectedType.toLowerCase().slice(0, -1)),
-        );
-        if (!hasType) return false;
+      if (!matchesFacet(version.eligible_stages, selectedStage)) {
+        return false;
+      }
+
+      if (!matchesFacet(version.eligible_states, selectedState)) {
+        return false;
+      }
+
+      if (!matchesFacet(version.support_types, selectedType)) {
+        return false;
       }
 
       return true;
     });
-  }, [searchedCanonical, selectedSector, selectedType]);
+  }, [
+    searchedCanonical,
+    selectedSector,
+    selectedStage,
+    selectedState,
+    selectedType,
+  ]);
 
   let visibleCanonical = facetFilteredCanonical;
   let visibleExternal = searchedExternal;
@@ -360,11 +408,11 @@ export default function SchemeExplorerPage({
     <div className="page-stack scheme-explorer-page">
       <header className="page-header">
         <div>
-          <span className="section-kicker">DISCOVER SUPPORT</span>
-          <h1>Explore schemes</h1>
-          <p>
-            Browse the complete scheme catalog, including recommendation-ready schemes, reviewed external programmes, merged aliases, and records retained as unavailable after official-source review.
-          </p>
+          <span className="section-kicker">
+            {t("schemes.explorer.kicker")}
+          </span>
+          <h1>{t("schemes.explorer.title")}</h1>
+          <p>{t("schemes.explorer.subtitle")}</p>
         </div>
       </header>
 
@@ -396,30 +444,50 @@ export default function SchemeExplorerPage({
       <section className="dashboard-card scheme-filter-card">
         <div className="filter-grid">
           <label className="assessment-field">
-            <span>Sector</span>
+            <span>{t("schemes.filter.sector")}</span>
             <select value={selectedSector} onChange={(e) => setSelectedSector(e.target.value)}>
-              {SECTORS.map((s) => <option key={s} value={s}>{s}</option>)}
+              {SECTORS.map((sector) => (
+                <option key={sector} value={sector}>
+                  {sector === "All Sectors"
+                    ? t("schemes.filter.sector_all")
+                    : sector}
+                </option>
+              ))}
             </select>
           </label>
 
           <label className="assessment-field">
-            <span>Stage</span>
+            <span>{t("schemes.filter.stage")}</span>
             <select value={selectedStage} onChange={(e) => setSelectedStage(e.target.value)}>
-              {STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {STAGES.map(([value, labelKey]) => (
+                <option key={value} value={value}>
+                  {t(labelKey)}
+                </option>
+              ))}
             </select>
           </label>
 
           <label className="assessment-field">
-            <span>Location / State</span>
+            <span>{t("schemes.filter.state")}</span>
             <select value={selectedState} onChange={(e) => setSelectedState(e.target.value)}>
-              {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {STATES.map((state) => (
+                <option key={state} value={state}>
+                  {state === "all"
+                    ? t("schemes.filter.state_all")
+                    : state}
+                </option>
+              ))}
             </select>
           </label>
 
           <label className="assessment-field">
-            <span>Support Type</span>
+            <span>{t("schemes.filter.type")}</span>
             <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
-              {SUPPORT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              {SUPPORT_TYPES.map(([value, labelKey]) => (
+                <option key={value} value={value}>
+                  {t(labelKey)}
+                </option>
+              ))}
             </select>
           </label>
         </div>
