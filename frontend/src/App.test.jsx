@@ -1287,7 +1287,7 @@ describe("functional user dashboard", () => {
       "INR 1 lakh – INR 10 lakh",
     );
     expect(externalCard).toHaveTextContent(
-      "Official application link unavailable",
+      "Verify funding terms with the responsible authority before applying.",
     );
 
     expect(
