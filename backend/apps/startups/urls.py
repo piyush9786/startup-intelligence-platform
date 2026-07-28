@@ -25,6 +25,7 @@ from .capital_planner_views import (
     StartupCapitalPlanCurrentView,
     StartupCapitalPlanGenerateView,
 )
+from .compliance_views import ComplianceRecordViewSet
 from .milestone_views import (
     StartupMilestoneCompleteView,
     StartupMilestoneDetailView,
@@ -59,7 +60,6 @@ from .workspace_views import (
     ApplicationStageEventViewSet,
     ApplicationTaskViewSet,
     ApplicationWorkflowViewSet,
-    ComplianceRecordViewSet,
     ConsultantProfileViewSet,
     FounderVaultDocumentViewSet,
 )
