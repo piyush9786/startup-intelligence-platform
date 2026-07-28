@@ -139,12 +139,15 @@ export async function listConsultantProfiles() {
 }
 
 
-export async function listApplicationWorkflows(startupProfileId) {
+export async function listApplicationWorkflows(startupProfileId = null) {
   const response = await authenticatedApiClient.get(
     "/application-workflows/",
     {
       params: {
-        startup_profile: startupProfileId,
+        ...(startupProfileId
+          ? { startup_profile: startupProfileId }
+          : {}),
+        ordering: "-updated_at",
         page_size: 250,
       },
     },
