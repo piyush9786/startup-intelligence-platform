@@ -223,22 +223,18 @@ export default function FundingPage({
                     </div>
                     <div>
                       <dt>Collateral</dt>
-                      <dd>{record.collateral_requirements || "Not published"}</dd>
+                      <dd>{record.collateral_required_text || "Not published"}</dd>
+                    </div>
+                    <div>
+                      <dt>Repayment</dt>
+                      <dd>{record.repayment_required_text || "Not published"}</dd>
                     </div>
                   </dl>
 
-                  {record.official_apply_url ? (
-                    <a
-                      className="button button-ghost button-wide"
-                      href={record.official_apply_url}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      Official portal ↗
-                    </a>
-                  ) : (
-                    <strong>Official application link unavailable</strong>
-                  )}
+                  <p className="external-scheme-disclaimer">
+                    {record.disclaimer ||
+                      "No official application URL is available in this external dataset. Verify the current terms with the responsible authority before applying."}
+                  </p>
                 </article>
               );
             })}
