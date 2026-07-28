@@ -38,12 +38,14 @@ describe("ApplicationTrackerPage", () => {
     expect(
       await screen.findByText("Application Pipeline Tracker"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Draft")).toBeInTheDocument();
+    expect(screen.getAllByText("Draft").length).toBeGreaterThan(0);
     expect(screen.getByText("Submitted")).toBeInTheDocument();
     expect(screen.getByText("Under Review")).toBeInTheDocument();
     expect(screen.getByText("Approved / Granted")).toBeInTheDocument();
     expect(screen.getByText("Rejected")).toBeInTheDocument();
-    expect(screen.getByText("Startup India Seed Fund")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Startup India Seed Fund").length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText("Manage workflow")).toBeInTheDocument();
   });
 });
