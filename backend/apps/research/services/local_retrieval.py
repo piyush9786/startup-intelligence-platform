@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from apps.companies.models import Company
 from apps.knowledge.models import (
@@ -56,14 +57,14 @@ def _profile_terms(profile) -> set[str]:
     return _text_tokens(
         profile.startup_name,
         profile.description,
-        profile.stage,
-        profile.state,
-        profile.district,
-        profile.sectors,
-        profile.technologies,
-        profile.resource_needs,
-        profile.funding_purpose,
-        profile.revenue_stage,
+        getattr(profile, "stage", ""),
+        getattr(profile, "state", ""),
+        getattr(profile, "district", ""),
+        getattr(profile, "sectors", []),
+        getattr(profile, "technologies", []),
+        getattr(profile, "resource_needs", None) or profile_data.get("resource_needs"),
+        getattr(profile, "funding_purpose", None) or profile_data.get("funding_purpose"),
+        getattr(profile, "revenue_stage", None) or profile_data.get("revenue_stage"),
         profile_data.get("target_customer"),
         profile_data.get("customer_segment"),
         profile_data.get("sub_industry"),
