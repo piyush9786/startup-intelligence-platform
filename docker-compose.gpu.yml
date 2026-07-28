@@ -1,0 +1,19 @@
+# NVIDIA GPU override for the local or production Ollama service.
+#
+# Local laptop usage:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+#
+# Production usage:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.gpu.yml up -d
+#
+# Requires the NVIDIA driver and NVIDIA Container Toolkit on the host.
+
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+*_venv/
+env/
+ENV/
+
+# Django
+backend/staticfiles/
+backend/media/
+*.sqlite3
+local_settings.py
+
+# ML model artifacts (regenerated via `python manage.py train_ml_models`)
+backend/ml_models/
+
+# Environment secrets
+.env
+LOCAL_CREDENTIALS.txt
+.advisor-research-catalog-backup/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Root-level Node (avoid accidental root package.json)
+node_modules/
+package-lock.json
+!frontend/package-lock.json
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Local backups created by the research orchestration bundle
+.vanilla-orchestration-backup/
+
+# Local backups created by the research reliability bundle
+.research-reliability-backup/
+.remaining-corrections-backup/
+
+# Archives
+*.zip
+
