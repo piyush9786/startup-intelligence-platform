@@ -8,6 +8,8 @@ from django.http import StreamingHttpResponse
 from django.utils import timezone
 from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from apps.accounts.models import User
@@ -92,7 +94,7 @@ class FounderVaultDocumentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = FounderVaultDocumentSerializer
     queryset = FounderVaultDocument.objects.none()
-    parser_classes = None
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     filterset_fields = (
         "startup_profile",
         "category",
@@ -192,14 +194,14 @@ class ConsultantProfileViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         if serializer.instance.user_id != self.request.user.id:
-            raise permissions.PermissionDenied(
+            raise PermissionDenied(
                 "You may update only your own consultant profile."
             )
         serializer.save()
 
     def perform_destroy(self, instance):
         if instance.user_id != self.request.user.id:
-            raise permissions.PermissionDenied(
+            raise PermissionDenied(
                 "You may delete only your own consultant profile."
             )
         instance.delete()
@@ -355,7 +357,7 @@ class ApplicationWorkflowViewSet(viewsets.ReadOnlyModelViewSet):
                 .first()
             )
             if application is None:
-                raise permissions.NotFound("Application was not found.")
+                raise NotFound("Application was not found.")
 
             previous_stage = application.stage
             allowed = self.ALLOWED_TRANSITIONS.get(previous_stage, set())
