@@ -267,6 +267,12 @@ class AssistantChatTurnThrottle(ScopedRateThrottle):
 
         return api_settings.DEFAULT_THROTTLE_RATES.get(scope)
 
+    def allow_request(self, request, view) -> bool:
+        self.scope = getattr(view, "throttle_scope", None)
+        self.rate = self.get_rate()
+        self.num_requests, self.duration = self.parse_rate(self.rate)
+        return super().allow_request(request, view)
+
 
 class ChatbotCurrentView(APIView):
     permission_classes = [IsAuthenticated]

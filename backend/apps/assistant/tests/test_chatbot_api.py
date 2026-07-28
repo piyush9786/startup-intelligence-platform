@@ -363,6 +363,7 @@ def test_session_turn_limit_returns_conflict():
     }
 )
 def test_message_endpoint_has_scoped_rate_limit():
+    cache.clear()
     founder = make_user("chatbot-throttle-founder")
     client = authenticated_client(founder)
 
