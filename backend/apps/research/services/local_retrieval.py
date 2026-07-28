@@ -13,6 +13,29 @@ from apps.knowledge.models import (
 from apps.schemes.models import Scheme, SchemeVersion
 
 _TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
+_PROFILE_MATCH_STOPWORDS = frozenset(
+    {
+        "all",
+        "and",
+        "business",
+        "capital",
+        "company",
+        "early",
+        "funding",
+        "grant",
+        "growth",
+        "idea",
+        "india",
+        "indian",
+        "loan",
+        "pan",
+        "scheme",
+        "stage",
+        "startup",
+        "support",
+    }
+)
+_RANKING_ITERATOR_CHUNK_SIZE = 500
 
 
 def _text_tokens(*values: Any) -> set[str]:
@@ -46,7 +69,7 @@ def _profile_terms(profile) -> set[str]:
         profile_data.get("sub_industry"),
         profile_data.get("business_model"),
         profile_data.get("revenue_model"),
-    )
+    ) - _PROFILE_MATCH_STOPWORDS
 
 
 def _rank_records(
@@ -56,12 +79,18 @@ def _rank_records(
     fields: tuple[str, ...],
     limit: int,
 ) -> list[Any]:
-    ranked: list[tuple[int, int, str, Any]] = []
+    if not profile_terms or limit <= 0:
+        return []
+
+    ranked: list[tuple[int, int, int, str, Any]] = []
     for record in records:
         record_terms = _text_tokens(
             *(getattr(record, field, "") for field in fields)
         )
         overlap = profile_terms & record_terms
+        if not overlap:
+            continue
+
         verified_bonus = int(
             getattr(record, "review_status", "") == "verified"
         )
@@ -73,6 +102,7 @@ def _rank_records(
         ranked.append(
             (
                 len(overlap),
+                sum(len(token) for token in overlap),
                 verified_bonus,
                 name.casefold(),
                 record,
@@ -83,10 +113,11 @@ def _rank_records(
         key=lambda item: (
             -item[0],
             -item[1],
-            item[2],
+            -item[2],
+            item[3],
         )
     )
-    return [item[3] for item in ranked[:limit]]
+    return [item[4] for item in ranked[:limit]]
 
 
 def _catalog_source_type(record: Any) -> str:
@@ -117,10 +148,10 @@ def _append_external_schemes(
     queryset = (
         ExternalSchemeRecord.objects.filter(dataset__is_active=True)
         .exclude(review_status=ExternalSchemeRecord.ReviewStatus.REJECTED)
-        .select_related("dataset")[:250]
+        .select_related("dataset")
     )
     records = _rank_records(
-        queryset,
+        queryset.iterator(chunk_size=_RANKING_ITERATOR_CHUNK_SIZE),
         profile_terms=profile_terms,
         fields=(
             "scheme_name",
@@ -176,10 +207,10 @@ def _append_external_capital_support(
                 ExternalCapitalSupportRecord.ReviewStatus.REJECTED
             )
         )
-        .select_related("dataset")[:250]
+        .select_related("dataset")
     )
     records = _rank_records(
-        queryset,
+        queryset.iterator(chunk_size=_RANKING_ITERATOR_CHUNK_SIZE),
         profile_terms=profile_terms,
         fields=(
             "support_name",
@@ -251,10 +282,10 @@ def _append_external_requirements(
                 .ReviewStatus.REJECTED
             )
         )
-        .select_related("dataset")[:250]
+        .select_related("dataset")
     )
     records = _rank_records(
-        queryset,
+        queryset.iterator(chunk_size=_RANKING_ITERATOR_CHUNK_SIZE),
         profile_terms=profile_terms,
         fields=(
             "certificate_name",
