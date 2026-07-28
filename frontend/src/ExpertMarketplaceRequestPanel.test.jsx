@@ -46,6 +46,7 @@ function renderPanel() {
 describe("ExpertMarketplaceRequestPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.setItem("si_language", "en");
     vi.mocked(listConsultantProfiles).mockResolvedValue([expert]);
     vi.mocked(listConsultationRequests).mockResolvedValue([]);
   });
@@ -80,7 +81,9 @@ describe("ExpertMarketplaceRequestPanel", () => {
       message: "Help us prepare the evidence.",
       preferred_date: null,
     });
-    expect(await screen.findByText("Consultation request sent.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Consultation request sent."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Asha Mehta")).toBeInTheDocument();
   });
 
