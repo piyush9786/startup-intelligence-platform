@@ -25,7 +25,9 @@ from datetime import date
 from typing import Any
 
 import numpy as np
+from django.db.models import Prefetch
 
+from apps.recommendations.models import Recommendation
 from apps.startups.models import StartupProfile
 
 FEATURE_VERSION = "features-v1"
@@ -66,8 +68,14 @@ def _latest_readiness_score(startup: StartupProfile) -> float:
 
 
 def _recommendation_count(startup: StartupProfile) -> float:
-    """Return normalized recommendation count (capped at 20)."""
-    count = startup.recommendations.count()
+    """Return the normalized count from the current recommendation run only."""
+    prefetched = getattr(startup, "_current_recommendations", None)
+    if prefetched is not None:
+        count = len(prefetched)
+    else:
+        count = startup.recommendations.filter(
+            generation_run__is_current=True,
+        ).count()
     return min(1.0, count / 20.0)
 
 
@@ -134,7 +142,21 @@ def batch_extract_features(startups: Any) -> tuple[np.ndarray, list[int]]:
     X_list: list[np.ndarray] = []
     ids: list[int] = []
 
-    for startup in startups.prefetch_related("readiness_assessments", "recommendations"):
+    current_recommendations = Recommendation.objects.filter(
+        generation_run__is_current=True,
+    ).only(
+        "id",
+        "startup_profile_id",
+    )
+
+    for startup in startups.prefetch_related(
+        "readiness_assessments",
+        Prefetch(
+            "recommendations",
+            queryset=current_recommendations,
+            to_attr="_current_recommendations",
+        ),
+    ):
         X_list.append(extract_features(startup))
         ids.append(startup.pk)
 

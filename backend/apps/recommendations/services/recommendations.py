@@ -25,7 +25,7 @@ from apps.recommendations.services.explanation import (
 from apps.schemes.models import EligibilityRule, Scheme, SchemeVersion
 from apps.startups.models import StartupProfile
 
-RANKING_VERSION = "recommendations-v2"
+RANKING_VERSION = "recommendations-v3"
 _SCORE_QUANTUM = Decimal("0.000001")
 
 # Legacy / Fallback scoring components
@@ -38,7 +38,7 @@ _APPLICATION_STATUS_COMPONENTS = {
 }
 _ACTIONABLE_APPLICATION_STATUSES = frozenset(_APPLICATION_STATUS_COMPONENTS)
 
-# Recommendations-v2 ML-blended weights
+# Recommendations-v3 ML-blended weights
 # Total score combines eligibility, rule matching, SVM probability,
 # and application status using 70%, 10%, 10%, and 10% weights.
 _ELIGIBILITY_WEIGHT_V2 = Decimal("0.700000")
@@ -142,7 +142,7 @@ def _score_assessment(
     svm_score = _get_svm_score(startup_profile, scheme_version) if startup_profile else None
 
     if svm_score is not None:
-        # Recommendations-v2 ML Blend: 70% eligibility + 10% rule match + 10% SVM + 10% app status
+        # Recommendations-v3 ML Blend: 70% eligibility + 10% rule match + 10% SVM + 10% app status
         eligibility_component = _ELIGIBILITY_WEIGHT_V2
         rule_match_component = _quantize(match_ratio * _RULE_MATCH_WEIGHT_MAX_V2)
         svm_component = _quantize(svm_score * _SVM_WEIGHT_V2)

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import AppShell from "./AppShell.jsx";
 import DashboardHome from "./DashboardHome.jsx";
 import PublicEntry from "./PublicEntry.jsx";
+import { resetAccountScopedQueries } from "./queryClient";
 import {
   SESSION_EXPIRED_EVENT,
   getSession,
@@ -17,6 +18,7 @@ export default function App() {
 
   useEffect(() => {
     function handleSessionExpired() {
+      resetAccountScopedQueries();
       setAuthenticated(false);
     }
 
@@ -31,9 +33,21 @@ export default function App() {
 
   if (!authenticated) {
     return (
-      <PublicEntry onAuthenticated={() => setAuthenticated(true)} />
+      <PublicEntry
+        onAuthenticated={() => {
+          resetAccountScopedQueries();
+          setAuthenticated(true);
+        }}
+      />
     );
   }
 
-  return <AppShell onSignOut={() => setAuthenticated(false)} />;
+  return (
+    <AppShell
+      onSignOut={() => {
+        resetAccountScopedQueries();
+        setAuthenticated(false);
+      }}
+    />
+  );
 }

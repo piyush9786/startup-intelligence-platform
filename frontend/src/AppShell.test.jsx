@@ -28,6 +28,13 @@ vi.mock("./api", () => ({
   listStartupAdvisorBriefings: vi.fn().mockResolvedValue([]),
   getCurrentStartupAdvisorBriefingJob: vi.fn().mockResolvedValue({}),
   generateGroundedBriefing: vi.fn(),
+  getAiReadiness: vi.fn().mockResolvedValue({
+    ready: true,
+    ollama: true,
+    required_models: ["qwen3:4b"],
+    missing_models: [],
+    reason: "",
+  }),
   updateCurrentStartupOnboarding: vi.fn(),
   getCurrentStartupOnboarding: vi.fn().mockResolvedValue(null),
   getSession: vi.fn().mockReturnValue("valid-token")

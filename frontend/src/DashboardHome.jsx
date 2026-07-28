@@ -291,6 +291,8 @@ function RecommendationList({
 }
 
 function AdvisorSummary({
+  aiReady,
+  aiReadinessLoading,
   briefing,
   generating,
   generationLabel,
@@ -342,11 +344,16 @@ function AdvisorSummary({
           </p>
           <button
             className="button button-primary button-wide"
-            disabled={generating}
+            disabled={generating || aiReadinessLoading || !aiReady}
             onClick={onGenerate}
             type="button"
           >
-            {generationLabel || "Generate founder guidance"}
+            {generationLabel ||
+              (aiReadinessLoading
+                ? "Checking AI model…"
+                : aiReady
+                  ? "Generate founder guidance"
+                  : "AI model unavailable")}
           </button>
         </>
       )}
@@ -355,6 +362,8 @@ function AdvisorSummary({
 }
 
 export function DashboardHome({
+  aiReady,
+  aiReadinessLoading,
   briefing,
   dashboardData,
   generating,
@@ -591,6 +600,8 @@ export function DashboardHome({
           schemes={schemes}
         />
         <AdvisorSummary
+          aiReady={aiReady}
+          aiReadinessLoading={aiReadinessLoading}
           briefing={briefing}
           generating={generating}
           generationLabel={generationLabel}

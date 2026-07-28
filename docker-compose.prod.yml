@@ -71,7 +71,7 @@ services:
     restart: always
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
@@ -81,7 +81,7 @@ services:
     restart: always
 
   minio_init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     env_file: .env.production
     depends_on:
       - minio
@@ -95,7 +95,7 @@ services:
       "
 
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.30.8
     # GPU support: use docker-compose.gpu.yml override
     # docker compose -f docker-compose.prod.yml -f docker-compose.gpu.yml up
     environment:
@@ -114,7 +114,7 @@ services:
     restart: always
 
   ollama_init:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.30.8
     env_file: .env.production
     environment:
       OLLAMA_HOST: http://ollama:11434
@@ -139,7 +139,7 @@ services:
     restart: "no"
 
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.30.0
     restart: always
 
   release:
@@ -158,6 +158,15 @@ services:
 
   backend:
     <<: *backend-prod-common
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      ollama_init:
+        condition: service_completed_successfully
     command: /app/scripts/start-prod.sh
     volumes:
       - static_volume:/app/staticfiles
