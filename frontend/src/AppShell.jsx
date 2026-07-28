@@ -115,6 +115,13 @@ import { JourneyDialog } from "./JourneyDialog.jsx";
 
 const MOTION_EASE = [0.22, 1, 0.36, 1];
 
+function advisorAiReady(status) {
+  const capability = status?.capabilities?.advisor;
+  return capability
+    ? Boolean(capability.ready)
+    : Boolean(status?.ready);
+}
+
 // ---------------------------------------------------------------------------
 // Sidebar navigation
 // ---------------------------------------------------------------------------
@@ -709,12 +716,14 @@ function Workspace({ onSignOut }) {
       const readiness = await getAiReadiness();
       setAiReadiness(readiness);
 
-      if (!readiness.ready) {
-        const missing = (readiness.missing_models || []).join(", ");
+      const advisorStatus =
+        readiness.capabilities?.advisor || readiness;
+      if (!advisorStatus.ready) {
+        const missing = (advisorStatus.missing_models || []).join(", ");
         throw new Error(
           missing
-            ? `AI generation is unavailable. Install the configured model(s): ${missing}.`
-            : readiness.reason || "The AI model service is unavailable.",
+            ? `AI generation is unavailable. Install the advisor model(s): ${missing}.`
+            : advisorStatus.reason || "The AI model service is unavailable.",
         );
       }
 
@@ -949,7 +958,7 @@ function OverviewRoute() {
   return (
     <DashboardHome
       briefing={ctx.currentBriefing}
-      aiReady={Boolean(ctx.aiReadiness?.ready)}
+      aiReady={advisorAiReady(ctx.aiReadiness)}
       aiReadinessLoading={ctx.loadingAiReadiness}
       dashboardData={ctx.dashboardData}
       generating={ctx.generating}
@@ -1146,7 +1155,7 @@ function AdvisorRoute() {
 
   return (
     <AdvisorWorkspace
-      aiReady={Boolean(ctx.aiReadiness?.ready)}
+      aiReady={advisorAiReady(ctx.aiReadiness)}
       aiReadinessLoading={ctx.loadingAiReadiness}
       briefing={ctx.currentBriefing}
       generating={ctx.generating}

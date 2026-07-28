@@ -27,7 +27,9 @@ describe("fault-isolated dashboard loading", () => {
     expect(data.profiles).toHaveLength(1);
     expect(data.schemes).toHaveLength(1);
     expect(data.externalSchemes).toEqual([]);
-    expect(data.warningLabels).toEqual(["external schemes (request failed)"]);
+    expect(data.warningLabels).toEqual([
+      "external schemes (request failed: external feed unavailable)",
+    ]);
   });
 
   test("keeps dashboard data when briefing history fails", async () => {
@@ -48,7 +50,9 @@ describe("fault-isolated dashboard loading", () => {
 
     expect(data.dashboardData.startup_profile.id).toBe("profile-1");
     expect(data.history).toEqual({ briefings: [] });
-    expect(data.warningLabels).toEqual(["briefing history (request failed)"]);
+    expect(data.warningLabels).toEqual([
+      "briefing history (request failed: history unavailable)",
+    ]);
   });
 
   test("propagates authentication failures", async () => {
