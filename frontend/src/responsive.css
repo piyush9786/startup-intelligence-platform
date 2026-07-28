@@ -147,7 +147,12 @@ button {
   .funding-grid,
   .milestone-grid,
   .public-capability-grid,
-  .public-trust-principles {
+  .public-trust-principles,
+  .application-workflow-detail {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .application-workflow-detail form {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 
@@ -191,6 +196,10 @@ button {
   input,
   select,
   textarea {
+    width: 100%;
+  }
+
+  .application-workflow-detail .button {
     width: 100%;
   }
 
