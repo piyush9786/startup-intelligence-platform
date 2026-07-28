@@ -20,6 +20,15 @@ export function buildPlatformUrl(pathname) {
 
 export const adminUrl = buildPlatformUrl("/admin/");
 export const apiDocsUrl = buildPlatformUrl("/api/docs/");
+
+export async function getAiReadiness() {
+  const response = await axios.get(
+    `${apiRoot}/ai-readiness/`,
+    { timeout: 10000 },
+  );
+  return response.data;
+}
+
 export const SESSION_EXPIRED_EVENT =
   "startup-intelligence:session-expired";
 

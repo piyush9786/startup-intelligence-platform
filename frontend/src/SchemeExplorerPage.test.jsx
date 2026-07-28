@@ -14,6 +14,8 @@ const sampleSchemes = [
       description: "Financial assistance to startups for proof of concept and prototype development.",
       support_types: ["grant", "seed funding"],
       categories: ["BioTech", "CleanTech"],
+      eligible_stages: ["mvp"],
+      eligible_states: ["Maharashtra"],
       maximum_amount: "2000000",
       currency: "INR",
       application_status: "open",
@@ -28,6 +30,8 @@ const sampleSchemes = [
       description: "Credit guarantee coverage for collateral-free working capital loans.",
       support_types: ["loan", "credit guarantee"],
       categories: ["FinTech", "DeepTech"],
+      eligible_stages: ["growth"],
+      eligible_states: ["Delhi"],
       maximum_amount: "50000000",
       currency: "INR",
       application_status: "open",
@@ -51,6 +55,34 @@ describe("SchemeExplorerPage component", () => {
 
     expect(screen.getByText("Startup India Seed Fund Scheme")).toBeInTheDocument();
     expect(screen.getByText("Credit Guarantee Scheme for Startups")).toBeInTheDocument();
+  });
+
+  test("filters schemes by stage and state", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SchemeExplorerPage
+        onOpenScheme={vi.fn()}
+        schemes={sampleSchemes}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText("Stage"), "mvp");
+
+    expect(screen.getByText("Startup India Seed Fund Scheme")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Credit Guarantee Scheme for Startups"),
+    ).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Stage"), "all");
+    await user.selectOptions(screen.getByLabelText("Location / State"), "Delhi");
+
+    expect(
+      screen.queryByText("Startup India Seed Fund Scheme"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Credit Guarantee Scheme for Startups"),
+    ).toBeInTheDocument();
   });
 
   test("filters schemes by sector and triggers scheme detail navigation", async () => {

@@ -53,6 +53,7 @@ import {
   apiDocsUrl,
   clearSession,
   generateGroundedBriefing,
+  getAiReadiness,
   getStartupAdvisorBriefing,
   getStartupAdvisorBriefingJob,
   getCurrentBriefing,
@@ -157,7 +158,7 @@ function Navigation({ canReviewEligibility, onLogout }) {
         ["/startup", "◉", t("nav.my_startup")],
         ["/builder", "🛠", t("nav.builder")],
         ["/capital-planner", "📊", t("nav.capital_planner")],
-        ["/tracker", "📌", "Application Tracker"],
+        ["/tracker", "📌", t("nav.application_tracker")],
         ["/roadmap", "↗", t("nav.roadmap")],
       ],
     },
@@ -173,7 +174,7 @@ function Navigation({ canReviewEligibility, onLogout }) {
       label: t("nav.group.guidance"),
       items: [
         ["/advisor", "✦", t("nav.advisor")],
-        ["/research", "⌕", "Research"],
+        ["/research", "⌕", t("nav.research")],
       ],
     },
   ];
@@ -297,7 +298,7 @@ function ProductTopbar({ profiles = [], query, selectedProfileId, setQuery, setS
         {profiles && profiles.length > 0 && (
           <div className="profile-switcher">
             <select
-              aria-label="Select Startup Profile"
+              aria-label={t("profile.select")}
               onChange={(e) => setSelectedProfileId && setSelectedProfileId(e.target.value)}
               value={selectedProfileId || ""}
             >
@@ -377,6 +378,8 @@ function Workspace({ onSignOut }) {
   const [loadingWorkspace, setLoadingWorkspace] = useState(false);
   const [generationJob, setGenerationJob] = useState(null);
   const [generationStep, setGenerationStep] = useState("");
+  const [aiReadiness, setAiReadiness] = useState(null);
+  const [loadingAiReadiness, setLoadingAiReadiness] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [onboardingProgress, setOnboardingProgress] = useState(null);
@@ -426,7 +429,7 @@ function Workspace({ onSignOut }) {
       setLoadingProfiles(true);
       setError("");
       try {
-        const [identityPayload, result] = await Promise.all([
+        const [identityPayload, result, aiStatus] = await Promise.all([
           getCurrentUser(),
           loadCatalogData({
             listStartupProfiles,
@@ -435,6 +438,12 @@ function Workspace({ onSignOut }) {
             listExternalCapitalSupport,
             listExternalCertificationRequirements,
           }),
+          getAiReadiness().catch(() => ({
+            ready: false,
+            ollama: false,
+            missing_models: [],
+            reason: "The AI model service is unavailable.",
+          })),
         ]);
         if (!active) return;
 
@@ -472,6 +481,8 @@ function Workspace({ onSignOut }) {
         }
 
         setCurrentUser(identity);
+        setAiReadiness(aiStatus);
+        setLoadingAiReadiness(false);
         setOnboardingProgress(onboardingPayload);
         setProfiles(ownedProfiles);
         setSchemes(result.schemes || []);
@@ -512,7 +523,10 @@ function Workspace({ onSignOut }) {
       } catch (err) {
         if (active) handleRequestError(err);
       } finally {
-        if (active) setLoadingProfiles(false);
+        if (active) {
+          setLoadingProfiles(false);
+          setLoadingAiReadiness(false);
+        }
       }
     }
     load();
@@ -686,21 +700,44 @@ function Workspace({ onSignOut }) {
   }, [selectedProfileId, generationJob?.id]);
 
   const handleGenerate = async () => {
-    if (!selectedProfileId || generating) return;
+    if (!selectedProfileId || generating || loadingAiReadiness) return;
     setError("");
     setSuccess("");
-    setGenerationStep("Freezing the current verified advisor snapshot…");
+    setLoadingAiReadiness(true);
+    setGenerationStep("Checking the local AI model service…");
     try {
-      const queuedResponse = await generateGroundedBriefing(selectedProfileId, setGenerationStep);
-      if (!queuedResponse?.job) throw new Error("The server did not return a founder guidance job.");
+      const readiness = await getAiReadiness();
+      setAiReadiness(readiness);
+
+      if (!readiness.ready) {
+        const missing = (readiness.missing_models || []).join(", ");
+        throw new Error(
+          missing
+            ? `AI generation is unavailable. Install the configured model(s): ${missing}.`
+            : readiness.reason || "The AI model service is unavailable.",
+        );
+      }
+
+      setGenerationStep("Freezing the current verified advisor snapshot…");
+      const queuedResponse = await generateGroundedBriefing(
+        selectedProfileId,
+        setGenerationStep,
+      );
+      if (!queuedResponse?.job) {
+        throw new Error("The server did not return a founder guidance job.");
+      }
       setGenerationJob(queuedResponse.job);
       setGenerationStep(advisorJobProgress(queuedResponse.job));
       navigate("/advisor");
-      if (!queuedResponse.created) setSuccess("The existing founder guidance job was resumed.");
+      if (!queuedResponse.created) {
+        setSuccess("The existing founder guidance job was resumed.");
+      }
     } catch (err) {
       setGenerationJob(null);
       setGenerationStep("");
       handleRequestError(err);
+    } finally {
+      setLoadingAiReadiness(false);
     }
   };
 
@@ -726,6 +763,8 @@ function Workspace({ onSignOut }) {
     generationJob,
     generationLabel,
     generationStep,
+    aiReadiness,
+    loadingAiReadiness,
     error,
     setError,
     success,
@@ -749,13 +788,13 @@ function Workspace({ onSignOut }) {
 
   if (loadingProfiles) {
     return (
-      <div className="app-loading" role="status" aria-label="Loading workspace">
+      <div className="app-loading" role="status" aria-label={t("loading.workspace")}>
         <div className="app-loading-card">
           <div className="sidebar-brand-mark" style={{ width: 44, height: 44, fontSize: "0.9rem" }}>
             <span>SI</span>
           </div>
           <div className="app-loading-spinner" />
-          <span>Loading your workspace…</span>
+          <span>{t("loading.workspace")}</span>
         </div>
       </div>
     );
@@ -807,7 +846,7 @@ function Workspace({ onSignOut }) {
           {loadingWorkspace ? (
             <div className="dashboard-loader" role="status">
               <span className="spinner" aria-hidden="true" />
-              Loading workspace module…
+              {t("loading.module")}
             </div>
           ) : (
             <WorkspaceErrorBoundary>
@@ -815,7 +854,7 @@ function Workspace({ onSignOut }) {
                 fallback={
                   <div className="dashboard-loader" role="status">
                     <span className="spinner" aria-hidden="true" />
-                    Loading workspace module…
+                    {t("loading.module")}
                   </div>
                 }
               >
@@ -910,6 +949,8 @@ function OverviewRoute() {
   return (
     <DashboardHome
       briefing={ctx.currentBriefing}
+      aiReady={Boolean(ctx.aiReadiness?.ready)}
+      aiReadinessLoading={ctx.loadingAiReadiness}
       dashboardData={ctx.dashboardData}
       generating={ctx.generating}
       generationLabel={ctx.generationLabel}
@@ -1105,6 +1146,8 @@ function AdvisorRoute() {
 
   return (
     <AdvisorWorkspace
+      aiReady={Boolean(ctx.aiReadiness?.ready)}
+      aiReadinessLoading={ctx.loadingAiReadiness}
       briefing={ctx.currentBriefing}
       generating={ctx.generating}
       generationLabel={ctx.generationLabel}

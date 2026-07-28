@@ -85,7 +85,7 @@ The platform integrates **9 Machine Learning models** to upgrade every decision 
 
 ### 3. Enhanced 3-Stage RAG Pipeline
 1. **Hybrid Retrieval**: Parallel search across Qdrant (dense vectors) + TF-IDF (sparse keywords), merged using Reciprocal Rank Fusion ($K=60$).
-2. **ML Re-Ranking**: Top candidates re-ranked by Calibrated SVM success probability ($0.40 \times \text{eligibility} + 0.40 \times \text{SVM} + 0.10 \times \text{rules} + 0.10 \times \text{status}$).
+2. **ML Re-Ranking**: Eligible candidates use the versioned `recommendations-v3` blend ($0.70 \times \text{eligibility} + 0.10 \times \text{rules} + 0.10 \times \text{SVM} + 0.10 \times \text{status}$). Unapproved, synthetic, or unavailable SVM artifacts use the deterministic fallback.
 3. **LLM Explanation**: Top 6 candidates passed to `qwen3:4b` with strict citation bounds.
 
 ---

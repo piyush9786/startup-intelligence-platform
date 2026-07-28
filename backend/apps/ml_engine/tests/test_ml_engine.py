@@ -1,9 +1,16 @@
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
 import numpy as np
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.ml_engine.models import MLModelRegistry
-from apps.ml_engine.services.feature_pipeline import FEATURE_DIM, extract_features
+from apps.ml_engine.services.feature_pipeline import (
+    FEATURE_DIM,
+    _recommendation_count,
+    extract_features,
+)
 from apps.ml_engine.services.models.adaboost_readiness import train_adaboost
 from apps.ml_engine.services.models.isolation_forest_detector import train_isolation_forest
 from apps.ml_engine.services.models.kmeans_cohorts import train_kmeans
@@ -37,6 +44,26 @@ class MLEngineTestCase(TestCase):
         vec = extract_features(self.profile)
         self.assertEqual(vec.shape, (FEATURE_DIM,))
         self.assertIsInstance(vec, np.ndarray)
+
+    def test_recommendation_count_uses_only_current_generation(self):
+        manager = MagicMock()
+        filtered = MagicMock()
+        filtered.count.return_value = 3
+        manager.filter.return_value = filtered
+
+        startup = SimpleNamespace(recommendations=manager)
+        self.assertAlmostEqual(_recommendation_count(startup), 0.15)
+        manager.filter.assert_called_once_with(
+            generation_run__is_current=True,
+        )
+
+        startup = SimpleNamespace(
+            recommendations=manager,
+            _current_recommendations=[object(), object()],
+        )
+        manager.reset_mock()
+        self.assertAlmostEqual(_recommendation_count(startup), 0.10)
+        manager.filter.assert_not_called()
 
     def test_kmeans_training(self):
         X = generate_startup_features(50)
