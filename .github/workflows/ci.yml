@@ -66,8 +66,21 @@ jobs:
           STARTUP_ADVISOR_RAG_ENABLED=false
           WEB_SEARCH_ENABLED=false
           EOF
-      - name: Run production release tasks
-        run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml --profile release run --rm release
+      - name: Apply production migrations
+        run: >-
+          docker compose --env-file ../.env.production
+          -f ../docker-compose.prod.yml --profile release
+          run --rm release python manage.py migrate --noinput
+      - name: Bootstrap production catalogs
+        run: >-
+          docker compose --env-file ../.env.production
+          -f ../docker-compose.prod.yml --profile release
+          run --rm release python manage.py bootstrap_catalogs
+      - name: Collect production static files
+        run: >-
+          docker compose --env-file ../.env.production
+          -f ../docker-compose.prod.yml --profile release
+          run --rm release python manage.py collectstatic --noinput
       - name: Start production stack
         run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml up -d --build
       - name: Verify production backend health
