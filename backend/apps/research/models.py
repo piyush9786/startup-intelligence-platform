@@ -28,6 +28,13 @@ class ResearchRequest(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="research_requests",
     )
+    source_advisor_job = models.OneToOneField(
+        "startups.StartupAdvisorBriefingJob",
+        on_delete=models.SET_NULL,
+        related_name="automatic_research_request",
+        null=True,
+        blank=True,
+    )
     source_advisor_briefing = models.OneToOneField(
         "startups.StartupAdvisorBriefing",
         on_delete=models.SET_NULL,
