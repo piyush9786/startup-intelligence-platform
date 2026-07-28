@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any, Iterator
+from typing import Any
 
 from .embeddings import (
     EmbeddingBatch,
@@ -19,6 +20,8 @@ from .vector_search import (
     VectorSearchError,
     VectorSearchUnavailableError,
     index_document_extraction,
+)
+from .vector_search import (
     search_document_chunks as _search_document_chunks,
 )
 
