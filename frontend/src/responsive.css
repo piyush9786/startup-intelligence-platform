@@ -1,0 +1,252 @@
+/* Mobile-first safeguards for founder workflows.
+ * These rules intentionally sit after styles.css so existing desktop layouts
+ * remain unchanged while dense workspace modules become usable on phones.
+ */
+
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-grid,
+  .public-preview-grid,
+  .scheme-grid,
+  .filter-grid,
+  .advisor-grid,
+  .capital-grid,
+  .requirements-grid,
+  .funding-grid,
+  .milestone-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .product-sidebar {
+    width: min(18rem, 30vw);
+  }
+}
+
+@media (max-width: 820px) {
+  .product-shell,
+  .workspace-shell,
+  .authenticated-shell {
+    display: block !important;
+    min-height: 100dvh;
+  }
+
+  .product-sidebar {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--border-subtle, rgba(15, 23, 42, 0.12));
+  }
+
+  .sidebar-brand,
+  .sidebar-profile-card,
+  .sidebar-metrics {
+    margin-inline: 0.75rem;
+  }
+
+  .product-navigation {
+    display: flex !important;
+    gap: 0.5rem;
+    padding: 0.75rem !important;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+  }
+
+  .nav-group {
+    display: flex !important;
+    flex: 0 0 auto;
+    gap: 0.35rem;
+    align-items: center;
+    scroll-snap-align: start;
+  }
+
+  .nav-group-label {
+    display: none;
+  }
+
+  .nav-item {
+    flex: 0 0 auto;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.8rem !important;
+    white-space: nowrap;
+  }
+
+  .nav-item-label {
+    display: inline !important;
+  }
+
+  .product-main,
+  .workspace-main,
+  .main-workspace,
+  .page-stack {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .product-topbar,
+  .page-header,
+  .dashboard-hero,
+  .scheme-catalog-heading,
+  .public-header,
+  .public-hero,
+  .public-auth-shell {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .product-topbar,
+  .page-header,
+  .dashboard-content,
+  .page-stack {
+    padding-inline: clamp(0.85rem, 4vw, 1.25rem) !important;
+  }
+
+  .topbar-search,
+  .public-header-actions,
+  .public-hero-actions,
+  .scheme-card-footer,
+  .scheme-card-footer-actions {
+    width: 100%;
+  }
+
+  .public-navigation {
+    display: none !important;
+  }
+
+  .dashboard-grid,
+  .public-preview-grid,
+  .scheme-grid,
+  .filter-grid,
+  .advisor-grid,
+  .capital-grid,
+  .requirements-grid,
+  .funding-grid,
+  .milestone-grid,
+  .public-capability-grid,
+  .public-trust-principles {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .scheme-review-summary,
+  .advisor-quick-facts,
+  .dashboard-metric-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .dashboard-card,
+  .scheme-card,
+  .public-auth-card,
+  .public-workspace-preview {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .table-scroll,
+  .data-table-wrap,
+  .kanban-board,
+  .application-board {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  table {
+    min-width: 42rem;
+  }
+
+  .button,
+  button,
+  input,
+  select,
+  textarea {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+  }
+
+  .modal,
+  .dialog,
+  .journey-dialog,
+  .scheme-detail-panel {
+    width: min(100% - 1rem, 42rem) !important;
+    max-height: calc(100dvh - 1rem) !important;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .nav-item-label {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .scheme-review-summary,
+  .advisor-quick-facts,
+  .dashboard-metric-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .public-header-actions,
+  .public-hero-actions,
+  .scheme-card-footer-actions,
+  .form-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .button,
+  .button-wide,
+  .public-header-actions > *,
+  .public-hero-actions > * {
+    width: 100%;
+  }
+
+  .public-hero,
+  .public-section,
+  .public-final-cta,
+  .public-footer {
+    padding-inline: 1rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
