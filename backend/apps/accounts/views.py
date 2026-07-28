@@ -1,0 +1,117 @@
+from django.conf import settings
+from rest_framework import status
+from rest_framework.permissions import (
+    AllowAny,
+    IsAuthenticated,
+)
+from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+from .serializers import (
+    CurrentUserSerializer,
+    FounderRegistrationSerializer,
+)
+
+
+def set_refresh_cookie(response, refresh_token):
+    max_age = int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
+    response.set_cookie(
+        "refresh_token",
+        refresh_token,
+        max_age=max_age,
+        httponly=True,
+        samesite="Lax",
+        secure=not settings.DEBUG,
+    )
+
+
+class CookieTokenObtainPairView(TokenObtainPairView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_login"
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            refresh_token = response.data.get("refresh")
+            if refresh_token:
+                set_refresh_cookie(response, refresh_token)
+                del response.data["refresh"]
+        return response
+
+
+class CookieTokenRefreshView(TokenRefreshView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_refresh"
+
+    def post(self, request, *args, **kwargs):
+        data = request.data.copy() if hasattr(request.data, "copy") else dict(request.data)
+        if "refresh" not in data and "refresh_token" in request.COOKIES:
+            data["refresh"] = request.COOKIES["refresh_token"]
+
+        serializer = self.get_serializer(data=data)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as exc:
+            raise InvalidToken(exc.args[0]) from exc
+
+        response = Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+        refresh_token = serializer.validated_data.get("refresh")
+        if refresh_token:
+            set_refresh_cookie(response, refresh_token)
+            del response.data["refresh"]
+
+        return response
+
+
+class CookieTokenLogoutView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_logout"
+
+    def post(self, request):
+        refresh_token = request.COOKIES.get("refresh_token")
+        if refresh_token:
+            try:
+                RefreshToken(refresh_token).blacklist()
+            except TokenError:
+                # Logout is intentionally idempotent for expired or already
+                # revoked browser sessions.
+                pass
+        response = Response({"detail": "Logged out successfully."}, status=status.HTTP_200_OK)
+        response.delete_cookie("refresh_token")
+        return response
+
+
+class FounderRegistrationView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_register"
+
+    def post(self, request):
+        serializer = FounderRegistrationSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        return Response(
+            FounderRegistrationSerializer(user).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CurrentUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(
+            CurrentUserSerializer(request.user).data,
+        )

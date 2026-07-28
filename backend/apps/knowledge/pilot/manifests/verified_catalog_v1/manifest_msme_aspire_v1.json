@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "manifest_key": "verified-catalog-msme-aspire-v1",
+  "extractor_version": "v4",
+  "source_document": {
+    "content_hash": "5ef919ac267726c03bfb90594c7481919387c2015765973d704d0020c536b876",
+    "source_name": "Startup India"
+  },
+  "authority": {
+    "canonical_name": "Ministry of Micro, Small and Medium Enterprises",
+    "authority_type": "central_government_ministry",
+    "ministry": "Ministry of Micro, Small and Medium Enterprises",
+    "official_url": "https://msme.gov.in",
+    "aliases": [
+      "Ministry of MSME",
+      "MSME Ministry"
+    ]
+  },
+  "candidates": [
+    {
+      "pilot_key": "aspire",
+      "candidate_id": "3f6e2e5f-f30e-4b4e-8a27-25ad1bae1d29",
+      "expected_title": "Aspire - A Scheme for Promotion of Innovation, Rural Industries",
+      "canonical_title": "A Scheme for Promotion of Innovation, Rural Industries and Entrepreneurship (ASPIRE)",
+      "classification": "canonical",
+      "curation": {
+        "canonical_summary": "ASPIRE supports entrepreneurship and innovation in rural and agriculture-linked industries by enabling Livelihood Business Incubators and related incubation and skill-development capacity.",
+        "canonical_objective": "Generate employment through scalable micro-enterprise creation, strengthen skills in new technologies, provide skilled human capital to nearby industrial clusters, and improve MSME competitiveness through innovation.",
+        "canonical_eligibility_text": "Eligible implementing organisations include Central or State Government agencies and institutions, existing Government training centres, industry associations, academic institutions, and experienced not-for-profit private institutions seeking to establish a Livelihood Business Incubator.",
+        "official_url": "https://aspire.msme.gov.in/ASPIRE/AFHome.aspx",
+        "application_url": "https://aspire.msme.gov.in/ASPIRE/AFHome.aspx",
+        "canonical_support_types": [
+          "incubation_support",
+          "entrepreneurship_development",
+          "skill_development"
+        ],
+        "canonical_categories": [
+          "rural_enterprise",
+          "agri_innovation",
+          "msme"
+        ],
+        "canonical_benefits": [],
+        "canonical_required_documents": [],
+        "canonical_application_steps": [
+          {
+            "step_number": 1,
+            "instruction": "Review the current ASPIRE programme requirements and submit the applicable proposal through the official ASPIRE portal.",
+            "url": "https://aspire.msme.gov.in/ASPIRE/AFHome.aspx"
+          }
+        ]
+      },
+      "eligibility_rules": {
+        "approve": [],
+        "reject": [
+          "c25eed27-f506-4012-a656-60cee31ee6ba"
+        ]
+      },
+      "structured_reviews": {
+        "benefits": {
+          "approve": [],
+          "reject": []
+        },
+        "required_documents": {
+          "approve": [],
+          "reject": []
+        },
+        "application_steps": {
+          "approve": [],
+          "reject": [
+            "6877b36a-a5c2-4042-a0b2-09db1f866ae3"
+          ]
+        }
+      }
+    }
+  ]
+}

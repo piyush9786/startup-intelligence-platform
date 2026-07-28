@@ -1,0 +1,208 @@
+name: startup-intelligence-prod
+
+x-backend-prod-common: &backend-prod-common
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+  env_file: .env.production
+  environment:
+    DJANGO_SETTINGS_MODULE: config.settings.production
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    qdrant:
+      condition: service_healthy
+  restart: always
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: always
+
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: always
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.2
+    volumes:
+      - qdrant_prod_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 3 bash -c '</dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: always
+
+  neo4j:
+    image: neo4j:5.26-community
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["apoc"]'
+    volumes:
+      - neo4j_prod_data:/data
+      - neo4j_prod_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: always
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_prod_data:/data
+    restart: always
+
+  minio_init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    env_file: .env.production
+    depends_on:
+      - minio
+    entrypoint: >-
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY; do sleep 2; done;
+      mc mb --ignore-existing local/$$MINIO_BUCKET_RAW;
+      mc mb --ignore-existing local/$${MINIO_BUCKET_STARTUP_EVIDENCE:-startup-eligibility-evidence};
+      mc mb --ignore-existing local/$${MINIO_BUCKET_PROCESSED:-startup-processed-documents};
+      exit 0;
+      "
+
+  ollama:
+    image: ollama/ollama:0.30.8
+    # GPU support: use docker-compose.gpu.yml override
+    # docker compose -f docker-compose.prod.yml -f docker-compose.gpu.yml up
+    environment:
+      OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-4096}
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-1}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-1}
+      OLLAMA_FLASH_ATTENTION: ${OLLAMA_FLASH_ATTENTION:-1}
+      OLLAMA_KV_CACHE_TYPE: ${OLLAMA_KV_CACHE_TYPE:-q8_0}
+    volumes:
+      - ollama_prod_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: always
+
+  ollama_init:
+    image: ollama/ollama:0.30.8
+    env_file: .env.production
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: >-
+      model="$${STARTUP_ADVISOR_LLM_MODEL:-qwen3:4b}";
+      echo "Ensuring Ollama generation model: $$model";
+      ollama pull "$$model";
+      case "$${CHATBOT_LLM_ENABLED:-true}" in
+        1|true|TRUE|yes|YES)
+          chatbot_model="$${CHATBOT_LLM_MODEL:-$$model}";
+          if [ "$$chatbot_model" != "$$model" ]; then
+            echo "Ensuring Ollama chatbot model: $$chatbot_model";
+            ollama pull "$$chatbot_model";
+          fi
+          ;;
+      esac;
+      if [ "$${STARTUP_ADVISOR_RAG_ENABLED:-false}" = "true" ] || [ "$${RESEARCH_VECTOR_RAG_ENABLED:-false}" = "true" ]; then
+        embedding_model="$${STARTUP_ADVISOR_EMBEDDING_MODEL:-embeddinggemma}";
+        echo "Ensuring Ollama embedding model: $$embedding_model";
+        ollama pull "$$embedding_model";
+      fi
+    restart: "no"
+
+  mailpit:
+    image: axllent/mailpit:v1.30.0
+    restart: always
+
+  release:
+    <<: *backend-prod-common
+    profiles: ["release"]
+    command: >-
+      bash -c "
+      python manage.py migrate --noinput &&
+      python manage.py bootstrap_catalogs &&
+      python manage.py collectstatic --noinput
+      "
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - ml_models_volume:/app/ml_models
+
+  backend:
+    <<: *backend-prod-common
+    command: /app/scripts/start-prod.sh
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - ml_models_volume:/app/ml_models
+
+  celery-worker:
+    <<: *backend-prod-common
+    command: >-
+      celery -A config worker
+      --loglevel=info
+      --concurrency=${CELERY_WORKER_CONCURRENCY:-1}
+    volumes:
+      - media_volume:/app/media
+      - ml_models_volume:/app/ml_models
+
+  celery-beat:
+    <<: *backend-prod-common
+    command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    depends_on:
+      - backend
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:
+  qdrant_prod_data:
+  neo4j_prod_data:
+  neo4j_prod_logs:
+  minio_prod_data:
+  ollama_prod_data:
+  static_volume:
+  media_volume:
+  ml_models_volume:

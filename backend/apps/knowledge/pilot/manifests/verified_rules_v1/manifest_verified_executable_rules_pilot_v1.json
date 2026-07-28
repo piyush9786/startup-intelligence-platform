@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "manifest_key": "verified-executable-rules-pilot-v1",
+  "revisions": [
+    {
+      "pilot_key": "big",
+      "scheme_id": "61e34041-67ae-441c-8c4d-94f1d4cb6799",
+      "source_publication_id": "b621d201-1817-4045-9843-d939eb3722f2",
+      "expected_current_version_id": "01b8c111-e18b-4ba3-a44c-f759d331b74e",
+      "expected_current_version_number": 1,
+      "expected_current_content_hash": "9b8ba318bf90d910263f3ac2276b2e53f1af40e564cc7bafe61ea9f3ca2e693f",
+      "rules": [
+        {
+          "rule_key": "startup_or_individual_entrepreneur",
+          "evaluation_mode": "executable",
+          "field_path": "eligible_entity_type",
+          "operator": "contains_any",
+          "expected_value": [
+            "startup",
+            "entrepreneur",
+            "individual"
+          ],
+          "mandatory": true,
+          "evidence_text": "Individual entrepreneurs and startups may apply.",
+          "evidence_page": 43
+        },
+        {
+          "rule_key": "incubator_association",
+          "evaluation_mode": "manual_verification",
+          "field_path": "manual_verification.big_incubator_association",
+          "operator": "exists",
+          "expected_value": null,
+          "mandatory": true,
+          "evidence_text": "The applicant must be incubated in an incubator, which may or may not be supported by BIRAC.",
+          "evidence_page": 43
+        }
+      ]
+    },
+    {
+      "pilot_key": "nidhi_ssp",
+      "scheme_id": "eef06f63-8523-4c59-aae6-e6231a62361c",
+      "source_publication_id": "30f1a4a4-ebbc-49fc-af2a-1af18ba3a8b2",
+      "expected_current_version_id": "473c9ccf-98a8-4f27-8552-617e72504b4d",
+      "expected_current_version_number": 1,
+      "expected_current_content_hash": "0731df2a02528ca79db2aa0ef6ab65e6c7d3bcd748752b51773d1d2a0f2715f4",
+      "rules": [
+        {
+          "rule_key": "startup_applicant",
+          "evaluation_mode": "executable",
+          "field_path": "eligible_entity_type",
+          "operator": "contains_any",
+          "expected_value": [
+            "startup"
+          ],
+          "mandatory": true,
+          "evidence_text": "The programme supports eligible incubatee startups.",
+          "evidence_page": 38
+        },
+        {
+          "rule_key": "india_company_registration",
+          "evaluation_mode": "manual_verification",
+          "field_path": "manual_verification.nidhi_ssp_india_company_registration",
+          "operator": "exists",
+          "expected_value": null,
+          "mandatory": true,
+          "evidence_text": "The applicant must be a company registered in India.",
+          "evidence_page": 38
+        },
+        {
+          "rule_key": "incubator_association_months",
+          "evaluation_mode": "manual_verification",
+          "field_path": "manual_verification.nidhi_ssp_incubator_association_months",
+          "operator": "exists",
+          "expected_value": null,
+          "mandatory": true,
+          "evidence_text": "The applicant should have completed at least three months of association with the participating incubator.",
+          "evidence_page": 38
+        },
+        {
+          "rule_key": "customer_validated_usp",
+          "evaluation_mode": "manual_verification",
+          "field_path": "manual_verification.nidhi_ssp_customer_validated_usp",
+          "operator": "exists",
+          "expected_value": null,
+          "mandatory": true,
+          "evidence_text": "The startup should have customer-validated clarity on its unique selling proposition.",
+          "evidence_page": 38
+        },
+        {
+          "rule_key": "not_foreign_subsidiary",
+          "evaluation_mode": "manual_verification",
+          "field_path": "manual_verification.nidhi_ssp_not_foreign_subsidiary",
+          "operator": "exists",
+          "expected_value": null,
+          "mandatory": true,
+          "evidence_text": "The startup must not be an Indian subsidiary of a foreign company or multinational corporation.",
+          "evidence_page": 38
+        },
+        {
+          "rule_key": "indian_promoter_shareholding",
+          "evaluation_mode": "manual_verification",
+          "field_path": "manual_verification.nidhi_ssp_indian_promoter_shareholding",
+          "operator": "exists",
+          "expected_value": null,
+          "mandatory": true,
+          "evidence_text": "Indian promoters must hold at least 51 percent of the startup shareholding.",
+          "evidence_page": 38
+        }
+      ]
+    }
+  ]
+}
