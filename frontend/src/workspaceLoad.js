@@ -24,12 +24,13 @@ function warningLabels(entries, results) {
     .map(({ label, result }) => {
       const status = responseStatus(result.reason);
       const detail = result.reason?.response?.data?.detail;
+      const message = result.reason?.message;
       const statusText = status
         ? `HTTP ${status}`
         : "request failed";
-      return detail
-        ? `${label} (${statusText}: ${detail})`
-        : `${label} (${statusText})`;
+      if (detail) return `${label} (${statusText}: ${detail})`;
+      if (message) return `${label} (${statusText}: ${message})`;
+      return `${label} (${statusText})`;
     });
 }
 

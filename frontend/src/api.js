@@ -38,15 +38,21 @@ export function trustedApiNextPath(nextUrl) {
   const apiBase = new URL(apiRoot, `${browserOrigin}/`);
   const resolved = new URL(nextUrl, apiBase);
   const apiPrefix = apiBase.pathname.replace(/\/+$/, "");
+
+  /*
+   * DRF builds absolute pagination links from the request Host header.
+   * Behind Vite, Nginx, Docker, or a load balancer that host may be
+   * localhost:8000, backend:8000, or the public API hostname while the browser
+   * is using a different origin. We never navigate to the supplied origin:
+   * only a path inside the configured API prefix is returned and Axios rebases
+   * it onto the trusted client base URL.
+   */
   const isInsideApi =
-    resolved.origin === apiBase.origin
-    && (
-      resolved.pathname === apiPrefix
-      || resolved.pathname.startsWith(`${apiPrefix}/`)
-    );
+    resolved.pathname === apiPrefix
+    || resolved.pathname.startsWith(`${apiPrefix}/`);
 
   if (!isInsideApi) {
-    throw new Error("The API returned an untrusted pagination URL.");
+    throw new Error("The API returned a pagination path outside the API root.");
   }
 
   const relativePath = resolved.pathname.slice(apiPrefix.length) || "/";
@@ -416,6 +422,7 @@ export async function listExternalSchemes() {
   let params = {
     catalog_scope: "all",
     ordering: "scheme_name",
+    page_size: 200,
   };
   let pageCount = 0;
 
@@ -436,6 +443,7 @@ export async function listExternalCapitalSupport() {
   let nextUrl = "/knowledge/external-capital-support/";
   let params = {
     ordering: "support_name",
+    page_size: 200,
   };
   let pageCount = 0;
 
@@ -457,6 +465,7 @@ export async function listExternalCertificationRequirements() {
     "/knowledge/external-certification-requirements/";
   let params = {
     ordering: "certificate_name",
+    page_size: 200,
   };
   let pageCount = 0;
 
@@ -478,6 +487,7 @@ export async function listSchemes() {
   let params = {
     lifecycle_status: "active",
     ordering: "canonical_name",
+    page_size: 200,
   };
   let pageCount = 0;
 

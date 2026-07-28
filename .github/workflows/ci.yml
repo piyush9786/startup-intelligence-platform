@@ -57,6 +57,8 @@ jobs:
           STARTUP_ADVISOR_RAG_ENABLED=false
           WEB_SEARCH_ENABLED=false
           EOF
+      - name: Run production release tasks
+        run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml --profile release run --rm release
       - name: Start production stack
         run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml up -d --build
       - name: Verify production backend health

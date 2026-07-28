@@ -90,6 +90,7 @@ describe("external scheme API client", () => {
         params: {
           catalog_scope: "all",
           ordering: "scheme_name",
+          page_size: 200,
         },
       },
     );
@@ -113,7 +114,7 @@ describe("external scheme API client", () => {
     });
 
     await expect(listExternalSchemes()).rejects.toThrow(
-      "untrusted pagination URL",
+      "The API returned a pagination path outside the API root.",
     );
     expect(mocks.client.get).toHaveBeenCalledTimes(1);
   });
