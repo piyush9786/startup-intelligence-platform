@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { autofillStartupProfileFromDocument } from "./api";
 import { humanizeApiError } from "./advisor";
+import FounderOperationsPanel from "./FounderOperationsPanel";
 
 const FIELD_LABELS = {
   startup_name: "Startup name",
@@ -43,9 +44,9 @@ export default function DocumentIntakeWorkspace({
 
       // Pre-select high confidence suggestions (>= 90%)
       const initialSelection = {};
-      (result.suggestions || []).forEach((s) => {
-        if (s.confidence >= 90) {
-          initialSelection[s.field] = true;
+      (result.suggestions || []).forEach((suggestion) => {
+        if (suggestion.confidence >= 90) {
+          initialSelection[suggestion.field] = true;
         }
       });
       setSelectedFields(initialSelection);
@@ -57,17 +58,17 @@ export default function DocumentIntakeWorkspace({
   }
 
   function toggleFieldSelection(fieldKey) {
-    setSelectedFields((prev) => ({
-      ...prev,
-      [fieldKey]: !prev[fieldKey],
+    setSelectedFields((previous) => ({
+      ...previous,
+      [fieldKey]: !previous[fieldKey],
     }));
   }
 
   function handleSelectHighConfidence() {
     const updated = {};
-    (extractionResult?.suggestions || []).forEach((s) => {
-      if (s.confidence >= 85) {
-        updated[s.field] = true;
+    (extractionResult?.suggestions || []).forEach((suggestion) => {
+      if (suggestion.confidence >= 85) {
+        updated[suggestion.field] = true;
       }
     });
     setSelectedFields(updated);
@@ -78,10 +79,10 @@ export default function DocumentIntakeWorkspace({
     const confirmedPayload = {};
     const autofilledKeys = [];
 
-    (extractionResult.suggestions || []).forEach((s) => {
-      if (selectedFields[s.field]) {
-        confirmedPayload[s.field] = s.value;
-        autofilledKeys.push(s.field);
+    (extractionResult.suggestions || []).forEach((suggestion) => {
+      if (selectedFields[suggestion.field]) {
+        confirmedPayload[suggestion.field] = suggestion.value;
+        autofilledKeys.push(suggestion.field);
       }
     });
 
@@ -100,21 +101,30 @@ export default function DocumentIntakeWorkspace({
     await onApplyConfirmedFacts(confirmedPayload);
   }
 
+  const suggestionCount = useMemo(
+    () => extractionResult?.suggestions?.length || 0,
+    [extractionResult],
+  );
+
   return (
     <div className="document-intake-workspace">
+      <FounderOperationsPanel startupProfileId={profile?.id} />
+
       <div className="intake-intro-banner">
         <div className="intake-intro-icon" aria-hidden="true">📄</div>
         <div>
           <h2>AI Document Intake</h2>
           <p>
-            Upload pitch decks, executive summaries, incorporation certificates, or Udyam MSME documents to extract structured facts with page-level text evidence.
-            Nothing is saved until you review, select, and apply suggestions.
+            Upload pitch decks, executive summaries, incorporation certificates,
+            or Udyam MSME documents to extract structured facts with page-level
+            text evidence. Nothing is saved until you review, select, and apply
+            suggestions.
           </p>
         </div>
       </div>
 
       <section className="dashboard-card upload-intake-card">
-        <h2>Upload startup document</h2>
+        <h2>Upload startup document for fact extraction</h2>
         <form onSubmit={handleExtract} className="intake-form">
           <div className="intake-form-grid">
             <label className="form-field">
@@ -122,7 +132,7 @@ export default function DocumentIntakeWorkspace({
               <input
                 type="file"
                 accept=".pdf,.txt"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                onChange={(event) => setFile(event.target.files?.[0] || null)}
               />
             </label>
 
@@ -130,12 +140,18 @@ export default function DocumentIntakeWorkspace({
               <span>Document type hint</span>
               <select
                 value={documentType}
-                onChange={(e) => setDocumentType(e.target.value)}
+                onChange={(event) => setDocumentType(event.target.value)}
               >
                 <option value="auto">Auto-detect</option>
-                <option value="incorporation_certificate">Incorporation certificate</option>
-                <option value="udyam_registration">Udyam MSME registration</option>
-                <option value="pitch_deck">Pitch deck / Executive summary</option>
+                <option value="incorporation_certificate">
+                  Incorporation certificate
+                </option>
+                <option value="udyam_registration">
+                  Udyam MSME registration
+                </option>
+                <option value="pitch_deck">
+                  Pitch deck / Executive summary
+                </option>
               </select>
             </label>
           </div>
@@ -163,24 +179,30 @@ export default function DocumentIntakeWorkspace({
               <span className="section-kicker">EXTRACTED EVIDENCE</span>
               <h2>Document summary</h2>
               <p>
-                <strong>{extractionResult.document.filename}</strong> — {extractionResult.document.page_count} pages parsed.
+                <strong>{extractionResult.document.filename}</strong>
+                {" — "}
+                {extractionResult.document.page_count} pages parsed.
               </p>
             </div>
             <span className="status-pill status-pill-pass">
-              Detected: {extractionResult.document_type.value} ({extractionResult.document_type.confidence}%)
+              Detected: {extractionResult.document_type.value}
+              {" "}
+              ({extractionResult.document_type.confidence}%)
             </span>
           </div>
 
           {extractionResult.warnings?.length > 0 && (
             <div className="notice notice-warning">
-              {extractionResult.warnings.map((w, idx) => (
-                <p key={idx}>{w}</p>
+              {extractionResult.warnings.map((warning) => (
+                <p key={warning}>{warning}</p>
               ))}
             </div>
           )}
 
           <div className="suggestions-toolbar">
-            <h3>Extracted suggestions & conflict review ({extractionResult.suggestions?.length || 0})</h3>
+            <h3>
+              Extracted suggestions & conflict review ({suggestionCount})
+            </h3>
             <div className="toolbar-actions">
               <button
                 className="button button-secondary button-small"
@@ -194,21 +216,35 @@ export default function DocumentIntakeWorkspace({
 
           <div className="suggestions-list">
             {(extractionResult.suggestions || []).map((suggestion) => {
-              const fieldLabel = FIELD_LABELS[suggestion.field] || suggestion.field;
-              const currentValue = profile?.[suggestion.field] ?? profile?.profile_data?.[suggestion.field];
+              const fieldLabel =
+                FIELD_LABELS[suggestion.field] || suggestion.field;
+              const currentValue =
+                profile?.[suggestion.field] ??
+                profile?.profile_data?.[suggestion.field];
               const isSelected = Boolean(selectedFields[suggestion.field]);
               const formattedExtracted = Array.isArray(suggestion.value)
                 ? suggestion.value.join(", ")
                 : String(suggestion.value);
-              const formattedCurrent = currentValue !== null && currentValue !== undefined && currentValue !== ""
-                ? (Array.isArray(currentValue) ? currentValue.join(", ") : String(currentValue))
-                : "Not set";
-              const isConflict = formattedCurrent !== "Not set" && formattedCurrent !== formattedExtracted;
+              const formattedCurrent =
+                currentValue !== null &&
+                currentValue !== undefined &&
+                currentValue !== ""
+                  ? Array.isArray(currentValue)
+                    ? currentValue.join(", ")
+                    : String(currentValue)
+                  : "Not set";
+              const isConflict =
+                formattedCurrent !== "Not set" &&
+                formattedCurrent !== formattedExtracted;
 
               return (
                 <article
                   key={suggestion.field}
-                  className={`suggestion-card ${isSelected ? "suggestion-selected" : ""} ${isConflict ? "suggestion-conflict" : ""}`}
+                  className={[
+                    "suggestion-card",
+                    isSelected ? "suggestion-selected" : "",
+                    isConflict ? "suggestion-conflict" : "",
+                  ].join(" ").trim()}
                 >
                   <div className="suggestion-checkbox-column">
                     <input
@@ -224,10 +260,19 @@ export default function DocumentIntakeWorkspace({
                       <label htmlFor={`check-${suggestion.field}`}>
                         <strong>{fieldLabel}</strong>
                       </label>
-                      <span className={`confidence-pill ${suggestion.confidence >= 90 ? "conf-high" : "conf-med"}`}>
+                      <span
+                        className={[
+                          "confidence-pill",
+                          suggestion.confidence >= 90
+                            ? "conf-high"
+                            : "conf-med",
+                        ].join(" ")}
+                      >
                         {suggestion.confidence}% confidence
                       </span>
-                      {isConflict && <span className="badge badge-conflict">Conflict</span>}
+                      {isConflict && (
+                        <span className="badge badge-conflict">Conflict</span>
+                      )}
                     </div>
 
                     <div className="value-comparison-grid">
@@ -246,7 +291,9 @@ export default function DocumentIntakeWorkspace({
                     {suggestion.evidence && (
                       <div className="evidence-excerpt-box">
                         <small>
-                          Evidence (Page {suggestion.evidence.page_number} — {suggestion.evidence.heading}):
+                          Evidence (Page {suggestion.evidence.page_number}
+                          {" — "}
+                          {suggestion.evidence.heading}):
                         </small>
                         <blockquote>“{suggestion.evidence.text}”</blockquote>
                       </div>
