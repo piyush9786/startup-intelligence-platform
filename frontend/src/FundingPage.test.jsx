@@ -28,13 +28,31 @@ const sampleSchemes = [
   },
 ];
 
+const externalCapitalSupport = [
+  {
+    id: "capital-101",
+    support_name: "External Working Capital Support",
+    support_type: "Loan",
+    funding_category: "Working capital",
+    implementing_agency: "Example Bank",
+    raw_minimum_amount: "INR 100000",
+    raw_maximum_amount: "INR 500000",
+    interest_rate_text: "As per lender policy",
+    collateral_required_text: "No collateral below the published threshold",
+    repayment_required_text: "Monthly repayment",
+    claimed_scheme_status: "Active",
+    verification_label: "Needs review",
+    disclaimer: "Verify the latest terms with the responsible authority.",
+  },
+];
+
 describe("FundingPage component", () => {
   test("renders funding page title and scheme items", () => {
     render(
       <FundingPage
         onOpenScheme={vi.fn()}
         schemes={sampleSchemes}
-      />
+      />,
     );
 
     expect(
@@ -52,7 +70,7 @@ describe("FundingPage component", () => {
       <FundingPage
         onOpenScheme={vi.fn()}
         schemes={sampleSchemes}
-      />
+      />,
     );
 
     const loanTab = screen.getByRole("button", { name: "Loans & credit" });
@@ -60,5 +78,26 @@ describe("FundingPage component", () => {
 
     expect(screen.getByText("Startup Working Capital Loan")).toBeInTheDocument();
     expect(screen.queryByText("Startup India Seed Fund")).not.toBeInTheDocument();
+  });
+
+  test("uses the capital-support API field names", () => {
+    render(
+      <FundingPage
+        externalCapitalSupport={externalCapitalSupport}
+        onOpenScheme={vi.fn()}
+        schemes={[]}
+      />,
+    );
+
+    expect(
+      screen.getByText("No collateral below the published threshold"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Monthly repayment")).toBeInTheDocument();
+    expect(
+      screen.getByText("Verify the latest terms with the responsible authority."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /official portal/i }),
+    ).not.toBeInTheDocument();
   });
 });
