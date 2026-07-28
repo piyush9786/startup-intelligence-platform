@@ -70,11 +70,31 @@ jobs:
           STARTUP_ADVISOR_RAG_ENABLED=false
           WEB_SEARCH_ENABLED=false
           EOF
-      - name: Apply production migrations
+      - name: Build production release image
         run: >-
           docker compose --env-file ../.env.production
           -f ../docker-compose.prod.yml --profile release
-          run --rm release python manage.py migrate --noinput
+          build release backend
+      - name: Validate production container settings
+        run: >-
+          docker compose --env-file ../.env.production
+          -f ../docker-compose.prod.yml --profile release
+          run --rm --no-deps release python manage.py check --deploy
+      - name: Apply production migrations
+        run: |
+          set -o pipefail
+          docker compose --env-file ../.env.production \
+            -f ../docker-compose.prod.yml --profile release \
+            run --rm release python manage.py migrate --noinput \
+            2>&1 | tee ../production-migration.log
+      - name: Upload production migration diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-migration-log
+          path: production-migration.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Bootstrap production catalogs
         run: >-
           docker compose --env-file ../.env.production
