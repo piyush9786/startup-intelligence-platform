@@ -66,7 +66,7 @@ class ComplianceRecordViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def summary(self, request):
-        records = self.get_queryset()
+        records = self.filter_queryset(self.get_queryset())
         today = timezone.localdate()
         horizon = today + timedelta(days=30)
         return Response(
@@ -174,9 +174,13 @@ class ConsultantProfileViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return self.queryset
+        directory_record = Q(
+            is_public=True,
+            verification_status=ConsultantProfile.VerificationStatus.VERIFIED,
+        )
         return (
             ConsultantProfile.objects.select_related("user")
-            .filter(Q(is_public=True) | Q(user=self.request.user))
+            .filter(directory_record | Q(user=self.request.user))
             .distinct()
         )
 
@@ -300,6 +304,17 @@ class ApplicationWorkflowViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ApplicationWorkflowSerializer
     queryset = SchemeApplicationTracker.objects.none()
+    filterset_fields = (
+        "startup_profile",
+        "stage",
+        "scheme_version",
+    )
+    ordering_fields = (
+        "created_at",
+        "updated_at",
+        "submitted_at",
+        "stage",
+    )
 
     ALLOWED_TRANSITIONS = {
         SchemeApplicationTracker.Stage.DRAFT: {
