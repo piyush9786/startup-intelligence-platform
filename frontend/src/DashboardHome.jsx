@@ -344,7 +344,7 @@ function AdvisorSummary({
           </p>
           <button
             className="button button-primary button-wide"
-            disabled={generating || aiReadinessLoading || !aiReady}
+            disabled={generating || aiReadinessLoading}
             onClick={onGenerate}
             type="button"
           >
@@ -353,7 +353,7 @@ function AdvisorSummary({
                 ? "Checking AI model…"
                 : aiReady
                   ? "Generate founder guidance"
-                  : "AI model unavailable")}
+                  : "Retry AI readiness")}
           </button>
         </>
       )}

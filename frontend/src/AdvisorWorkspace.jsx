@@ -48,8 +48,7 @@ export function AdvisorWorkspace({
             disabled={
               generating ||
               loading ||
-              aiReadinessLoading ||
-              !aiReady
+              aiReadinessLoading
             }
             onClick={onGenerate}
             type="button"
@@ -59,7 +58,7 @@ export function AdvisorWorkspace({
                 ? "Checking AI model…"
                 : aiReady
                   ? "Generate new guidance"
-                  : "AI model unavailable")}
+                  : "Retry AI readiness")}
           </button>
         }
       />

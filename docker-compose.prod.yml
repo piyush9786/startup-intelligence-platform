@@ -126,11 +126,15 @@ services:
       model="$${STARTUP_ADVISOR_LLM_MODEL:-qwen3:4b}";
       echo "Ensuring Ollama generation model: $$model";
       ollama pull "$$model";
-      chatbot_model="$${CHATBOT_LLM_MODEL:-$$model}";
-      if [ "$$chatbot_model" != "$$model" ]; then
-        echo "Ensuring Ollama chatbot model: $$chatbot_model";
-        ollama pull "$$chatbot_model";
-      fi;
+      case "$${CHATBOT_LLM_ENABLED:-true}" in
+        1|true|TRUE|yes|YES)
+          chatbot_model="$${CHATBOT_LLM_MODEL:-$$model}";
+          if [ "$$chatbot_model" != "$$model" ]; then
+            echo "Ensuring Ollama chatbot model: $$chatbot_model";
+            ollama pull "$$chatbot_model";
+          fi
+          ;;
+      esac;
       if [ "$${STARTUP_ADVISOR_RAG_ENABLED:-false}" = "true" ] || [ "$${RESEARCH_VECTOR_RAG_ENABLED:-false}" = "true" ]; then
         embedding_model="$${STARTUP_ADVISOR_EMBEDDING_MODEL:-embeddinggemma}";
         echo "Ensuring Ollama embedding model: $$embedding_model";
@@ -158,15 +162,6 @@ services:
 
   backend:
     <<: *backend-prod-common
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
-      ollama_init:
-        condition: service_completed_successfully
     command: /app/scripts/start-prod.sh
     volumes:
       - static_volume:/app/staticfiles
@@ -175,15 +170,6 @@ services:
 
   celery-worker:
     <<: *backend-prod-common
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
-      ollama_init:
-        condition: service_completed_successfully
     command: >-
       celery -A config worker
       --loglevel=info

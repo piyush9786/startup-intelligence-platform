@@ -75,12 +75,16 @@ function normalizedFacetValue(value) {
 function matchesFacet(values, selected) {
   if (selected === "all") return true;
 
-  const collection = Array.isArray(values)
-    ? values.filter(Boolean)
-    : [];
+  const collection = (
+    Array.isArray(values)
+      ? values
+      : values === null || values === undefined || values === ""
+        ? []
+        : [values]
+  ).filter(Boolean);
 
-  // An empty structured list means the source did not restrict this facet.
-  if (!collection.length) return true;
+  // Missing structured metadata is unknown, not a confirmed facet match.
+  if (!collection.length) return false;
 
   const expected = normalizedFacetValue(selected);
   return collection.some((value) => {
@@ -91,6 +95,16 @@ function matchesFacet(values, selected) {
       expected.includes(candidate)
     );
   });
+}
+
+function facetValues(...values) {
+  return values.flatMap((value) =>
+    Array.isArray(value)
+      ? value
+      : value === null || value === undefined || value === ""
+        ? []
+        : [value],
+  );
 }
 
 function ExternalSchemeCard({ onOpen, scheme }) {
@@ -281,7 +295,10 @@ export default function SchemeExplorerPage({
 
       map.set(String(schemeId), {
         rank: recommendation.rank ?? null,
-        svmScore: finiteNumber(recommendation.svm_score),
+        svmScore: finiteNumber(
+          recommendation.svm_score ??
+            recommendation.score_breakdown?.svm_score,
+        ),
       });
     });
 
@@ -334,41 +351,94 @@ export default function SchemeExplorerPage({
     selectedType,
   ]);
 
+  const facetFilteredExternal = useMemo(() => {
+    return (searchedExternal || []).filter((record) => {
+      if (
+        selectedSector !== "All Sectors" &&
+        !matchesFacet(
+          facetValues(record.sector, record.industry),
+          selectedSector,
+        )
+      ) {
+        return false;
+      }
+
+      if (
+        selectedStage !== "all" &&
+        !matchesFacet(record.startup_stage, selectedStage)
+      ) {
+        return false;
+      }
+
+      if (
+        selectedState !== "all" &&
+        !matchesFacet(
+          facetValues(record.state, record.central_state),
+          selectedState,
+        )
+      ) {
+        return false;
+      }
+
+      if (
+        selectedType !== "all" &&
+        !matchesFacet(
+          facetValues(
+            record.funding_type,
+            record.financial_instrument,
+            record.support_type,
+          ),
+          selectedType,
+        )
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    searchedExternal,
+    selectedSector,
+    selectedStage,
+    selectedState,
+    selectedType,
+  ]);
+
   let visibleCanonical = facetFilteredCanonical;
-  let visibleExternal = searchedExternal;
+  let visibleExternal = facetFilteredExternal;
 
   if (filter === "verified") {
     visibleCanonical = facetFilteredCanonical.filter(
       (scheme) =>
         currentSchemeVersion(scheme)?.verification_status === "verified",
     );
-    visibleExternal = searchedExternal.filter(
+    visibleExternal = facetFilteredExternal.filter(
       (scheme) => externalSchemeCatalogStatus(scheme) === "reviewed",
     );
   } else if (filter === "merged") {
     visibleCanonical = [];
-    visibleExternal = searchedExternal.filter(
+    visibleExternal = facetFilteredExternal.filter(
       (scheme) => externalSchemeCatalogStatus(scheme) === "merged",
     );
   } else if (filter === "unavailable") {
     visibleCanonical = [];
-    visibleExternal = searchedExternal.filter(
+    visibleExternal = facetFilteredExternal.filter(
       (scheme) => externalSchemeCatalogStatus(scheme) === "unavailable",
     );
   } else if (filter === "needs-review") {
     visibleCanonical = [];
-    visibleExternal = searchedExternal.filter(
+    visibleExternal = facetFilteredExternal.filter(
       (scheme) => externalSchemeCatalogStatus(scheme) === "needs_review",
     );
   } else if (filter === "funding") {
     visibleCanonical = facetFilteredCanonical.filter(isFundingScheme);
-    visibleExternal = searchedExternal.filter((scheme) => {
+    visibleExternal = facetFilteredExternal.filter((scheme) => {
       const status = externalSchemeCatalogStatus(scheme);
       return status !== "merged" && status !== "unavailable" && isExternalFundingScheme(scheme);
     });
   } else if (filter === "loans") {
     visibleCanonical = facetFilteredCanonical.filter(isLoanScheme);
-    visibleExternal = searchedExternal.filter((scheme) => {
+    visibleExternal = facetFilteredExternal.filter((scheme) => {
       const status = externalSchemeCatalogStatus(scheme);
       return status !== "merged" && status !== "unavailable" && isExternalLoanScheme(scheme);
     });
