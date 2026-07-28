@@ -30,18 +30,37 @@ export async function createTrackerApplication(data) {
 
 export async function updateTrackerStage(id, stage, notes = "", ref = "") {
   const session = getSession();
-  const body = { stage };
-  if (notes) body.notes = notes;
-  if (ref) body.submission_reference = ref;
-  if (stage === "submitted") body.submitted_at = new Date().toISOString();
+  const transition = await fetch(
+    buildPlatformUrl(`/api/v1/application-workflows/${id}/transition/`),
+    {
+      method: "POST",
+      headers: authHeaders(session),
+      body: JSON.stringify({ stage, note: notes }),
+    },
+  );
+  if (!transition.ok) {
+    throw new Error("Failed to update application stage");
+  }
 
-  const res = await fetch(buildPlatformUrl(`/api/v1/tracker-applications/${id}/`), {
-    method: "PATCH",
-    headers: authHeaders(session),
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error("Failed to update application stage");
-  return res.json();
+  const transitioned = await transition.json();
+  if (!ref) return transitioned;
+
+  const referenceUpdate = await fetch(
+    buildPlatformUrl(`/api/v1/tracker-applications/${id}/`),
+    {
+      method: "PATCH",
+      headers: authHeaders(session),
+      body: JSON.stringify({ submission_reference: ref }),
+    },
+  );
+  if (!referenceUpdate.ok) {
+    throw new Error("Stage changed, but the submission reference was not saved");
+  }
+
+  return {
+    ...transitioned,
+    submission_reference: ref,
+  };
 }
 
 export async function generateSchemeProposal(id) {

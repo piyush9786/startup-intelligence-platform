@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import AppShell from "./AppShell.jsx";
 import DashboardHome from "./DashboardHome.jsx";
+import FounderOperationsWorkspacePage, {
+  FounderToolsLauncher,
+} from "./FounderOperationsWorkspacePage.jsx";
 import PublicEntry from "./PublicEntry.jsx";
 import { resetAccountScopedQueries } from "./queryClient";
 import {
@@ -12,6 +16,7 @@ import {
 export { DashboardHome };
 
 export default function App() {
+  const location = useLocation();
   const [authenticated, setAuthenticated] = useState(
     Boolean(getSession()?.access),
   );
@@ -31,6 +36,11 @@ export default function App() {
     };
   }, []);
 
+  function handleSignedOut() {
+    resetAccountScopedQueries();
+    setAuthenticated(false);
+  }
+
   if (!authenticated) {
     return (
       <PublicEntry
@@ -42,12 +52,18 @@ export default function App() {
     );
   }
 
+  if (location.pathname === "/founder-tools") {
+    return (
+      <FounderOperationsWorkspacePage
+        onSignOut={handleSignedOut}
+      />
+    );
+  }
+
   return (
-    <AppShell
-      onSignOut={() => {
-        resetAccountScopedQueries();
-        setAuthenticated(false);
-      }}
-    />
+    <>
+      <AppShell onSignOut={handleSignedOut} />
+      <FounderToolsLauncher />
+    </>
   );
 }

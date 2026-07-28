@@ -6,11 +6,63 @@ from .base import *
 
 DEBUG = False
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
-if not SECRET_KEY:
-    raise ImproperlyConfigured("DJANGO_SECRET_KEY environment variable MUST be set in production.")
 
-ALLOWED_HOSTS = [x.strip() for x in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if x.strip()]
+_WEAK_SECRET_VALUES = {
+    "",
+    "changeme",
+    "change-me",
+    "password",
+    "startup",
+    "minioadmin",
+    "unsafe-development-key",
+}
+_WEAK_SECRET_MARKERS = (
+    "change_this",
+    "change-this",
+    "replace_me",
+    "replace-me",
+    "example",
+    "placeholder",
+)
+
+
+def _required_secret(name: str, *, minimum_length: int = 12) -> str:
+    value = os.environ.get(name, "").strip()
+    normalized = value.lower()
+    if (
+        len(value) < minimum_length
+        or normalized in _WEAK_SECRET_VALUES
+        or any(marker in normalized for marker in _WEAK_SECRET_MARKERS)
+    ):
+        raise ImproperlyConfigured(
+            f"{name} must be set to a non-placeholder value of at least "
+            f"{minimum_length} characters in production."
+        )
+    return value
+
+
+SECRET_KEY = _required_secret("DJANGO_SECRET_KEY", minimum_length=32)
+DATABASES["default"]["PASSWORD"] = _required_secret("POSTGRES_PASSWORD")
+NEO4J_PASSWORD = _required_secret("NEO4J_PASSWORD")
+MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "").strip()
+if not MINIO_ACCESS_KEY or any(
+    marker in MINIO_ACCESS_KEY.lower()
+    for marker in _WEAK_SECRET_MARKERS
+):
+    raise ImproperlyConfigured(
+        "MINIO_ACCESS_KEY must be set to a non-placeholder value in production."
+    )
+MINIO_SECRET_KEY = _required_secret("MINIO_SECRET_KEY")
+
+ALLOWED_HOSTS = [
+    value.strip()
+    for value in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",")
+    if value.strip()
+]
+if not ALLOWED_HOSTS:
+    raise ImproperlyConfigured(
+        "DJANGO_ALLOWED_HOSTS must contain at least one production host."
+    )
 
 # Security settings
 SECURE_SSL_REDIRECT = True

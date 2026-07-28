@@ -1,10 +1,11 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { autofillStartupProfileFromDocument } from "./api";
 import DocumentIntakeWorkspace from "./DocumentIntakeWorkspace";
+import { LanguageProvider } from "./i18n/index.jsx";
 
 vi.mock("./api", async (importOriginal) => {
   const actual = await importOriginal();
@@ -13,6 +14,14 @@ vi.mock("./api", async (importOriginal) => {
     autofillStartupProfileFromDocument: vi.fn(),
   };
 });
+
+vi.mock("./FounderOperationsPanel", () => ({
+  default: () => null,
+}));
+
+vi.mock("./ExpertMarketplaceRequestPanel", () => ({
+  default: () => null,
+}));
 
 const sampleExtractionResult = {
   parser_version: "startup-document-autofill-v1",
@@ -35,66 +44,106 @@ const sampleExtractionResult = {
       value: "Acme BioTech Private Limited",
       confidence: 96,
       reason: "Enterprise name in document.",
-      evidence: { text: "Acme BioTech Private Limited incorporated on 2026", page_number: 1, heading: "Header" },
+      evidence: {
+        text: "Acme BioTech Private Limited incorporated on 2026",
+        page_number: 1,
+        heading: "Header",
+      },
     },
     {
       field: "sectors",
       value: ["CleanTech", "BioTech"],
       confidence: 85,
       reason: "Sectors listed on page 2.",
-      evidence: { text: "Sector: CleanTech, BioTech", page_number: 2, heading: "Overview" },
+      evidence: {
+        text: "Sector: CleanTech, BioTech",
+        page_number: 2,
+        heading: "Overview",
+      },
     },
   ],
   warnings: [],
 };
 
-describe("DocumentIntakeWorkspace component", () => {
-  test("renders document intake upload form", () => {
-    render(
+function renderWorkspace({
+  language = "en",
+  onApplyConfirmedFacts = vi.fn(),
+  profile = { startup_name: "Acme" },
+} = {}) {
+  window.localStorage.setItem("si_language", language);
+  return render(
+    <LanguageProvider>
       <DocumentIntakeWorkspace
-        onApplyConfirmedFacts={vi.fn()}
-        profile={{ startup_name: "Acme" }}
+        onApplyConfirmedFacts={onApplyConfirmedFacts}
+        profile={profile}
       />
-    );
+    </LanguageProvider>,
+  );
+}
+
+describe("DocumentIntakeWorkspace component", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.clear();
+  });
+
+  test("renders the English document intake upload form", () => {
+    renderWorkspace();
 
     expect(
       screen.getByRole("heading", { name: "AI Document Intake" }),
     ).toBeInTheDocument();
-
     expect(
       screen.getByRole("button", { name: "Extract startup facts" }),
     ).toBeInTheDocument();
   });
 
-  test("extracts facts and allows founder to select and apply confirmed facts", async () => {
-    vi.mocked(autofillStartupProfileFromDocument).mockResolvedValue(sampleExtractionResult);
+  test.each([
+    ["hi", "AI दस्तावेज़ ग्रहण", "स्टार्टअप तथ्य निकालें"],
+    ["mr", "AI कागदपत्र ग्रहण", "स्टार्टअप तथ्ये मिळवा"],
+  ])("renders %s regional-language controls", (language, title, action) => {
+    renderWorkspace({ language });
+
+    expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: action })).toBeInTheDocument();
+  });
+
+  test("extracts facts and applies confirmed suggestions", async () => {
+    vi.mocked(autofillStartupProfileFromDocument).mockResolvedValue(
+      sampleExtractionResult,
+    );
     const handleApply = vi.fn().mockResolvedValue({});
     const user = userEvent.setup();
 
-    render(
-      <DocumentIntakeWorkspace
-        onApplyConfirmedFacts={handleApply}
-        profile={{ startup_name: "Acme", legal_name: "Old Name" }}
-      />
-    );
+    renderWorkspace({
+      onApplyConfirmedFacts: handleApply,
+      profile: { startup_name: "Acme", legal_name: "Old Name" },
+    });
 
     const file = new File(["dummy content"], "acme_pitch_deck.pdf", {
       type: "application/pdf",
     });
 
-    const fileInput = screen.getByLabelText(/select document file/i);
-    await user.upload(fileInput, file);
-
-    const submitBtn = screen.getByRole("button", { name: "Extract startup facts" });
-    await user.click(submitBtn);
+    await user.upload(
+      screen.getByLabelText(/select document file/i),
+      file,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Extract startup facts" }),
+    );
 
     expect(
       await screen.findByRole("heading", { name: "Document summary" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText("Acme BioTech Private Limited"),
+    ).toBeInTheDocument();
 
-    expect(screen.getByText("Acme BioTech Private Limited")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Apply confirmed facts to startup profile" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Apply confirmed facts to startup profile",
+      }),
+    );
 
     expect(handleApply).toHaveBeenCalledWith({
       legal_name: "Acme BioTech Private Limited",
