@@ -26,6 +26,7 @@ from .capital_planner_views import (
     StartupCapitalPlanGenerateView,
 )
 from .compliance_views import ComplianceRecordViewSet
+from .expert_marketplace_views import ConsultationRequestViewSet
 from .milestone_views import (
     StartupMilestoneCompleteView,
     StartupMilestoneDetailView,
@@ -69,6 +70,7 @@ router.register("startup-profiles", StartupProfileViewSet, basename="startup-pro
 router.register("startup-assessment-drafts", StartupAssessmentDraftViewSet, basename="startup-assessment-draft")
 router.register("compliance-records", ComplianceRecordViewSet, basename="compliance-record")
 router.register("consultant-profiles", ConsultantProfileViewSet, basename="consultant-profile")
+router.register("consultation-requests", ConsultationRequestViewSet, basename="consultation-request")
 router.register("founder-vault-documents", FounderVaultDocumentViewSet, basename="founder-vault-document")
 router.register("application-tasks", ApplicationTaskViewSet, basename="application-task")
 router.register("application-stage-events", ApplicationStageEventViewSet, basename="application-stage-event")
