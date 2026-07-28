@@ -139,6 +139,48 @@ export async function listConsultantProfiles() {
 }
 
 
+export async function listConsultationRequests(startupProfileId) {
+  const response = await authenticatedApiClient.get(
+    "/consultation-requests/",
+    {
+      params: {
+        startup_profile: startupProfileId,
+        ordering: "-created_at",
+        page_size: 250,
+      },
+    },
+  );
+  return normalizeCollection(response.data);
+}
+
+
+export async function createConsultationRequest(payload) {
+  const response = await authenticatedApiClient.post(
+    "/consultation-requests/",
+    payload,
+  );
+  return response.data;
+}
+
+
+export async function cancelConsultationRequest(requestId) {
+  const response = await authenticatedApiClient.post(
+    `/consultation-requests/${requestId}/cancel/`,
+    {},
+  );
+  return response.data;
+}
+
+
+export async function respondToConsultationRequest(requestId, payload) {
+  const response = await authenticatedApiClient.post(
+    `/consultation-requests/${requestId}/respond/`,
+    payload,
+  );
+  return response.data;
+}
+
+
 export async function listApplicationWorkflows(startupProfileId = null) {
   const response = await authenticatedApiClient.get(
     "/application-workflows/",
