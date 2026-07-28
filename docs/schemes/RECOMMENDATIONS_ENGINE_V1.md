@@ -1,4 +1,4 @@
-# Recommendations Engine (`v1` + ML Blend)
+# Recommendations Engine (`recommendations-v3`)
 
 ## Scope
 
@@ -15,16 +15,16 @@ application status must be one of: `open`, `rolling`, or `unknown`.
 Recommendation scores blend deterministic rule evaluations with **Calibrated SVM Scheme Success Probability (Model 4)**:
 
 ```text
-Score = eligibility_component (0.40)
+Score = eligibility_component (0.70)
       + rule_match_component (0.10)
-      + svm_component (0.40)
+      + svm_component (0.10)
       + application_status_component (0.10)
 ```
 
 ### Components:
-1. **Eligibility Component**: Base value `0.400000` for eligible assessments.
+1. **Eligibility Component**: Base value `0.700000` for eligible assessments.
 2. **Rule Match Component**: Up to `0.100000` proportional to matched rule ratio.
-3. **SVM Component**: `0.400000` × Calibrated SVM probability score ($0.0-1.0$) output by `apps.ml_engine.services.models.svm_ranker`.
+3. **SVM Component**: `0.100000` × Calibrated SVM probability score ($0.0-1.0$) output by `apps.ml_engine.services.models.svm_ranker`.
 4. **Application Status Component**: Up to `0.100000` based on status (`open` = `0.10`, `rolling` = `0.09`, `unknown` = `0.05`).
 
 ### Heuristic Fallback
