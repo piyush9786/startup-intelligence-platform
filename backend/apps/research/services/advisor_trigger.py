@@ -1,4 +1,4 @@
-"""Queue one founder-research job after advisor generation."""
+"""Queue one founder-research job when advisor generation is triggered."""
 from __future__ import annotations
 
 import logging
@@ -9,7 +9,11 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.research.models import ResearchRequest
-from apps.startups.models import StartupAdvisorBriefing, StartupProfile
+from apps.startups.models import (
+    StartupAdvisorBriefing,
+    StartupAdvisorBriefingJob,
+    StartupProfile,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,19 +40,18 @@ RECOVERABLE_AUTO_RESEARCH_ERRORS = frozenset(
 
 
 def _resolve_actor(
-    briefing: StartupAdvisorBriefing,
+    *,
+    profile: StartupProfile,
     requested_by: Any,
+    job: StartupAdvisorBriefingJob | None = None,
+    briefing: StartupAdvisorBriefing | None = None,
 ) -> Any:
-    actor = requested_by or briefing.requested_by
-    if actor is not None:
-        return actor
-
-    profile = getattr(briefing, "startup_profile", None)
-    if profile is None:
-        profile = StartupProfile.objects.select_related("owner").get(
-            pk=briefing.startup_profile_id,
-        )
-    return profile.owner
+    return (
+        requested_by
+        or (job.requested_by if job is not None else None)
+        or (briefing.requested_by if briefing is not None else None)
+        or profile.owner
+    )
 
 
 def _needs_handoff_repair(
@@ -86,6 +89,33 @@ def _reset_for_redispatch(
             "updated_at",
         ]
     )
+    return research_request
+
+
+def _link_sources(
+    research_request: ResearchRequest,
+    *,
+    job: StartupAdvisorBriefingJob | None,
+    briefing: StartupAdvisorBriefing | None,
+) -> ResearchRequest:
+    update_fields: list[str] = []
+
+    if job is not None and research_request.source_advisor_job_id is None:
+        research_request.source_advisor_job = job
+        update_fields.append("source_advisor_job")
+
+    if (
+        briefing is not None
+        and research_request.source_advisor_briefing_id is None
+    ):
+        research_request.source_advisor_briefing = briefing
+        update_fields.append("source_advisor_briefing")
+
+    if update_fields:
+        research_request.save(
+            update_fields=[*update_fields, "updated_at"],
+        )
+
     return research_request
 
 
@@ -133,18 +163,33 @@ def _dispatch_research(
     return research_request, True
 
 
-def queue_research_after_advisor(
+def _existing_for_source(
     *,
-    briefing: StartupAdvisorBriefing,
-    requested_by: Any,
-) -> tuple[ResearchRequest | None, bool]:
-    """Create or repair one automatic request for an advisor briefing.
+    job: StartupAdvisorBriefingJob | None,
+    briefing: StartupAdvisorBriefing | None,
+) -> ResearchRequest | None:
+    if job is not None:
+        existing = ResearchRequest.objects.filter(
+            source_advisor_job=job,
+        ).first()
+        if existing is not None:
+            return existing
 
-    The operation is idempotent. A request whose only failure was broker
-    dispatch is reset and dispatched again. If another request is active for
-    the same profile, no duplicate request is created; the periodic
-    reconciliation task will try this briefing again later.
-    """
+    if briefing is not None:
+        return ResearchRequest.objects.filter(
+            source_advisor_briefing=briefing,
+        ).first()
+
+    return None
+
+
+def _queue_automatic_research(
+    *,
+    startup_profile_id: Any,
+    requested_by: Any,
+    job: StartupAdvisorBriefingJob | None = None,
+    briefing: StartupAdvisorBriefing | None = None,
+) -> tuple[ResearchRequest | None, bool]:
     if not getattr(
         settings,
         "AUTO_RESEARCH_AFTER_ADVISOR_ENABLED",
@@ -152,31 +197,42 @@ def queue_research_after_advisor(
     ):
         return None, False
 
-    actor = _resolve_actor(briefing, requested_by)
-    if actor is None:
-        logger.warning(
-            "Advisor briefing %s has no requesting user or profile owner; "
-            "research skipped.",
-            briefing.pk,
-        )
-        return None, False
-
     research_request: ResearchRequest | None = None
 
     try:
         with transaction.atomic():
-            StartupProfile.objects.select_for_update().only("id").get(
-                pk=briefing.startup_profile_id,
+            profile = (
+                StartupProfile.objects.select_for_update()
+                .select_related("owner")
+                .get(pk=startup_profile_id)
             )
+            actor = _resolve_actor(
+                profile=profile,
+                requested_by=requested_by,
+                job=job,
+                briefing=briefing,
+            )
+            if actor is None:
+                logger.warning(
+                    "Advisor research handoff for profile %s has no actor; "
+                    "research skipped.",
+                    profile.pk,
+                )
+                return None, False
 
-            existing = (
-                ResearchRequest.objects.select_for_update()
-                .filter(source_advisor_briefing=briefing)
-                .first()
+            existing = _existing_for_source(
+                job=job,
+                briefing=briefing,
             )
+            if existing is not None:
+                existing = _link_sources(
+                    existing,
+                    job=job,
+                    briefing=briefing,
+                )
 
             active_query = ResearchRequest.objects.select_for_update().filter(
-                startup_profile_id=briefing.startup_profile_id,
+                startup_profile=profile,
                 status__in=ACTIVE_STATUSES,
             )
             if existing is not None:
@@ -188,10 +244,10 @@ def queue_research_after_advisor(
             ).first()
             if active is not None:
                 logger.info(
-                    "Automatic research for briefing %s is waiting for "
-                    "active request %s.",
-                    briefing.pk,
+                    "Automatic research for advisor source is waiting for "
+                    "active request %s on profile %s.",
                     active.pk,
+                    profile.pk,
                 )
                 return active, False
 
@@ -202,27 +258,63 @@ def queue_research_after_advisor(
                     return existing, False
             else:
                 research_request = ResearchRequest.objects.create(
-                    startup_profile_id=briefing.startup_profile_id,
+                    startup_profile=profile,
                     requested_by=actor,
+                    source_advisor_job=job,
                     source_advisor_briefing=briefing,
                     question=AUTO_RESEARCH_QUESTION,
                 )
     except IntegrityError:
+        existing = _existing_for_source(
+            job=job,
+            briefing=briefing,
+        )
+        if existing is not None:
+            return existing, False
+
         active = ResearchRequest.objects.filter(
-            startup_profile_id=briefing.startup_profile_id,
+            startup_profile_id=startup_profile_id,
             status__in=ACTIVE_STATUSES,
         ).first()
         if active is not None:
             return active, False
-
-        existing = ResearchRequest.objects.filter(
-            source_advisor_briefing=briefing,
-        ).first()
-        if existing is not None:
-            return existing, False
         raise
 
     if research_request is None:
         return None, False
 
     return _dispatch_research(research_request)
+
+
+def queue_research_after_advisor_job(
+    *,
+    job: StartupAdvisorBriefingJob,
+    requested_by: Any,
+) -> tuple[ResearchRequest | None, bool]:
+    """Queue research from the durable advisor job, regardless of LLM outcome."""
+    briefing = job.briefing if job.briefing_id else None
+    return _queue_automatic_research(
+        startup_profile_id=job.startup_profile_id,
+        requested_by=requested_by,
+        job=job,
+        briefing=briefing,
+    )
+
+
+def queue_research_after_advisor(
+    *,
+    briefing: StartupAdvisorBriefing,
+    requested_by: Any,
+) -> tuple[ResearchRequest | None, bool]:
+    """Link a successful briefing to its already-started research request."""
+    try:
+        job = briefing.generation_job
+    except StartupAdvisorBriefingJob.DoesNotExist:
+        job = None
+
+    return _queue_automatic_research(
+        startup_profile_id=briefing.startup_profile_id,
+        requested_by=requested_by,
+        job=job,
+        briefing=briefing,
+    )
