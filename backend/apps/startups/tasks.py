@@ -9,6 +9,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from apps.knowledge.services import startup_profile_vector_scope
 from apps.startups.models import (
     StartupAdvisorBriefing,
     StartupAdvisorBriefingJob,
@@ -343,10 +344,13 @@ def generate_startup_advisor_briefing_task(
         )
 
     try:
-        briefing = generate_startup_advisor_briefing(
-            source_snapshot=source_snapshot,
-            requested_by=requested_by,
-        )
+        with startup_profile_vector_scope(
+            str(source_snapshot.startup_profile_id),
+        ):
+            briefing = generate_startup_advisor_briefing(
+                source_snapshot=source_snapshot,
+                requested_by=requested_by,
+            )
     except SoftTimeLimitExceeded:
         failed_job = _mark_job_failed(
             job_id=job_id,
