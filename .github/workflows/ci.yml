@@ -48,6 +48,10 @@ jobs:
           MINIO_SECRET_KEY: ci-minio-secret-2026
         run: python manage.py check --deploy
       - run: python manage.py makemigrations --check --dry-run
+      - name: Apply migrations to PostgreSQL smoke database
+        run: python manage.py migrate --noinput
+      - run: pytest
+      - run: ruff check .
       - run: |
           cat << 'EOF' > ../.env.production
           POSTGRES_DB=startup_test
@@ -109,8 +113,6 @@ jobs:
       - name: Stop production stack
         if: always()
         run: docker compose --env-file ../.env.production -f ../docker-compose.prod.yml down -v
-      - run: pytest
-      - run: ruff check .
 
   frontend:
     runs-on: ubuntu-latest
