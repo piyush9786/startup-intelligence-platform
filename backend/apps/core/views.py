@@ -11,16 +11,45 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 
-def _required_ollama_models() -> list[str]:
-    models = [settings.STARTUP_ADVISOR_LLM_MODEL]
+def _clean_models(models: list[Any]) -> list[str]:
+    return sorted(
+        {
+            str(model).strip()
+            for model in models
+            if str(model or "").strip()
+        }
+    )
 
-    if settings.CHATBOT_LLM_ENABLED:
-        models.append(settings.CHATBOT_LLM_MODEL)
 
-    if settings.STARTUP_ADVISOR_RAG_ENABLED or settings.RESEARCH_VECTOR_RAG_ENABLED:
-        models.append(settings.STARTUP_ADVISOR_EMBEDDING_MODEL)
+def _capability_models() -> dict[str, dict[str, Any]]:
+    advisor_models: list[Any] = [settings.STARTUP_ADVISOR_LLM_MODEL]
+    if settings.STARTUP_ADVISOR_RAG_ENABLED:
+        advisor_models.append(settings.STARTUP_ADVISOR_EMBEDDING_MODEL)
 
-    return sorted({str(model).strip() for model in models if str(model).strip()})
+    chatbot_enabled = bool(settings.CHATBOT_LLM_ENABLED)
+    chatbot_models = [settings.CHATBOT_LLM_MODEL] if chatbot_enabled else []
+
+    research_enabled = bool(settings.RESEARCH_VECTOR_RAG_ENABLED)
+    research_models = (
+        [settings.STARTUP_ADVISOR_EMBEDDING_MODEL]
+        if research_enabled
+        else []
+    )
+
+    return {
+        "advisor": {
+            "enabled": True,
+            "required_models": _clean_models(advisor_models),
+        },
+        "chatbot": {
+            "enabled": chatbot_enabled,
+            "required_models": _clean_models(chatbot_models),
+        },
+        "research_vector": {
+            "enabled": research_enabled,
+            "required_models": _clean_models(research_models),
+        },
+    }
 
 
 def _installed_ollama_models(payload: Any) -> set[str]:
@@ -46,6 +75,45 @@ def _model_is_installed(required: str, installed: set[str]) -> bool:
     return False
 
 
+def _capability_statuses(
+    *,
+    installed_models: set[str],
+    ollama_available: bool,
+) -> dict[str, dict[str, Any]]:
+    statuses: dict[str, dict[str, Any]] = {}
+
+    for name, config in _capability_models().items():
+        required = config["required_models"]
+        missing = (
+            [
+                model
+                for model in required
+                if not _model_is_installed(model, installed_models)
+            ]
+            if ollama_available
+            else list(required)
+        )
+        enabled = bool(config["enabled"])
+
+        statuses[name] = {
+            "enabled": enabled,
+            "ready": (not enabled) or (ollama_available and not missing),
+            "required_models": required,
+            "missing_models": missing,
+            "reason": (
+                ""
+                if (not enabled) or (ollama_available and not missing)
+                else (
+                    "The Ollama service is unavailable."
+                    if not ollama_available
+                    else "One or more required Ollama models are not installed."
+                )
+            ),
+        }
+
+    return statuses
+
+
 class HealthView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -62,41 +130,34 @@ class AIReadinessView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        required_models = _required_ollama_models()
         endpoint = f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/tags"
+        ollama_available = False
+        installed_models: set[str] = set()
 
         try:
             response = httpx.get(endpoint, timeout=5.0)
             response.raise_for_status()
             installed_models = _installed_ollama_models(response.json())
+            ollama_available = True
         except (httpx.HTTPError, ValueError):
-            return Response(
-                {
-                    "ready": False,
-                    "ollama": False,
-                    "required_models": required_models,
-                    "missing_models": required_models,
-                    "reason": "The Ollama service is unavailable.",
-                }
-            )
+            pass
 
-        missing_models = [
-            model
-            for model in required_models
-            if not _model_is_installed(model, installed_models)
-        ]
+        capabilities = _capability_statuses(
+            installed_models=installed_models,
+            ollama_available=ollama_available,
+        )
+        advisor = capabilities["advisor"]
 
+        # Backward-compatible top-level fields represent founder-advisor
+        # readiness only. An unavailable chatbot must not disable guidance.
         return Response(
             {
-                "ready": not missing_models,
-                "ollama": True,
-                "required_models": required_models,
-                "missing_models": missing_models,
-                "reason": (
-                    ""
-                    if not missing_models
-                    else "One or more configured Ollama models are not installed."
-                ),
+                "ready": advisor["ready"],
+                "ollama": ollama_available,
+                "required_models": advisor["required_models"],
+                "missing_models": advisor["missing_models"],
+                "reason": advisor["reason"],
+                "capabilities": capabilities,
             }
         )
 

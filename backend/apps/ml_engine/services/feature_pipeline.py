@@ -4,7 +4,7 @@ Feature Engineering Pipeline (Data Engineering Layer)
 Extracts, transforms, and normalizes raw StartupProfile fields into a
 fixed-length numeric feature vector ready for scikit-learn model input.
 
-Feature vector layout (28 dimensions):
+Feature vector layout (29 dimensions):
   [0]     stage_encoded (ordinal 0–7)
   [1]     startup_age_days (log-scaled, 0–1)
   [2]     team_size (log-scaled, 0–1)
@@ -28,7 +28,7 @@ import numpy as np
 from django.db.models import Prefetch
 
 from apps.recommendations.models import Recommendation
-from apps.startups.models import StartupProfile
+from apps.startups.models import StartupProfile, StartupReadinessAssessment
 
 FEATURE_VERSION = "features-v1"
 FEATURE_DIM = 29  # 11 base features + 18 sector one-hot slots (indices 11-28)
@@ -61,7 +61,15 @@ def _log_scale(value: float | None, max_value: float) -> float:
 
 def _latest_readiness_score(startup: StartupProfile) -> float:
     """Return the most recent readiness score as 0–1, or 0 if none."""
-    assessment = startup.readiness_assessments.order_by("-created_at").first()
+    prefetched = getattr(startup, "_latest_readiness_assessments", None)
+    if prefetched is not None:
+        assessment = prefetched[0] if prefetched else None
+    else:
+        assessment = startup.readiness_assessments.order_by(
+            "-created_at",
+            "-id",
+        ).first()
+
     if assessment is None:
         return 0.0
     return assessment.score / 100.0
@@ -81,9 +89,9 @@ def _recommendation_count(startup: StartupProfile) -> float:
 
 def extract_features(startup: StartupProfile) -> np.ndarray:
     """
-    Extract a 28-dimensional feature vector from a StartupProfile.
+    Extract a 29-dimensional feature vector from a StartupProfile.
 
-    Returns a float64 numpy array of shape (28,).
+    Returns a float64 numpy array of shape (29,).
     """
     vec = np.zeros(FEATURE_DIM, dtype=np.float64)
 
@@ -148,9 +156,22 @@ def batch_extract_features(startups: Any) -> tuple[np.ndarray, list[int]]:
         "id",
         "startup_profile_id",
     )
+    latest_readiness = StartupReadinessAssessment.objects.only(
+        "id",
+        "startup_profile_id",
+        "score",
+        "created_at",
+    ).order_by(
+        "-created_at",
+        "-id",
+    )
 
     for startup in startups.prefetch_related(
-        "readiness_assessments",
+        Prefetch(
+            "readiness_assessments",
+            queryset=latest_readiness,
+            to_attr="_latest_readiness_assessments",
+        ),
         Prefetch(
             "recommendations",
             queryset=current_recommendations,

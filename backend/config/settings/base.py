@@ -130,7 +130,7 @@ REST_FRAMEWORK = {
         "rest_framework.filters.OrderingFilter",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "apps.core.pagination.PlatformPageNumberPagination",
     "PAGE_SIZE": 25,
     "DEFAULT_THROTTLE_RATES": {
         "auth_login": os.getenv("AUTH_LOGIN_RATE", "10/minute"),
@@ -230,10 +230,34 @@ CELERY_BEAT_SCHEDULE["research-reconcile-advisor-handoffs"] = {
 # ML Engine configuration
 ML_MODELS_DIR = os.environ.get("ML_MODELS_DIR", str(BASE_DIR / "ml_models"))
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend",
+)
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "mailpit")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "1025"))
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@startup.local")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+}
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+}
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT_SECONDS", "30"))
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    "noreply@startup.local",
+)
+
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ImproperlyConfigured(
+        "EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be enabled."
+    )
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://qdrant:6333")
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", "")
@@ -486,7 +510,7 @@ CHATBOT_LLM_MODEL = os.environ.get(
 CHATBOT_LLM_TIMEOUT_SECONDS = float(
     os.environ.get(
         "CHATBOT_LLM_TIMEOUT_SECONDS",
-        "180",
+        "75",
     )
 )
 

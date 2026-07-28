@@ -13,6 +13,7 @@ import {
   login,
   registerFounder,
   saveSession,
+  trustedApiNextPath,
 } from "./api.js";
 
 function memoryStorage() {
@@ -72,6 +73,30 @@ describe("environment-safe platform links", () => {
     expect(new URL(adminUrl).pathname).toBe("/admin/");
     expect(new URL(apiDocsUrl).pathname).toBe("/api/docs/");
     expect(buildPlatformUrl("/admin/")).toBe(adminUrl);
+  });
+});
+
+describe("proxy-safe pagination links", () => {
+  test("rebases an internal Docker host onto the configured API client", () => {
+    expect(
+      trustedApiNextPath(
+        "http://backend:8000/api/v1/schemes/?ordering=canonical_name&page=2",
+      ),
+    ).toBe("/schemes/?ordering=canonical_name&page=2");
+  });
+
+  test("accepts a public API hostname with the same API path", () => {
+    expect(
+      trustedApiNextPath(
+        "https://api.example.test/api/v1/knowledge/external-schemes/?page=2",
+      ),
+    ).toBe("/knowledge/external-schemes/?page=2");
+  });
+
+  test("rejects pagination outside the configured API prefix", () => {
+    expect(() =>
+      trustedApiNextPath("https://example.test/admin/users/?page=2"),
+    ).toThrow("outside the API root");
   });
 });
 

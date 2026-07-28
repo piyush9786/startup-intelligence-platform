@@ -100,6 +100,7 @@ describe("external knowledge API client", () => {
       {
         params: {
           ordering: "support_name",
+          page_size: 200,
         },
       },
     );
@@ -172,6 +173,7 @@ describe("external knowledge API client", () => {
         {
           params: {
             ordering: "certificate_name",
+            page_size: 200,
           },
         },
       );
