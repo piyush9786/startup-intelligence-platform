@@ -1,3 +1,5 @@
+"""Regression coverage for founder-profile catalog relevance ranking."""
+
 from types import SimpleNamespace
 
 from apps.research.services.local_retrieval import (
