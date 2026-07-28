@@ -121,7 +121,7 @@ class FounderWorkspaceAPITestCase(TestCase):
         self.assertEqual(listed.status_code, status.HTTP_200_OK)
         self.assertEqual(listed.data["count"], 0)
 
-    def test_consultant_directory_exposes_public_profiles(self):
+    def test_consultant_directory_exposes_verified_public_profiles(self):
         consultant_client = APIClient()
         consultant_client.force_authenticate(user=self.consultant)
         created = consultant_client.post(
@@ -141,6 +141,16 @@ class FounderWorkspaceAPITestCase(TestCase):
         )
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
         self.assertEqual(ConsultantProfile.objects.count(), 1)
+
+        hidden = self.client.get("/api/v1/consultant-profiles/")
+        self.assertEqual(hidden.status_code, status.HTTP_200_OK)
+        self.assertEqual(hidden.data["count"], 0)
+
+        profile = ConsultantProfile.objects.get()
+        profile.verification_status = (
+            ConsultantProfile.VerificationStatus.VERIFIED
+        )
+        profile.save(update_fields=["verification_status", "updated_at"])
 
         listed = self.client.get("/api/v1/consultant-profiles/")
         self.assertEqual(listed.status_code, status.HTTP_200_OK)
