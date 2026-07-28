@@ -10,7 +10,7 @@ from django.conf import settings
 from django.db.models import Q
 
 from apps.research.models import ResearchRequest
-from apps.startups.models import StartupAdvisorBriefing
+from apps.startups.models import StartupAdvisorBriefingJob
 
 from .services.job_state import (
     mark_research_failed,
@@ -79,7 +79,7 @@ def generate_research_report_task(
     ignore_result=True,
 )
 def reconcile_advisor_research_handoffs_task() -> int:
-    """Repair advisor briefings whose automatic research was not dispatched."""
+    """Repair advisor jobs whose automatic research was not dispatched."""
     if not getattr(
         settings,
         "AUTO_RESEARCH_AFTER_ADVISOR_ENABLED",
@@ -89,7 +89,7 @@ def reconcile_advisor_research_handoffs_task() -> int:
 
     from apps.research.services.advisor_trigger import (
         RECOVERABLE_AUTO_RESEARCH_ERRORS,
-        queue_research_after_advisor,
+        queue_research_after_advisor_job,
     )
 
     batch_size = max(
@@ -103,11 +103,8 @@ def reconcile_advisor_research_handoffs_task() -> int:
         ),
     )
 
-    briefings = list(
-        StartupAdvisorBriefing.objects.filter(
-            generation_job__status="succeeded",
-        )
-        .filter(
+    jobs = list(
+        StartupAdvisorBriefingJob.objects.filter(
             Q(requested_by__isnull=False)
             | Q(startup_profile__owner__isnull=False)
         )
@@ -129,25 +126,26 @@ def reconcile_advisor_research_handoffs_task() -> int:
             )
         )
         .select_related(
+            "briefing",
             "requested_by",
             "startup_profile",
             "startup_profile__owner",
         )
-        .order_by("completed_at", "id")[:batch_size]
+        .order_by("created_at", "id")[:batch_size]
     )
 
     dispatched = 0
-    for briefing in briefings:
-        _, created_or_redispatched = queue_research_after_advisor(
-            briefing=briefing,
-            requested_by=briefing.requested_by,
+    for job in jobs:
+        _, created_or_redispatched = queue_research_after_advisor_job(
+            job=job,
+            requested_by=job.requested_by,
         )
         if created_or_redispatched:
             dispatched += 1
 
     if dispatched:
         logger.info(
-            "Reconciled %s advisor-to-research handoff(s).",
+            "Reconciled %s advisor-job research handoff(s).",
             dispatched,
         )
     return dispatched
