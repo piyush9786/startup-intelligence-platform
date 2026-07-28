@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ApplicationTrackerPage from "./ApplicationTrackerPage";
 import { LanguageProvider } from "./i18n/index.jsx";
@@ -27,13 +27,23 @@ vi.mock("./founderOperationsApi", () => ({
   updateApplicationTask: vi.fn().mockResolvedValue({}),
 }));
 
+function renderTracker(language = "en") {
+  window.localStorage.setItem("si_language", language);
+  return render(
+    <LanguageProvider>
+      <ApplicationTrackerPage />
+    </LanguageProvider>,
+  );
+}
+
 describe("ApplicationTrackerPage", () => {
-  it("renders validated kanban stages and workflow cards", async () => {
-    render(
-      <LanguageProvider>
-        <ApplicationTrackerPage />
-      </LanguageProvider>,
-    );
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.clear();
+  });
+
+  it("renders validated English kanban stages and workflow cards", async () => {
+    renderTracker();
 
     expect(
       await screen.findByText("Application Pipeline Tracker"),
@@ -48,4 +58,31 @@ describe("ApplicationTrackerPage", () => {
     ).toBeGreaterThan(0);
     expect(screen.getByText("Manage workflow")).toBeInTheDocument();
   });
+
+  it.each([
+    [
+      "hi",
+      "आवेदन पाइपलाइन ट्रैकर",
+      "ड्राफ्ट",
+      "अस्वीकृत",
+      "कार्यप्रवाह प्रबंधित करें",
+    ],
+    [
+      "mr",
+      "अर्ज पाइपलाइन ट्रॅकर",
+      "मसुदा",
+      "नामंजूर",
+      "कार्यप्रवाह व्यवस्थापित करा",
+    ],
+  ])(
+    "renders the %s application workflow labels",
+    async (language, title, draft, rejected, manageWorkflow) => {
+      renderTracker(language);
+
+      expect(await screen.findByText(title)).toBeInTheDocument();
+      expect(screen.getAllByText(draft).length).toBeGreaterThan(0);
+      expect(screen.getByText(rejected)).toBeInTheDocument();
+      expect(screen.getByText(manageWorkflow)).toBeInTheDocument();
+    },
+  );
 });
