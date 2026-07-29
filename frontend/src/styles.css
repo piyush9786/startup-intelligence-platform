@@ -9115,3 +9115,50 @@ body {
   gap: 0.75rem;
   margin-top: 1.25rem;
 }
+
+/* Route-aware website tour launcher */
+.topbar-tour-button {
+  min-height: 38px;
+  padding-inline: 0.85rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .topbar-tour-button {
+    min-height: 36px;
+    padding-inline: 0.7rem;
+    font-size: 0.78rem;
+  }
+}
+
+.tour-chapter-progress {
+  display: inline-flex;
+  margin-bottom: 0.35rem;
+  color: #1c5137;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tour-chapter-title {
+  margin: 0 0 0.45rem;
+  color: #17231d;
+  font-size: 1rem;
+}
+
+.topbar-tour-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+@media (max-width: 760px) {
+  .topbar-tour-actions {
+    width: 100%;
+  }
+
+  .topbar-tour-actions .button {
+    flex: 1;
+  }
+}
