@@ -161,7 +161,7 @@ def test_generation_evaluates_all_and_recommends_actionable_only():
     assert second.rank == 2
     assert first.score == Decimal("1.000000")
     assert second.score == Decimal("0.950000")
-    assert RANKING_VERSION == "recommendations-v3"
+    assert RANKING_VERSION == "recommendations-v4"
     assert first.ranking_version == RANKING_VERSION
     assert first.generation_id == second.generation_id == generation.generation_id
 
@@ -314,5 +314,5 @@ def test_scheme_without_rules_requires_verification_and_is_excluded():
     assert exclusion["scheme_id"] == str(scheme.id)
     assert exclusion["result"] == "verification_required"
     assert exclusion["reason"] == (
-        "eligibility_result:verification_required"
+        "verification_required:no_structured_profile_match"
     )
