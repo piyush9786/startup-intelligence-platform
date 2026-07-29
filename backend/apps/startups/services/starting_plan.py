@@ -151,6 +151,26 @@ def _recommendation_items(
         if not isinstance(evidence, dict):
             evidence = {}
 
+        score_breakdown = source_item.get("score_breakdown")
+        if not isinstance(score_breakdown, dict):
+            score_breakdown = {}
+
+        eligibility_result = str(
+            evidence.get("eligibility_result")
+            or source_item.get("assessment_result")
+            or ""
+        )
+
+        manual_verification_required = (
+            bool(
+                score_breakdown.get(
+                    "manual_verification_required"
+                )
+            )
+            or eligibility_result
+            == "verification_required"
+        )
+
         rank = int(source_item.get("rank") or len(items) + 1)
         scheme_name = str(evidence.get("scheme_name") or "Verified startup scheme")
         scheme_id = str(source_item.get("scheme_id") or evidence.get("scheme_id") or "")
@@ -160,16 +180,26 @@ def _recommendation_items(
             or ""
         )
 
+        if manual_verification_required:
+            recommendation_description = (
+                f"This is a profile-based potential match ranked "
+                f"#{rank}. Review the official source and verify "
+                "current eligibility before applying."
+            )
+        else:
+            recommendation_description = (
+                f"This verified scheme is eligible and ranked "
+                f"#{rank} by the deterministic recommendation "
+                "engine."
+            )
+
         items.append(
             {
                 "position": starting_position + len(items),
                 "item_type": "scheme_opportunity",
                 "priority": "opportunity",
                 "title": f"Review {scheme_name}",
-                "description": (
-                    f"This verified scheme is eligible and ranked #{rank} "
-                    "by the deterministic recommendation engine."
-                ),
+                "description": recommendation_description,
                 "status": "not_started",
                 "dependency_status": "not_evaluated",
                 "destination": {

@@ -1,9 +1,14 @@
 import { authenticatedApiClient as client } from "./api";
 
-export async function submitResearchRequest(startupProfileId, question) {
+export async function submitResearchRequest(
+  startupProfileId,
+  question,
+  { generateFounderAdvice = false } = {},
+) {
   const response = await client.post("/research/requests/", {
     startup_profile_id: startupProfileId,
     question,
+    generate_founder_advice: generateFounderAdvice,
   });
   return response.data;
 }

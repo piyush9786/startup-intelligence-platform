@@ -19,7 +19,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.recommendations.models import EligibilityAssessment, RecommendationGenerationRun
+from apps.recommendations.models import (
+    EligibilityAssessment,
+    Recommendation,
+    RecommendationGenerationRun,
+)
 from apps.startups.models import (
     StartupBuilderSection,
     StartupCapitalPlan,
@@ -151,12 +155,30 @@ def _build_builder_snapshot(profile: StartupProfile) -> dict[str, Any]:
     }
 
 
-def _build_schemes_snapshot(profile: StartupProfile) -> dict[str, Any]:
+def _build_schemes_snapshot(
+    profile: StartupProfile,
+) -> dict[str, Any]:
+    """
+    Summarize the current persisted recommendation set.
+
+    Ranked recommendations are counted as matches. A recommendation that
+    still requires manual eligibility verification is presented as a
+    potential match rather than as confirmed eligible.
+    """
+
     latest_run = (
-        RecommendationGenerationRun.objects.filter(startup_profile=profile)
-        .order_by("-created_at")
+        RecommendationGenerationRun.objects.filter(
+            startup_profile=profile,
+            is_current=True,
+        )
+        .order_by(
+            "-completed_at",
+            "-created_at",
+            "-id",
+        )
         .first()
     )
+
     if latest_run is None:
         return {
             "matched": 0,
@@ -166,18 +188,30 @@ def _build_schemes_snapshot(profile: StartupProfile) -> dict[str, Any]:
             "has_recommendations": False,
         }
 
-    assessments = EligibilityAssessment.objects.filter(
+    recommendations = Recommendation.objects.filter(
         generation_run=latest_run,
+    ).select_related(
+        "assessment",
     )
-    matched = assessments.count()
-    eligible = assessments.filter(
-        result=EligibilityAssessment.Result.ELIGIBLE,
+
+    matched = recommendations.count()
+
+    eligible = recommendations.filter(
+        assessment__result="eligible",
     ).count()
-    conditional = assessments.filter(
-        result=EligibilityAssessment.Result.CONDITIONAL,
+
+    conditional = recommendations.filter(
+        assessment__result__in=[
+            "conditionally_eligible",
+            "likely_eligible",
+        ],
     ).count()
-    pending = assessments.filter(
-        result=EligibilityAssessment.Result.LIKELY,
+
+    pending = recommendations.filter(
+        assessment__result__in=[
+            "verification_required",
+            "insufficient_information",
+        ],
     ).count()
 
     return {
@@ -185,9 +219,8 @@ def _build_schemes_snapshot(profile: StartupProfile) -> dict[str, Any]:
         "eligible": eligible,
         "conditionally_eligible": conditional,
         "pending_review": pending,
-        "has_recommendations": True,
+        "has_recommendations": matched > 0,
     }
-
 
 def _format_dt(dt: datetime | None) -> str | None:
     if dt is None:
