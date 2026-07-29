@@ -11,13 +11,13 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import joblib
-import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 from apps.ml_engine.models import MLModelRegistry
