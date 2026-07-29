@@ -68,6 +68,11 @@ class Command(BaseCommand):
             stderr=self.stderr,
         )
         call_command(
+            "canonicalize_verified_external_schemes",
+            stdout=self.stdout,
+            stderr=self.stderr,
+        )
+        call_command(
             "import_external_knowledge",
             str(capital),
             str(requirements),

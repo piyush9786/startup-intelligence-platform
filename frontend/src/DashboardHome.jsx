@@ -659,7 +659,7 @@ export function DashboardHome({
           <div className="dashboard-card-heading">
             <div>
               <span className="section-kicker">Continue your workflow</span>
-              <h2>Founder tools</h2>
+              <h2>Workspace shortcuts</h2>
             </div>
           </div>
           <div className="support-map-grid">

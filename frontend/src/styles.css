@@ -2089,7 +2089,8 @@ body {
   .nav-group { display: flex; gap: 0.32rem; }
   .nav-group-label,
   .sidebar-evidence-card,
-  .sidebar-profile { display: none; }
+  .sidebar-profile,
+  .sidebar-stats-footer { display: none !important; }
   .nav-item { flex: 0 0 auto; padding: 0.65rem 0.72rem; }
   .product-topbar { position: static; }
   .dashboard-hero { grid-template-columns: 1fr; }
@@ -9078,4 +9079,39 @@ body {
   .research-sidebar {
     position: static;
   }
+}
+
+/* Root-level recovery screen: visible even when an authenticated workspace fails. */
+.root-error-page {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.root-error-card {
+  background: var(--paper-strong);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow-md);
+  max-width: 720px;
+  padding: clamp(1.4rem, 4vw, 2.5rem);
+  width: 100%;
+}
+
+.root-error-card pre {
+  background: #f1f4f9;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  overflow-x: auto;
+  padding: 0.9rem;
+  white-space: pre-wrap;
+}
+
+.root-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
 }

@@ -84,8 +84,9 @@ button {
     scroll-snap-align: start;
   }
 
-  .nav-group-label {
-    display: none;
+  .nav-group-label,
+  .sidebar-stats-footer {
+    display: none !important;
   }
 
   .nav-item {

@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.db import (
     IntegrityError,
     close_old_connections,
+    connection,
     connections,
     transaction,
 )
@@ -524,6 +525,8 @@ def test_database_rejects_duplicate_open_draft(linked):
     ids=["onboarding", "linked-profile"],
 )
 def test_concurrent_create_reuses_single_open_draft(linked):
+    if connection.vendor == "sqlite":
+        pytest.skip("SQLite does not support concurrent thread write transactions")
     owner = make_user(
         username=f"assessment-concurrent-{linked}",
     )

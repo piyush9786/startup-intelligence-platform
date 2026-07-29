@@ -7,6 +7,9 @@ export default defineConfig(({ mode }) => {
     env.VITE_DEV_PROXY_TARGET || "http://localhost:8000";
 
   return {
+    // A writable cache path prevents Vite dependency-optimisation failures
+    // when node_modules is backed by a Docker named volume.
+    cacheDir: env.VITE_CACHE_DIR || "node_modules/.vite",
     build: {
       outDir: "dist",
     },

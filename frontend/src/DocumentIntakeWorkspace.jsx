@@ -3,7 +3,6 @@ import React, { useMemo, useState } from "react";
 import { autofillStartupProfileFromDocument } from "./api";
 import { humanizeApiError } from "./advisor";
 import ExpertMarketplaceRequestPanel from "./ExpertMarketplaceRequestPanel";
-import FounderOperationsPanel from "./FounderOperationsPanel";
 import { useT } from "./i18n/index.jsx";
 
 const FIELD_LABELS = {
@@ -241,7 +240,6 @@ export default function DocumentIntakeWorkspace({
 
   return (
     <div className="document-intake-workspace">
-      <FounderOperationsPanel startupProfileId={profile?.id} />
       <ExpertMarketplaceRequestPanel startupProfileId={profile?.id} />
 
       <div className="intake-intro-banner">

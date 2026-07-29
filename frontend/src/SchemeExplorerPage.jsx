@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   currentSchemeVersion,
   filterSchemes,
@@ -18,6 +18,7 @@ import {
   isExternalFundingScheme,
   isExternalLoanScheme,
 } from "./externalSchemes";
+import { searchVerifiedSchemes } from "./api";
 import { useT } from "./i18n/index.jsx";
 
 const SECTORS = [
@@ -271,6 +272,7 @@ function probabilityPercent(value) {
 export default function SchemeExplorerPage({
   externalSchemes = [],
   onOpenScheme,
+  profile = null,
   query = "",
   recommendations = [],
   schemes = [],
@@ -281,6 +283,57 @@ export default function SchemeExplorerPage({
   const [selectedStage, setSelectedStage] = useState("all");
   const [selectedState, setSelectedState] = useState("all");
   const [selectedType, setSelectedType] = useState("all");
+  const [hybridSearch, setHybridSearch] = useState({
+    data: null,
+    error: "",
+    loading: false,
+  });
+  const normalizedQuery = String(query || "").trim();
+
+  useEffect(() => {
+    if (normalizedQuery.length < 2) {
+      setHybridSearch({ data: null, error: "", loading: false });
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setHybridSearch({
+        data: null,
+        error: "",
+        loading: true,
+      });
+
+      try {
+        const data = await searchVerifiedSchemes({
+          query: normalizedQuery,
+          startupProfileId: profile?.id || null,
+          limit: 50,
+        });
+        if (!cancelled) {
+          setHybridSearch({ data, error: "", loading: false });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setHybridSearch({
+            data: null,
+            error: String(
+              error?.response?.data?.detail
+              || error?.response?.data?.q?.[0]
+              || error?.message
+              || "Hybrid scheme ranking is temporarily unavailable.",
+            ),
+            loading: false,
+          });
+        }
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [normalizedQuery, profile?.id]);
 
   const recommendationMap = useMemo(() => {
     const map = new Map();
@@ -295,6 +348,15 @@ export default function SchemeExplorerPage({
 
       map.set(String(schemeId), {
         rank: recommendation.rank ?? null,
+        score: finiteNumber(recommendation.score),
+        assessmentResult:
+          recommendation.assessment_result ?? null,
+        scoreKind:
+          recommendation.score_breakdown?.score_kind ?? null,
+        manualVerificationRequired: Boolean(
+          recommendation.score_breakdown
+            ?.manual_verification_required,
+        ),
         svmScore: finiteNumber(
           recommendation.svm_score ??
             recommendation.score_breakdown?.svm_score,
@@ -310,8 +372,35 @@ export default function SchemeExplorerPage({
     [externalSchemes],
   );
 
-  const searchedCanonical = filterSchemes(schemes, query);
-  const searchedExternal = filterExternalSchemes(catalogExternal, query);
+  const hybridResultMap = useMemo(() => {
+    const map = new Map();
+    (hybridSearch.data?.results || []).forEach((result) => {
+      map.set(String(result.scheme_id), result);
+    });
+    return map;
+  }, [hybridSearch.data]);
+
+  const searchedCanonical = useMemo(() => {
+    if (normalizedQuery.length < 2 || !hybridSearch.data) {
+      return filterSchemes(schemes, query);
+    }
+
+    if (hybridSearch.data.no_match) {
+      return [];
+    }
+
+    const byId = new Map(
+      (schemes || []).map((scheme) => [String(scheme.id), scheme]),
+    );
+    return (hybridSearch.data.results || [])
+      .map((result) => byId.get(String(result.scheme_id)))
+      .filter(Boolean);
+  }, [hybridSearch.data, normalizedQuery, query, schemes]);
+
+  const searchedExternal =
+    normalizedQuery.length >= 2 && hybridSearch.data
+      ? []
+      : filterExternalSchemes(catalogExternal, query);
 
   const facetFilteredCanonical = useMemo(() => {
     return searchedCanonical.filter((scheme) => {
@@ -486,6 +575,32 @@ export default function SchemeExplorerPage({
         </div>
       </header>
 
+      {normalizedQuery.length >= 2 && (
+        <section
+          aria-live="polite"
+          className={[
+            "notice",
+            hybridSearch.error ? "notice-warning" : "notice-info",
+          ].join(" ")}
+        >
+          {hybridSearch.loading ? (
+            <p>Ranking verified schemes using text, intent, eligibility, sector, stage, location, and evidence signals…</p>
+          ) : hybridSearch.error ? (
+            <p>Hybrid ranking could not be loaded. Local catalog filtering is being used. {hybridSearch.error}</p>
+          ) : hybridSearch.data?.no_match ? (
+            <p><strong>No verified match.</strong> {hybridSearch.data.message}</p>
+          ) : hybridSearch.data ? (
+            <p>
+              <strong>{hybridSearch.data.count} verified matches</strong> ranked with {hybridSearch.data.ranking_version}.
+              {hybridSearch.data.profile_applied ? " Your selected startup profile was applied." : ""}
+              {hybridSearch.data.model?.version
+                ? ` TF-IDF v${hybridSearch.data.model.version} is one ranking signal (${hybridSearch.data.model.stage}).`
+                : " TF-IDF was unavailable, so structured signals were used."}
+            </p>
+          ) : null}
+        </section>
+      )}
+
       {/* Catalog Review Summary Bar */}
       <section aria-label="External scheme review summary" className="scheme-review-summary">
         <div>
@@ -612,6 +727,13 @@ export default function SchemeExplorerPage({
                   const deadline = schemeDeadlineStatus(scheme);
                   const recommendation =
                     recommendationMap.get(String(scheme.id));
+                  const hybridResult =
+                    hybridResultMap.get(String(scheme.id));
+                  const hybridMatchPercent = hybridResult
+                    ? Math.round(Number(hybridResult.final_score) * 100)
+                    : null;
+                  const recommendationScorePercent =
+                    probabilityPercent(recommendation?.score);
                   const svmMatchPercent = probabilityPercent(
                     recommendation?.svmScore,
                   );
@@ -632,7 +754,36 @@ export default function SchemeExplorerPage({
                         </span>
                         {recommendation?.rank && (
                           <span className="rank-badge">
-                            Rank: #{recommendation.rank}
+                            Recommended rank: #{recommendation.rank}
+                          </span>
+                        )}
+
+                        {recommendationScorePercent !== null && (
+                          <span
+                            className="score-pill"
+                            title="Personalized deterministic recommendation score based on eligibility, matching rules and application status. This is not an approval probability."
+                          >
+                            {recommendation?.manualVerificationRequired
+                              ? `Potential match: ${recommendationScorePercent}%`
+                              : `Recommendation score: ${recommendationScorePercent}%`}
+                          </span>
+                        )}
+
+                        {recommendation?.manualVerificationRequired && (
+                          <span
+                            className="verification-badge verification-review_required"
+                            title="The scheme matches structured profile fields, but its executable eligibility rules still require manual verification."
+                          >
+                            Manual eligibility verification required
+                          </span>
+                        )}
+
+                        {hybridMatchPercent !== null && (
+                          <span
+                            className="score-pill"
+                            title="Auditable hybrid relevance score. This is not an approval probability."
+                          >
+                            Hybrid relevance: {hybridMatchPercent}%
                           </span>
                         )}
 

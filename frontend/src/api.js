@@ -481,6 +481,35 @@ export async function listExternalCertificationRequirements() {
 }
 
 
+export async function searchVerifiedSchemes({
+  query,
+  startupProfileId = null,
+  limit = 20,
+}) {
+  const normalizedQuery = String(query || "").trim();
+  if (!normalizedQuery) {
+    return {
+      query: "",
+      count: 0,
+      no_match: true,
+      message: "Enter a search query.",
+      results: [],
+    };
+  }
+
+  const params = {
+    q: normalizedQuery,
+    limit,
+  };
+  if (startupProfileId) {
+    params.startup_profile_id = startupProfileId;
+  }
+
+  const response = await client.get("/schemes/hybrid-search/", { params });
+  return response.data;
+}
+
+
 export async function listSchemes() {
   const schemes = [];
   let nextUrl = "/schemes/";

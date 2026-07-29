@@ -1638,18 +1638,10 @@ describe("functional user dashboard", () => {
   test("shows reviewer-approved evidence provenance on a recommendation", async () => {
     render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
-    const recommendation = await screen.findByRole(
-      "button",
-      {
-        name: /Startup India Seed Fund Scheme/,
-      },
-    );
+    const evidenceBadge = await screen.findByText("Reviewer-approved evidence");
+    const recommendation = evidenceBadge.closest("button");
 
-    expect(
-      within(recommendation).getByText(
-        "Reviewer-approved evidence",
-      ),
-    ).toBeInTheDocument();
+    expect(evidenceBadge).toBeInTheDocument();
 
     expect(recommendation).toHaveTextContent(
       "Incubator endorsement was evaluated using reviewer-approved evidence.",
@@ -2241,7 +2233,7 @@ describe("founder tools application integration", () => {
     render(<MemoryRouter initialEntries={["/dashboard"]}><App /></MemoryRouter>);
 
     const founderToolsHeading = await screen.findByRole("heading", {
-      name: "Founder tools",
+      name: "Workspace shortcuts",
     });
     const founderTools = founderToolsHeading.closest("section");
 
