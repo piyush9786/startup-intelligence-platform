@@ -24,8 +24,10 @@ log "Catalog health"
 compose exec -T backend python manage.py platform_doctor --strict
 
 log "Frontend health"
-curl --fail --silent http://localhost:5173/ >/dev/null
-printf 'frontend=ok\n'
+for module in bootstrap.js main.jsx App.jsx AppShell.jsx DashboardHome.jsx; do
+  curl --fail --silent "http://localhost:5173/src/${module}" >/dev/null
+done
+printf 'frontend_html=ok frontend_modules=ok\n'
 
 if [[ "${USE_GPU}" == "true" ]]; then
   log "GPU and Ollama"

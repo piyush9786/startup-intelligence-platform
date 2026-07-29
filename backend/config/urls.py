@@ -5,6 +5,8 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+admin.site.site_url = "http://localhost:5173/"
+
 urlpatterns = [
     # Admin & Documentation
     path("admin/", admin.site.urls),

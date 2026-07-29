@@ -215,16 +215,51 @@ class Command(BaseCommand):
         from apps.ml_engine.services.models.tfidf_search import build_tfidf_index
         from apps.schemes.models import SchemeVersion
 
-        schemes = SchemeVersion.objects.select_related("scheme").order_by("id")[:1000]
+        schemes = (
+            SchemeVersion.objects.select_related("scheme", "scheme__authority")
+            .filter(
+                scheme__lifecycle_status="active",
+                verification_status="verified",
+            )
+            .order_by("id")[:1000]
+        )
+
+        def searchable_text(value):
+            if value is None:
+                return ""
+            if isinstance(value, dict):
+                return " ".join(searchable_text(item) for item in value.values())
+            if isinstance(value, (list, tuple, set)):
+                return " ".join(searchable_text(item) for item in value)
+            return str(value)
+
         corpus = []
         for sv in schemes:
-            text = " ".join(filter(None, [
-                sv.scheme.canonical_name,
-                sv.description,
-                sv.objective,
-                " ".join(sv.eligible_sectors or []),
-                " ".join(sv.eligible_stages or []),
-            ]))
+            text = " ".join(
+                filter(
+                    None,
+                    [
+                        sv.scheme.canonical_name,
+                        sv.scheme.short_name,
+                        searchable_text(sv.scheme.alternative_names),
+                        sv.scheme.authority.name,
+                        sv.scheme.authority.ministry,
+                        sv.scheme.authority.department,
+                        sv.description,
+                        sv.objective,
+                        searchable_text(sv.support_types),
+                        searchable_text(sv.categories),
+                        searchable_text(sv.eligible_sectors),
+                        searchable_text(sv.eligible_stages),
+                        searchable_text(sv.eligible_states),
+                        searchable_text(sv.founder_categories),
+                        searchable_text(sv.required_documents),
+                        searchable_text(sv.application_steps),
+                        searchable_text(sv.benefits),
+                        searchable_text(sv.restrictions),
+                    ],
+                )
+            )
             corpus.append({"scheme_version_id": str(sv.id), "text": text})
 
         is_synthetic_fallback = False

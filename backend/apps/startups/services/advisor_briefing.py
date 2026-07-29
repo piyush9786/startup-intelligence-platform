@@ -596,6 +596,126 @@ def _bound_retrieved_evidence_for_prompt(
     }
 
 
+
+_PROMPT_PROFILE_FIELDS = (
+    "id", "startup_name", "legal_name", "description",
+    "state", "district", "stage", "current_stage",
+    "sectors", "sector", "technologies", "technology",
+    "founder_category", "dpiit_recognized", "udyam_registered",
+    "incorporation_date", "startup_age_months", "team_size",
+    "monthly_revenue", "monthly_burn", "cash_balance",
+    "funding_raised", "funding_required", "customer_segments",
+    "traction",
+)
+
+_PROMPT_READINESS_FIELDS = (
+    "id", "readiness_status", "overall_score", "score",
+    "summary", "findings", "blocking_findings", "missing_fields",
+    "answered_count", "unanswered_count",
+)
+
+_PROMPT_ACTION_PLAN_FIELDS = (
+    "id", "readiness_status", "next_action", "actions",
+    "blockers", "blocker_count", "total_action_count",
+)
+
+_PROMPT_RECOMMENDATION_FIELDS = (
+    "id", "scheme_id", "scheme_version_id", "scheme_name",
+    "canonical_name", "rank", "ranking_score", "score",
+    "eligibility_result", "eligibility_score", "explanation",
+    "reasons", "support_types", "verification_status",
+    "official_url", "source_references",
+)
+
+
+def _compact_prompt_value(value: Any, *, depth: int = 0) -> Any:
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        normalized = " ".join(value.split())
+        return normalized[: (360 if depth < 3 else 220)]
+    if isinstance(value, list):
+        return [
+            _compact_prompt_value(item, depth=depth + 1)
+            for item in value[:5]
+        ]
+    if isinstance(value, dict):
+        return {
+            str(key): _compact_prompt_value(item, depth=depth + 1)
+            for key, item in list(value.items())[:18]
+        }
+    return str(value)[:220]
+
+
+def _select_prompt_fields(
+    value: Any,
+    field_names: tuple[str, ...],
+) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        name: _compact_prompt_value(value[name])
+        for name in field_names
+        if name in value
+    }
+
+
+def _compact_startup_advisor_prompt_input(
+    input_payload: dict[str, Any],
+) -> dict[str, Any]:
+    # The complete immutable snapshot remains in source_input and is
+    # rechecked after generation. Only the LLM prompt copy is reduced.
+    compact: dict[str, Any] = {}
+
+    for name in (
+        "advisor_snapshot_id",
+        "startup_profile_id",
+        "snapshot_version",
+        "created_at",
+        "source_ids",
+        "source_record_ids",
+    ):
+        if name in input_payload:
+            compact[name] = _compact_prompt_value(input_payload[name])
+
+    compact["profile"] = _select_prompt_fields(
+        input_payload.get("profile"),
+        _PROMPT_PROFILE_FIELDS,
+    )
+    compact["readiness"] = _select_prompt_fields(
+        input_payload.get("readiness"),
+        _PROMPT_READINESS_FIELDS,
+    )
+    compact["action_plan"] = _select_prompt_fields(
+        input_payload.get("action_plan"),
+        _PROMPT_ACTION_PLAN_FIELDS,
+    )
+
+    generation = input_payload.get("recommendation_generation")
+    if isinstance(generation, dict):
+        compact["recommendation_generation"] = _select_prompt_fields(
+            generation,
+            (
+                "id", "status", "generated_at",
+                "recommendation_count", "model_version",
+            ),
+        )
+
+    recommendations = input_payload.get("recommendations")
+    compact["recommendations"] = (
+        [
+            _select_prompt_fields(
+                item,
+                _PROMPT_RECOMMENDATION_FIELDS,
+            )
+            for item in recommendations[:5]
+            if isinstance(item, dict)
+        ]
+        if isinstance(recommendations, list)
+        else []
+    )
+    return compact
+
 def build_startup_advisor_briefing_prompt(
     *,
     source_snapshot: StartupAdvisorSnapshot,
@@ -630,7 +750,7 @@ def build_startup_advisor_briefing_prompt(
 
     user_payload = {
         "citation_contract": citation_contract,
-        "startup_advisor_snapshot": input_payload,
+        "startup_advisor_snapshot": _compact_startup_advisor_prompt_input(input_payload),
         "retrieved_evidence": evidence_documents,
         "retrieval": retrieval_snapshot,
     }

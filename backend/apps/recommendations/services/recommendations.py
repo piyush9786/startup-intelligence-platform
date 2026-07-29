@@ -25,7 +25,7 @@ from apps.recommendations.services.explanation import (
 from apps.schemes.models import EligibilityRule, Scheme, SchemeVersion
 from apps.startups.models import StartupProfile
 
-RANKING_VERSION = "recommendations-v3"
+RANKING_VERSION = "recommendations-v4"
 _SCORE_QUANTUM = Decimal("0.000001")
 
 # Legacy / Fallback scoring components
@@ -194,6 +194,200 @@ def _score_assessment(
     }
 
 
+
+def _normalized_match_value(value: Any) -> str:
+    return "".join(
+        character
+        for character in str(value or "").casefold()
+        if character.isalnum()
+    )
+
+
+def _collection_values(value: Any) -> list[Any]:
+    if value in (None, "", [], (), {}):
+        return []
+
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return list(value)
+
+    return [value]
+
+
+_STAGE_ORDER = {
+    "idea": 0,
+    "validation": 1,
+    "prototype": 2,
+    "mvp": 3,
+    "pilot": 4,
+    "earlyrevenue": 5,
+    "growth": 6,
+    "expansion": 7,
+}
+
+
+def _structured_provisional_score(
+    *,
+    startup_profile: StartupProfile,
+    scheme_version: SchemeVersion,
+    assessment: EligibilityAssessment,
+) -> tuple[Decimal, dict[str, Any]] | None:
+    startup_sectors = {
+        _normalized_match_value(value)
+        for value in _collection_values(
+            getattr(startup_profile, "sectors", [])
+        )
+        if _normalized_match_value(value)
+    }
+
+    eligible_sectors = {
+        _normalized_match_value(value)
+        for value in _collection_values(
+            getattr(scheme_version, "eligible_sectors", [])
+        )
+        if _normalized_match_value(value)
+    }
+
+    startup_stage = _normalized_match_value(
+        getattr(startup_profile, "stage", "")
+    )
+
+    eligible_stages = {
+        _normalized_match_value(value)
+        for value in _collection_values(
+            getattr(scheme_version, "eligible_stages", [])
+        )
+        if _normalized_match_value(value)
+    }
+
+    startup_state = _normalized_match_value(
+        getattr(startup_profile, "state", "")
+    )
+
+    eligible_states = {
+        _normalized_match_value(value)
+        for value in _collection_values(
+            getattr(scheme_version, "eligible_states", [])
+        )
+        if _normalized_match_value(value)
+    }
+
+    sector_match = bool(
+        startup_sectors
+        and eligible_sectors
+        and startup_sectors.intersection(eligible_sectors)
+    )
+
+    if eligible_sectors and not sector_match:
+        return None
+
+    stage_match = False
+    adjacent_stage_match = False
+
+    if startup_stage and eligible_stages:
+        stage_match = startup_stage in eligible_stages
+
+        startup_position = _STAGE_ORDER.get(startup_stage)
+
+        if not stage_match and startup_position is not None:
+            adjacent_stage_match = any(
+                abs(
+                    startup_position -
+                    _STAGE_ORDER[eligible_stage]
+                ) <= 1
+                for eligible_stage in eligible_stages
+                if eligible_stage in _STAGE_ORDER
+            )
+
+        if not stage_match and not adjacent_stage_match:
+            return None
+
+    state_match = False
+
+    if eligible_states:
+        state_match = (
+            bool(startup_state)
+            and startup_state in eligible_states
+        )
+
+        if not state_match:
+            return None
+
+    has_structured_basis = bool(
+        eligible_sectors
+        or eligible_stages
+        or eligible_states
+    )
+
+    if not has_structured_basis:
+        return None
+
+    score = Decimal("0.350000")
+
+    if eligible_sectors:
+        score += Decimal("0.180000")
+    else:
+        score += Decimal("0.050000")
+
+    if stage_match:
+        score += Decimal("0.120000")
+    elif adjacent_stage_match:
+        score += Decimal("0.080000")
+    elif not eligible_stages:
+        score += Decimal("0.040000")
+
+    if state_match:
+        score += Decimal("0.070000")
+    elif not eligible_states:
+        score += Decimal("0.050000")
+
+    application_component = {
+        SchemeVersion.ApplicationStatus.OPEN:
+            Decimal("0.060000"),
+        SchemeVersion.ApplicationStatus.ROLLING:
+            Decimal("0.050000"),
+        SchemeVersion.ApplicationStatus.UNKNOWN:
+            Decimal("0.020000"),
+    }.get(
+        scheme_version.application_status,
+        Decimal("0.000000"),
+    )
+
+    score += application_component
+
+    # Provisional matches must remain below confirmed-eligibility
+    # recommendations, whose base eligibility component is 0.70.
+    score = min(score, Decimal("0.690000"))
+    score = _quantize(score)
+
+    return score, {
+        "ranking_version": RANKING_VERSION,
+        "ml_scoring_mode": "structured_provisional",
+        "score_kind": "potential_match",
+        "manual_verification_required": True,
+        "assessment_result": assessment.result,
+        "formula": (
+            "structured sector + stage + state + "
+            "application-status compatibility"
+        ),
+        "sector_match": sector_match,
+        "stage_match": stage_match,
+        "adjacent_stage_match": adjacent_stage_match,
+        "state_match": state_match,
+        "startup_sectors": sorted(startup_sectors),
+        "eligible_sectors": sorted(eligible_sectors),
+        "startup_stage": startup_stage,
+        "eligible_stages": sorted(eligible_stages),
+        "startup_state": startup_state,
+        "eligible_states": sorted(eligible_states),
+        "application_status_component": format(
+            application_component,
+            "f",
+        ),
+        "score": format(score, "f"),
+    }
+
+
+
 def _evidence_snapshot(
     *,
     assessment: EligibilityAssessment,
@@ -280,7 +474,12 @@ def generate_recommendations(
             )
             assessments.append(assessment)
 
-            if assessment.result != eligible_result:
+            allowed_results = {
+                eligible_result,
+                EligibilityAssessment.Result.VERIFY,
+            }
+
+            if assessment.result not in allowed_results:
                 excluded_schemes.append(
                     {
                         "scheme_id": str(scheme.id),
@@ -288,34 +487,74 @@ def generate_recommendations(
                         "reason": f"eligibility_result:{assessment.result}",
                         "result": assessment.result,
                         "failed_rules": [
-                            item.get("field_path") for item in assessment.failed_rules
+                            item.get("field_path")
+                            for item in assessment.failed_rules
                         ],
-                        "eligibility_explanation": build_eligibility_explanation(
-                            assessment,
-                        ),
+                        "eligibility_explanation":
+                            build_eligibility_explanation(
+                                assessment,
+                            ),
                     }
                 )
                 continue
 
-            if scheme_version.application_status not in _ACTIONABLE_APPLICATION_STATUSES:
+            if (
+                scheme_version.application_status
+                not in _ACTIONABLE_APPLICATION_STATUSES
+            ):
                 excluded_schemes.append(
                     {
                         "scheme_id": str(scheme.id),
                         "scheme_name": scheme.canonical_name,
-                        "reason": f"application_status:{scheme_version.application_status}",
-                        "application_status": (scheme_version.application_status),
-                        "eligibility_explanation": build_eligibility_explanation(
-                            assessment,
+                        "reason": (
+                            "application_status:"
+                            f"{scheme_version.application_status}"
                         ),
+                        "application_status":
+                            scheme_version.application_status,
+                        "eligibility_explanation":
+                            build_eligibility_explanation(
+                                assessment,
+                            ),
                     }
                 )
                 continue
 
-            score, breakdown = _score_assessment(
-                assessment=assessment,
-                scheme_version=scheme_version,
-                startup_profile=startup_profile,
-            )
+            if (
+                assessment.result
+                == EligibilityAssessment.Result.VERIFY
+            ):
+                provisional = _structured_provisional_score(
+                    startup_profile=startup_profile,
+                    scheme_version=scheme_version,
+                    assessment=assessment,
+                )
+
+                if provisional is None:
+                    excluded_schemes.append(
+                        {
+                            "scheme_id": str(scheme.id),
+                            "scheme_name": scheme.canonical_name,
+                            "reason": (
+                                "verification_required:"
+                                "no_structured_profile_match"
+                            ),
+                            "result": assessment.result,
+                            "eligibility_explanation":
+                                build_eligibility_explanation(
+                                    assessment,
+                                ),
+                        }
+                    )
+                    continue
+
+                score, breakdown = provisional
+            else:
+                score, breakdown = _score_assessment(
+                    assessment=assessment,
+                    scheme_version=scheme_version,
+                    startup_profile=startup_profile,
+                )
             snapshot = _evidence_snapshot(
                 assessment=assessment,
                 scheme_version=scheme_version,

@@ -4,7 +4,7 @@ from threading import Barrier
 
 import pytest
 from django.core.exceptions import ValidationError
-from django.db import close_old_connections, connections
+from django.db import close_old_connections, connection, connections
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -136,6 +136,8 @@ def test_submission_supersedes_current_submission_atomically():
 
 @pytest.mark.django_db(transaction=True)
 def test_first_submission_race_is_serialized_by_startup_profile_lock():
+    if connection.vendor == "sqlite":
+        pytest.skip("SQLite does not support concurrent thread write transactions")
     founder = make_user("submission-race-founder")
     profile = StartupProfile.objects.create(
         owner=founder,

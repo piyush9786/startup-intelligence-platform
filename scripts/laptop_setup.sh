@@ -22,33 +22,54 @@ if [[ "${USE_GPU}" == "true" ]]; then
   log "NVIDIA GPU mode enabled for Ollama"
 fi
 
-log "Building and starting the complete laptop stack"
-compose up -d --build
+log "Removing stale frontend dependency container and volume"
+compose stop frontend >/dev/null 2>&1 || true
+compose rm -f frontend >/dev/null 2>&1 || true
+docker volume rm startup-intelligence_frontend_node_modules >/dev/null 2>&1 || true
 
-log "Waiting for the backend and catalog bootstrap"
-for attempt in $(seq 1 900); do
+log "Building application images"
+compose build backend frontend
+
+log "Starting infrastructure and API"
+compose up -d postgres redis qdrant neo4j minio minio_init ollama ollama_init mailpit backend
+
+log "Waiting for backend migrations and health"
+for attempt in $(seq 1 300); do
   if curl --fail --silent http://localhost:8000/api/v1/health/ >/dev/null 2>&1; then
     break
   fi
-  if [[ "${attempt}" -eq 900 ]]; then
+  if [[ "${attempt}" -eq 300 ]]; then
     compose ps
-    compose logs --tail=200 ollama_init backend
+    compose logs --tail=300 backend
     fail "Backend did not become healthy."
   fi
   sleep 2
 done
 
+log "Initializing bundled catalogs after the API is healthy"
+compose run --rm catalog_init
+
 log "Checking required scheme and support data"
 compose exec -T backend python manage.py platform_doctor --strict
 
+log "Starting workers and frontend"
+compose up -d worker beat frontend
+
 log "Waiting for the frontend"
 for attempt in $(seq 1 120); do
-  if curl --fail --silent http://localhost:5173/ >/dev/null 2>&1; then
+  modules_ok=true
+  for module in bootstrap.js main.jsx App.jsx AppShell.jsx DashboardHome.jsx; do
+    if ! curl --fail --silent "http://localhost:5173/src/${module}" >/dev/null 2>&1; then
+      modules_ok=false
+      break
+    fi
+  done
+  if [[ "${modules_ok}" == "true" ]]; then
     break
   fi
   if [[ "${attempt}" -eq 120 ]]; then
     compose ps
-    compose logs --tail=200 frontend
+    compose logs --tail=250 frontend
     fail "Frontend did not become healthy."
   fi
   sleep 2

@@ -79,6 +79,9 @@ prepare_env() {
 
 compose_args() {
   printf '%s\n' -f docker-compose.yml
+  if [[ -f docker-compose.llm.yml ]]; then
+    printf '%s\n' -f docker-compose.llm.yml
+  fi
   if [[ "${USE_GPU:-false}" == "true" ]]; then
     printf '%s\n' -f docker-compose.gpu.yml
   fi

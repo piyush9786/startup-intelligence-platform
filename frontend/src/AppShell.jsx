@@ -396,21 +396,6 @@ function Workspace({ onSignOut }) {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    /*
-     * React Router does not automatically reset the document scroll position.
-     * This prevents a newly opened page from appearing underneath the sticky
-     * top bar or halfway down the document.
-     */
-    if (window.scrollY !== 0) {
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: "auto",
-      });
-    }
-  }, [location.pathname]);
-
   const selectedProfile = useMemo(
     () => (profiles || []).find((p) => String(p.id) === String(selectedProfileId)) || null,
     [profiles, selectedProfileId],
@@ -936,6 +921,7 @@ export function AppRouter({ onSignOut }) {
         <Route path="reviewer-verifications" element={<ReviewerRoute />} />
         <Route path="onboarding" element={<OnboardingRoute />} />
         <Route path="documents" element={<DocumentsRoute />} />
+        <Route path="founder-tools" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<NotFoundRoute />} />
       </Route>
     </Routes>

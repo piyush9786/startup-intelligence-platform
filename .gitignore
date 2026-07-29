@@ -28,8 +28,15 @@ backend/ml_models/
 
 # Environment secrets
 .env
+.env.*
+!.env.example
 LOCAL_CREDENTIALS.txt
 .advisor-research-catalog-backup/
+.hotfix-backups/
+frontend-scroll-unlock-remove-founder-operations-hotfix/
+*.bak
+*.before-*
+legacy-assets-*.txt
 
 # Frontend
 frontend/node_modules/
