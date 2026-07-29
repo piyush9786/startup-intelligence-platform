@@ -126,6 +126,8 @@ def get_current_recommendation_set(
         .select_related(
             "assessment",
             "scheme_version__scheme",
+            "scheme_version__source_document",
+            "scheme_version__source_document__source",
         )
         .order_by(
             "rank",

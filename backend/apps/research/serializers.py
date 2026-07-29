@@ -1,6 +1,7 @@
 """Serializers for research app."""
 from __future__ import annotations
 
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from .models import (
@@ -62,6 +63,43 @@ class ResearchRequestDetailSerializer(serializers.ModelSerializer):
     search_queries = ResearchSearchQuerySerializer(many=True, read_only=True)
     evidence_items = ResearchEvidenceSerializer(many=True, read_only=True)
     generated_report = StartupResearchReportSerializer(read_only=True)
+    advisor_job = serializers.SerializerMethodField()
+
+    def get_advisor_job(self, obj):
+        try:
+            report = obj.generated_report
+        except ObjectDoesNotExist:
+            return None
+
+        try:
+            job = report.advisor_generation_job
+        except ObjectDoesNotExist:
+            return None
+
+        return {
+            "id": str(job.id),
+            "startup_profile_id": str(job.startup_profile_id),
+            "source_snapshot_id": str(job.source_snapshot_id),
+            "source_research_report_id": str(
+                job.source_research_report_id
+            ),
+            "briefing_id": (
+                str(job.briefing_id)
+                if job.briefing_id
+                else None
+            ),
+            "status": job.status,
+            "error_code": job.error_code,
+            "error_message": job.error_message,
+            "started_at": job.started_at,
+            "completed_at": job.completed_at,
+            "created_at": job.created_at,
+            "updated_at": job.updated_at,
+            "is_terminal": job.status in (
+                "succeeded",
+                "failed",
+            ),
+        }
 
     class Meta:
         model = ResearchRequest
@@ -69,6 +107,9 @@ class ResearchRequestDetailSerializer(serializers.ModelSerializer):
             "id",
             "startup_profile",
             "requested_by",
+            "workflow_type",
+            "advisor_snapshot",
+            "source_advisor_job",
             "source_advisor_briefing",
             "question",
             "status",
@@ -81,6 +122,7 @@ class ResearchRequestDetailSerializer(serializers.ModelSerializer):
             "search_queries",
             "evidence_items",
             "generated_report",
+            "advisor_job",
             "created_at",
         ]
 
@@ -88,3 +130,7 @@ class ResearchRequestDetailSerializer(serializers.ModelSerializer):
 class ResearchRequestCreateSerializer(serializers.Serializer):
     startup_profile_id = serializers.UUIDField()
     question = serializers.CharField(min_length=5, max_length=2000)
+    generate_founder_advice = serializers.BooleanField(
+        required=False,
+        default=False,
+    )

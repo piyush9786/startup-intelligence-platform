@@ -146,6 +146,15 @@ def _ensure_auto_research_job_handoff(
                 "startup_profile__owner",
             ).get(pk=job_id)
         )
+
+        if job.source_research_report_id is not None:
+            logger.info(
+                "Skipping advisor-to-research handoff for "
+                "research-first advisor job %s.",
+                job.id,
+            )
+            return
+
         research_request, dispatched = (
             queue_research_after_advisor_job(
                 job=job,
@@ -188,6 +197,15 @@ def _ensure_auto_research_handoff(
                 "startup_profile",
             ).get(pk=briefing_id)
         )
+
+        if briefing.source_research_report_id is not None:
+            logger.info(
+                "Skipping advisor-to-research handoff for "
+                "research-first briefing %s.",
+                briefing.id,
+            )
+            return
+
         research_request, dispatched = (
             queue_research_after_advisor(
                 briefing=briefing,
@@ -336,6 +354,11 @@ def generate_startup_advisor_briefing_task(
 
         source_snapshot = job.source_snapshot
         requested_by = job.requested_by
+        source_research_report = (
+            job.source_research_report
+            if job.source_research_report_id
+            else None
+        )
         handoff_job_id = str(job.id)
         transaction.on_commit(
             lambda: _ensure_auto_research_job_handoff(
@@ -350,6 +373,9 @@ def generate_startup_advisor_briefing_task(
             briefing = generate_startup_advisor_briefing(
                 source_snapshot=source_snapshot,
                 requested_by=requested_by,
+                source_research_report=(
+                    source_research_report
+                ),
             )
     except SoftTimeLimitExceeded:
         failed_job = _mark_job_failed(
