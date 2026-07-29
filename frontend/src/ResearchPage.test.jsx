@@ -95,7 +95,11 @@ describe("ResearchPage", () => {
     });
     render(<ResearchPage startupProfileId="profile-one" />);
 
-    fireEvent.click(await screen.findByText("Logistics market report"));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /Logistics market report/i,
+      }),
+    );
 
     expect(
       await screen.findByText(/This report is partial/),
