@@ -69,7 +69,7 @@ class Command(BaseCommand):
         missing = sorted(
             model for model in required if not _model_available(model, installed)
         )
-        self.stdout.write(f"ollama=ok")
+        self.stdout.write("ollama=ok")
         self.stdout.write(f"installed_models={len(installed)}")
         self.stdout.write(f"advisor_model={settings.STARTUP_ADVISOR_LLM_MODEL}")
         self.stdout.write(f"context_length={settings.OLLAMA_CONTEXT_LENGTH}")

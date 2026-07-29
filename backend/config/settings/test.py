@@ -1,6 +1,7 @@
-from .development import *  # noqa: F403
 from django.db.backends.signals import connection_created
 from django.dispatch import receiver
+
+from .development import *  # noqa: F403
 
 DATABASES = {
     "default": {
