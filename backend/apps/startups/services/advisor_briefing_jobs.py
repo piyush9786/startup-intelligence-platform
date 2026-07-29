@@ -112,6 +112,7 @@ def queue_startup_advisor_briefing_job(
     *,
     source_snapshot: StartupAdvisorSnapshot,
     requested_by: Any,
+    source_research_report: Any | None = None,
 ) -> tuple[StartupAdvisorBriefingJob, bool]:
     """Create and dispatch one non-stale active job per startup profile."""
 
@@ -119,6 +120,30 @@ def queue_startup_advisor_briefing_job(
         StartupProfile.objects.select_for_update().only("id").get(
             pk=source_snapshot.startup_profile_id,
         )
+
+        if (
+            source_research_report is not None
+            and source_research_report.startup_profile_id
+            != source_snapshot.startup_profile_id
+        ):
+            raise ValueError(
+                "The research report and advisor snapshot must "
+                "belong to the same startup profile."
+            )
+
+        if source_research_report is not None:
+            existing_for_report = (
+                StartupAdvisorBriefingJob.objects
+                .select_for_update()
+                .filter(
+                    source_research_report=(
+                        source_research_report
+                    ),
+                )
+                .first()
+            )
+            if existing_for_report is not None:
+                return existing_for_report, False
 
         existing_job = (
             StartupAdvisorBriefingJob.objects.select_for_update()
@@ -137,6 +162,16 @@ def queue_startup_advisor_briefing_job(
             )
 
             if not error_code:
+                if (
+                    source_research_report is not None
+                    and existing_job.source_research_report_id
+                    != source_research_report.id
+                ):
+                    raise AdvisorBriefingJobDispatchError(
+                        "Another advisor generation job is "
+                        "already active for this startup profile."
+                    )
+
                 return existing_job, False
 
             _mark_locked_job_failed(
@@ -150,6 +185,7 @@ def queue_startup_advisor_briefing_job(
             requested_by=requested_by,
             startup_profile_id=source_snapshot.startup_profile_id,
             source_snapshot=source_snapshot,
+            source_research_report=source_research_report,
         )
 
     try:

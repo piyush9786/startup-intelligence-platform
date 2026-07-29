@@ -29,7 +29,7 @@ from .llm_provider import (
     get_startup_advisor_llm_provider,
 )
 
-BRIEFING_PROMPT_VERSION = "startup-advisor-briefing-prompt-v4"
+BRIEFING_PROMPT_VERSION = "startup-advisor-briefing-prompt-v5"
 
 SYSTEM_PROMPT = """
 You are a grounded startup advisor for Indian founders.
@@ -57,7 +57,7 @@ Source types:
 - recommendation
 - evidence_chunk
 
-Retrieved evidence chunks are supporting official-source context. They never
+Retrieved evidence chunks are supporting verified-research or official-source context. They never
 override deterministic eligibility, readiness, recommendation or deadline
 records. Cite a retrieved chunk with its listed chunk ID and a path such as
 "/text", "/source_url", "/page_number" or "/title".
@@ -77,6 +77,10 @@ Never use nested identifiers such as assessment_id, scheme_id or profile_id
 as source_id unless they are explicitly listed in the citation contract.
 
 Each scheme-guidance item must cite at least one persisted recommendation.
+When persisted recommendations are available, return at least one
+scheme-guidance item. Include the official source or application link supplied
+inside the persisted recommendation. Clearly distinguish a potential match
+requiring verification from confirmed eligibility.
 When citation_contract.scheme_guidance_must_be_empty is true, return
 "scheme_guidance": [] exactly. Excluded schemes may instead inform risks or
 priorities using the recommendation_generation document.
@@ -622,9 +626,13 @@ _PROMPT_ACTION_PLAN_FIELDS = (
 _PROMPT_RECOMMENDATION_FIELDS = (
     "id", "scheme_id", "scheme_version_id", "scheme_name",
     "canonical_name", "rank", "ranking_score", "score",
-    "eligibility_result", "eligibility_score", "explanation",
-    "reasons", "support_types", "verification_status",
-    "official_url", "source_references",
+    "assessment_result", "eligibility_result",
+    "eligibility_score", "explanation", "reasons",
+    "support_types", "verification_status",
+    "application_status", "official_url",
+    "application_url", "source_document",
+    "score_breakdown", "evidence_snapshot",
+    "source_references",
 )
 
 
@@ -716,6 +724,176 @@ def _compact_startup_advisor_prompt_input(
     )
     return compact
 
+
+def _ensure_persisted_scheme_guidance(
+    *,
+    payload: dict[str, Any],
+    source_snapshot: StartupAdvisorSnapshot,
+) -> dict[str, Any]:
+    """Add grounded scheme guidance when the model leaves it empty."""
+
+    completed = deepcopy(payload)
+
+    if completed.get("scheme_guidance"):
+        return completed
+
+    recommendations = (
+        source_snapshot.recommendations_snapshot
+        if isinstance(
+            source_snapshot.recommendations_snapshot,
+            list,
+        )
+        else []
+    )
+
+    guidance_items: list[dict[str, Any]] = []
+
+    for recommendation in recommendations[:3]:
+        if not isinstance(recommendation, dict):
+            continue
+
+        recommendation_id = recommendation.get("id")
+        scheme_name = recommendation.get("scheme_name")
+
+        if not recommendation_id or not scheme_name:
+            continue
+
+        score_breakdown = (
+            recommendation.get("score_breakdown")
+            if isinstance(
+                recommendation.get("score_breakdown"),
+                dict,
+            )
+            else {}
+        )
+
+        manual_verification = bool(
+            score_breakdown.get(
+                "manual_verification_required"
+            )
+        ) or (
+            recommendation.get("assessment_result")
+            == "verification_required"
+        )
+
+        official_url = str(
+            recommendation.get("official_url") or ""
+        ).strip()
+
+        application_url = str(
+            recommendation.get("application_url") or ""
+        ).strip()
+
+        source_document = (
+            recommendation.get("source_document")
+            if isinstance(
+                recommendation.get("source_document"),
+                dict,
+            )
+            else {}
+        )
+
+        source_url = str(
+            source_document.get("final_url")
+            or source_document.get("source_url")
+            or ""
+        ).strip()
+
+        source_title = str(
+            source_document.get("title") or ""
+        ).strip()
+
+        if manual_verification:
+            guidance = (
+                "This is a profile-based potential match. "
+                "Confirm the latest eligibility conditions, "
+                "application window and required documents "
+                "on the official source before applying."
+            )
+        else:
+            guidance = (
+                "Review the current eligibility conditions, "
+                "application window and required documents "
+                "before submitting an application."
+            )
+
+        selected_url = (
+            application_url
+            or official_url
+            or source_url
+        )
+
+        if selected_url:
+            guidance = (
+                f"{guidance} Official source: {selected_url}"
+            )
+
+        if source_title:
+            guidance = (
+                f"{guidance} Source document: {source_title}."
+            )
+
+        references = [
+            {
+                "source_type": "recommendation",
+                "source_id": str(recommendation_id),
+                "field_path": "/scheme_name",
+            }
+        ]
+
+        if application_url:
+            references.append(
+                {
+                    "source_type": "recommendation",
+                    "source_id": str(recommendation_id),
+                    "field_path": "/application_url",
+                }
+            )
+        elif official_url:
+            references.append(
+                {
+                    "source_type": "recommendation",
+                    "source_id": str(recommendation_id),
+                    "field_path": "/official_url",
+                }
+            )
+        elif source_url:
+            source_path = (
+                "/source_document/final_url"
+                if source_document.get("final_url")
+                else "/source_document/source_url"
+            )
+
+            references.append(
+                {
+                    "source_type": "recommendation",
+                    "source_id": str(recommendation_id),
+                    "field_path": source_path,
+                }
+            )
+
+        if source_title:
+            references.append(
+                {
+                    "source_type": "recommendation",
+                    "source_id": str(recommendation_id),
+                    "field_path": "/source_document/title",
+                }
+            )
+
+        guidance_items.append(
+            {
+                "scheme_name": str(scheme_name),
+                "guidance": guidance[:1500],
+                "source_references": references,
+            }
+        )
+
+    completed["scheme_guidance"] = guidance_items
+    return completed
+
+
+
 def build_startup_advisor_briefing_prompt(
     *,
     source_snapshot: StartupAdvisorSnapshot,
@@ -747,6 +925,8 @@ def build_startup_advisor_briefing_prompt(
     )
     if citation_contract["scheme_guidance_must_be_empty"]:
         response_schema["properties"]["scheme_guidance"]["maxItems"] = 0
+    else:
+        response_schema["properties"]["scheme_guidance"]["minItems"] = 1
 
     user_payload = {
         "citation_contract": citation_contract,
@@ -781,13 +961,114 @@ def build_startup_advisor_briefing_prompt(
     }
 
 
+
+TRUSTED_RESEARCH_VERIFICATION_STATUSES = (
+    "verified_internal",
+    "official_live",
+    "reputable_secondary",
+)
+
+
+def _research_report_to_advisor_evidence(
+    source_research_report,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if source_research_report is None:
+        return [], {
+            "status": "not_provided",
+            "report_id": None,
+            "evidence_count": 0,
+        }
+
+    evidence_items = (
+        source_research_report
+        .research_request
+        .evidence_items
+        .filter(
+            verification_status__in=(
+                TRUSTED_RESEARCH_VERIFICATION_STATUSES
+            ),
+        )
+        .order_by(
+            "-confidence_score",
+            "-retrieved_at",
+        )[:6]
+    )
+
+    documents: list[dict[str, Any]] = []
+
+    for item in evidence_items:
+        text_excerpt = " ".join(
+            (item.content_excerpt or "").split()
+        )
+        if not text_excerpt:
+            continue
+
+        documents.append(
+            {
+                "id": str(item.id),
+                "title": (
+                    item.title
+                    or item.publisher
+                    or item.url
+                ),
+                "heading": item.publisher or "",
+                "text": text_excerpt,
+                "source_url": item.url,
+                "score": float(
+                    item.confidence_score or 0
+                ),
+                "verification_status": (
+                    item.verification_status
+                ),
+                "source_type": item.source_type,
+                "retrieved_at": (
+                    item.retrieved_at.isoformat()
+                    if item.retrieved_at
+                    else None
+                ),
+            }
+        )
+
+    return documents, {
+        "status": "available",
+        "report_id": str(source_research_report.id),
+        "research_request_id": str(
+            source_research_report.research_request_id
+        ),
+        "research_status": (
+            source_research_report
+            .research_request
+            .status
+        ),
+        "evidence_count": len(documents),
+        "live_search_date": (
+            source_research_report
+            .live_search_date
+            .isoformat()
+            if source_research_report.live_search_date
+            else None
+        ),
+    }
+
+
 def generate_startup_advisor_briefing(
     *,
     source_snapshot: StartupAdvisorSnapshot,
     requested_by: Any,
+    source_research_report: Any | None = None,
     provider: StartupAdvisorLLMProvider | None = None,
     retriever=None,
 ) -> StartupAdvisorBriefing:
+    if (
+        source_research_report is not None
+        and source_research_report.startup_profile_id
+        != source_snapshot.startup_profile_id
+    ):
+        raise ValueError(
+            "The research report and advisor snapshot must "
+            "belong to the same startup profile."
+        )
+
     input_payload = snapshot_to_llm_input(source_snapshot)
     active_retriever = (
         retriever
@@ -798,6 +1079,25 @@ def generate_startup_advisor_briefing(
         input_payload,
         active_retriever,
     )
+
+    (
+        research_evidence,
+        research_context,
+    ) = _research_report_to_advisor_evidence(
+        source_research_report,
+    )
+
+    retrieved_evidence = [
+        *research_evidence,
+        *retrieved_evidence,
+    ]
+
+    retrieval = {
+        **retrieval,
+        "research_report": research_context,
+        "result_count": len(retrieved_evidence),
+    }
+
     prompt_snapshot = build_startup_advisor_briefing_prompt(
         source_snapshot=source_snapshot,
         retrieved_evidence=retrieved_evidence,
@@ -831,8 +1131,11 @@ def generate_startup_advisor_briefing(
         }
         prompt_snapshot = build_startup_advisor_briefing_prompt(
             source_snapshot=source_snapshot,
-            retrieved_evidence=[],
-            retrieval=retry_retrieval,
+            retrieved_evidence=research_evidence,
+            retrieval={
+                **retry_retrieval,
+                "result_count": len(research_evidence),
+            },
         )
         prompt_snapshot["messages"][0]["content"] = (
             f"{prompt_snapshot['messages'][0]['content']}\n\n"
@@ -852,9 +1155,17 @@ def generate_startup_advisor_briefing(
         generation_attempts[1]["status"] = "succeeded"
 
     prompt_snapshot["generation_attempts"] = generation_attempts
+
+    completed_generation_payload = (
+        _ensure_persisted_scheme_guidance(
+            payload=generation_result.payload,
+            source_snapshot=source_snapshot,
+        )
+    )
+
     briefing_payload, evidence_usage = (
         _apply_retrieved_evidence_usage(
-            payload=generation_result.payload,
+            payload=completed_generation_payload,
             source_snapshot=source_snapshot,
             evidence_documents=prompt_snapshot[
                 "retrieved_evidence"
@@ -891,6 +1202,7 @@ def generate_startup_advisor_briefing(
             requested_by=requested_by,
             startup_profile=locked_snapshot.startup_profile,
             source_snapshot=locked_snapshot,
+            source_research_report=source_research_report,
             provider=generation_result.provider,
             model_name=generation_result.model_name,
             prompt_version=BRIEFING_PROMPT_VERSION,

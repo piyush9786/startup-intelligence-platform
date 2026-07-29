@@ -816,6 +816,10 @@ class StartupAdvisorBriefingGenerationRequestSerializer(serializers.Serializer):
 class StartupAdvisorBriefingSerializer(serializers.ModelSerializer):
     startup_profile_id = serializers.UUIDField(read_only=True)
     source_snapshot_id = serializers.UUIDField(read_only=True)
+    source_research_report_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
     requested_by_id = serializers.UUIDField(
         read_only=True,
         allow_null=True,
@@ -827,6 +831,7 @@ class StartupAdvisorBriefingSerializer(serializers.ModelSerializer):
             "id",
             "startup_profile_id",
             "source_snapshot_id",
+            "source_research_report_id",
             "requested_by_id",
             "provider",
             "model_name",
@@ -848,6 +853,10 @@ class StartupAdvisorBriefingSerializer(serializers.ModelSerializer):
 class StartupAdvisorBriefingJobSerializer(serializers.ModelSerializer):
     startup_profile_id = serializers.UUIDField(read_only=True)
     source_snapshot_id = serializers.UUIDField(read_only=True)
+    source_research_report_id = serializers.UUIDField(
+        read_only=True,
+        allow_null=True,
+    )
     requested_by_id = serializers.UUIDField(
         read_only=True,
         allow_null=True,
@@ -864,6 +873,7 @@ class StartupAdvisorBriefingJobSerializer(serializers.ModelSerializer):
             "id",
             "startup_profile_id",
             "source_snapshot_id",
+            "source_research_report_id",
             "requested_by_id",
             "briefing_id",
             "status",

@@ -9,7 +9,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.startups.models import StartupProfile
+from apps.recommendations.services import (
+    RecommendationSetIntegrityError,
+)
+from apps.startups.models import (
+    StartupAdvisorBriefingJob,
+    StartupProfile,
+)
+from apps.startups.services import (
+    create_startup_advisor_snapshot,
+)
 
 from .models import ResearchRequest, StartupResearchReport
 from .serializers import (
@@ -39,6 +48,9 @@ class ResearchRequestCreateView(APIView):
             request.user,
             serializer.validated_data["startup_profile_id"],
         )
+        generate_founder_advice = serializer.validated_data[
+            "generate_founder_advice"
+        ]
 
         active_job = ResearchRequest.objects.filter(
             startup_profile=profile,
@@ -54,13 +66,69 @@ class ResearchRequestCreateView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
+        if generate_founder_advice:
+            active_advisor_job = (
+                StartupAdvisorBriefingJob.objects.filter(
+                    startup_profile=profile,
+                    status__in=[
+                        StartupAdvisorBriefingJob.Status.QUEUED,
+                        StartupAdvisorBriefingJob.Status.RUNNING,
+                    ],
+                )
+                .order_by("-created_at", "-id")
+                .first()
+            )
+
+            if active_advisor_job is not None:
+                return Response(
+                    {
+                        "detail": (
+                            "An advisor generation job is already "
+                            "in progress for this startup profile."
+                        ),
+                        "advisor_job_id": str(
+                            active_advisor_job.id
+                        ),
+                        "advisor_job_status": (
+                            active_advisor_job.status
+                        ),
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
         try:
             with transaction.atomic():
+                advisor_snapshot = None
+                workflow_type = (
+                    ResearchRequest.WorkflowType.STANDALONE
+                )
+
+                if generate_founder_advice:
+                    advisor_snapshot = (
+                        create_startup_advisor_snapshot(
+                            startup_profile=profile,
+                            requested_by=request.user,
+                        )
+                    )
+                    workflow_type = (
+                        ResearchRequest.WorkflowType
+                        .RESEARCH_FIRST_INTELLIGENCE
+                    )
+
                 req_obj = ResearchRequest.objects.create(
                     startup_profile=profile,
                     requested_by=request.user,
-                    question=serializer.validated_data["question"],
+                    advisor_snapshot=advisor_snapshot,
+                    workflow_type=workflow_type,
+                    question=serializer.validated_data[
+                        "question"
+                    ],
                 )
+        except RecommendationSetIntegrityError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
         except IntegrityError:
             active_job = ResearchRequest.objects.filter(
                 startup_profile=profile,
@@ -116,6 +184,12 @@ class ResearchRequestCreateView(APIView):
 
         return Response(
             {
+                "workflow_type": req_obj.workflow_type,
+                "advisor_snapshot_id": (
+                    str(req_obj.advisor_snapshot_id)
+                    if req_obj.advisor_snapshot_id
+                    else None
+                ),
                 "job": ResearchRequestDetailSerializer(req_obj).data,
             },
             status=status.HTTP_202_ACCEPTED,

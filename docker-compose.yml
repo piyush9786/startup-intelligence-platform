@@ -16,8 +16,6 @@ x-backend-common: &backend-common
       condition: service_healthy
     minio_init:
       condition: service_completed_successfully
-    ollama_init:
-      condition: service_completed_successfully
   restart: unless-stopped
 
 services:
@@ -107,6 +105,7 @@ services:
       "
 
   ollama:
+    profiles: ["docker-ollama"]
     image: ollama/ollama:0.30.8
     environment:
       OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-4096}
@@ -126,6 +125,7 @@ services:
     restart: unless-stopped
 
   ollama_init:
+    profiles: ["docker-ollama"]
     image: ollama/ollama:0.30.8
     env_file: .env
     environment:
@@ -153,6 +153,32 @@ services:
         ollama pull "$$embedding_model";
       fi
     restart: "no"
+
+
+  searxng:
+    image: searxng/searxng:latest
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET}
+      SEARXNG_BASE_URL: http://searxng:8080/
+      SEARXNG_LIMITER: "false"
+      SEARXNG_IMAGE_PROXY: "false"
+      SEARXNG_PUBLIC_INSTANCE: "false"
+      FORCE_OWNERSHIP: "false"
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    expose:
+      - "8080"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/', timeout=5)"
+      interval: 10s
+      timeout: 6s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
 
   mailpit:
     image: axllent/mailpit:v1.30.0

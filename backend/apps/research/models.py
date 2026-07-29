@@ -18,6 +18,20 @@ class ResearchRequest(TimeStampedModel):
         PARTIAL = "partial", "Partial results"
         FAILED = "failed", "Failed"
 
+    class WorkflowType(models.TextChoices):
+        STANDALONE = (
+            "standalone",
+            "Standalone research",
+        )
+        ADVISOR_FOLLOWUP = (
+            "advisor_followup",
+            "Advisor follow-up research",
+        )
+        RESEARCH_FIRST_INTELLIGENCE = (
+            "research_first_intelligence",
+            "Research-first founder intelligence",
+        )
+
     startup_profile = models.ForeignKey(
         StartupProfile,
         on_delete=models.CASCADE,
@@ -27,6 +41,19 @@ class ResearchRequest(TimeStampedModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="research_requests",
+    )
+    workflow_type = models.CharField(
+        max_length=40,
+        choices=WorkflowType.choices,
+        default=WorkflowType.STANDALONE,
+        db_index=True,
+    )
+    advisor_snapshot = models.ForeignKey(
+        "startups.StartupAdvisorSnapshot",
+        on_delete=models.PROTECT,
+        related_name="research_first_requests",
+        null=True,
+        blank=True,
     )
     source_advisor_job = models.OneToOneField(
         "startups.StartupAdvisorBriefingJob",

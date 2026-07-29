@@ -1,6 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { describeApiFailure } from "./api";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  describeApiFailure,
+  getStartupAdvisorBriefing,
+  getStartupAdvisorBriefingJob,
+} from "./api";
+import BriefingDocument from "./BriefingDocument";
 import { getFounderIntelligence } from "./intelligenceApi";
+import {
+  getResearchRequest,
+  submitResearchRequest,
+} from "./researchApi";
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -35,6 +50,22 @@ const WORKSPACE_LABELS = {
   schemes:           "Scheme Explorer",
   roadmap:           "Action Roadmap",
 };
+
+const ACTIVE_RESEARCH_STATUSES = new Set(["queued", "running"]);
+const ACTIVE_ADVISOR_STATUSES = new Set(["queued", "running"]);
+
+const FOUNDER_INTELLIGENCE_QUESTION = [
+  "Research current government funding, competitors, compliance",
+  "requirements, market risks, market gaps, capital options, and",
+  "recommended next actions for this startup before generating",
+  "evidence-backed founder advice.",
+].join(" ");
+
+function humanizeStatus(value) {
+  return String(value || "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -157,7 +188,46 @@ export default function FounderIntelligencePage({ startupProfile, onNavigate }) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [researchJob, setResearchJob] = useState(null);
+  const [advisorJob, setAdvisorJob] = useState(null);
+  const [generatedBriefing, setGeneratedBriefing] = useState(null);
+  const [generationLoading, setGenerationLoading] = useState(false);
+  const [generationError, setGenerationError] = useState("");
+
   const profileId = startupProfile?.id || null;
+  const currentProfileRef = useRef(profileId);
+
+  const researchActive = ACTIVE_RESEARCH_STATUSES.has(
+    researchJob?.status,
+  );
+  const advisorActive = ACTIVE_ADVISOR_STATUSES.has(
+    advisorJob?.status,
+  );
+  const researchWaitingForAdvisor =
+    ["succeeded", "partial"].includes(researchJob?.status)
+    && researchJob?.workflow_type === "research_first_intelligence"
+    && !advisorJob;
+  const generationActive =
+    generationLoading
+    || researchActive
+    || researchWaitingForAdvisor
+    || advisorActive;
+
+  useEffect(() => {
+    currentProfileRef.current = profileId;
+    setResearchJob(null);
+    setAdvisorJob(null);
+    setGeneratedBriefing(null);
+    setGenerationLoading(false);
+    setGenerationError("");
+  }, [profileId]);
+
+  function profileStillSelected(requestedProfileId) {
+    return (
+      String(currentProfileRef.current)
+      === String(requestedProfileId)
+    );
+  }
 
   useEffect(() => {
     if (!profileId) return;
@@ -173,6 +243,219 @@ export default function FounderIntelligencePage({ startupProfile, onNavigate }) 
 
     return () => { cancelled = true; };
   }, [profileId]);
+
+
+  useEffect(() => {
+    if (!researchJob?.id || !profileId) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    let timer = null;
+    let missingAdvisorPolls = 0;
+
+    const selectedProfileId = String(profileId);
+    const requestId = researchJob.id;
+
+    const pollResearch = async () => {
+      try {
+        const nextResearch = await getResearchRequest(requestId);
+
+        if (
+          cancelled
+          || !profileStillSelected(selectedProfileId)
+          || (
+            nextResearch.startup_profile
+            && String(nextResearch.startup_profile)
+              !== selectedProfileId
+          )
+        ) {
+          return;
+        }
+
+        setResearchJob(nextResearch);
+
+        if (nextResearch.status === "failed") {
+          setGenerationError(
+            nextResearch.error_message
+            || "Founder research generation failed.",
+          );
+          return;
+        }
+
+        if (nextResearch.advisor_job) {
+          setAdvisorJob(nextResearch.advisor_job);
+          return;
+        }
+
+        const waitingForAdvisor =
+          ["succeeded", "partial"].includes(nextResearch.status)
+          && nextResearch.workflow_type
+            === "research_first_intelligence";
+
+        if (
+          ACTIVE_RESEARCH_STATUSES.has(nextResearch.status)
+          || waitingForAdvisor
+        ) {
+          if (waitingForAdvisor) {
+            missingAdvisorPolls += 1;
+          }
+
+          if (missingAdvisorPolls >= 30) {
+            setGenerationError(
+              "Research finished, but the Founder Advice job "
+              + "was not linked. Check the worker logs.",
+            );
+            return;
+          }
+
+          timer = window.setTimeout(pollResearch, 2000);
+        }
+      } catch (requestError) {
+        if (
+          !cancelled
+          && profileStillSelected(selectedProfileId)
+        ) {
+          setGenerationError(
+            describeApiFailure(requestError),
+          );
+          timer = window.setTimeout(pollResearch, 4000);
+        }
+      }
+    };
+
+    timer = window.setTimeout(pollResearch, 1200);
+
+    return () => {
+      cancelled = true;
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [researchJob?.id, profileId]);
+
+  useEffect(() => {
+    if (!advisorJob?.id || !profileId) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    let timer = null;
+
+    const selectedProfileId = String(profileId);
+    const jobId = advisorJob.id;
+
+    const pollAdvisor = async () => {
+      try {
+        const nextAdvisorJob =
+          await getStartupAdvisorBriefingJob(jobId);
+
+        if (
+          cancelled
+          || !profileStillSelected(selectedProfileId)
+          || (
+            nextAdvisorJob.startup_profile_id
+            && String(nextAdvisorJob.startup_profile_id)
+              !== selectedProfileId
+          )
+        ) {
+          return;
+        }
+
+        setAdvisorJob(nextAdvisorJob);
+
+        if (nextAdvisorJob.status === "failed") {
+          setGenerationError(
+            nextAdvisorJob.error_message
+            || "Founder Advice generation failed.",
+          );
+          return;
+        }
+
+        if (nextAdvisorJob.status === "succeeded") {
+          if (!nextAdvisorJob.briefing_id) {
+            setGenerationError(
+              "Founder Advice completed without a briefing record.",
+            );
+            return;
+          }
+
+          const briefing = await getStartupAdvisorBriefing(
+            nextAdvisorJob.briefing_id,
+          );
+
+          if (
+            !cancelled
+            && profileStillSelected(selectedProfileId)
+          ) {
+            setGeneratedBriefing(briefing);
+          }
+          return;
+        }
+
+        if (ACTIVE_ADVISOR_STATUSES.has(nextAdvisorJob.status)) {
+          timer = window.setTimeout(pollAdvisor, 2000);
+        }
+      } catch (requestError) {
+        if (
+          !cancelled
+          && profileStillSelected(selectedProfileId)
+        ) {
+          setGenerationError(
+            describeApiFailure(requestError),
+          );
+          timer = window.setTimeout(pollAdvisor, 4000);
+        }
+      }
+    };
+
+    timer = window.setTimeout(pollAdvisor, 1000);
+
+    return () => {
+      cancelled = true;
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [advisorJob?.id, profileId]);
+
+  async function handleGenerateFounderIntelligence() {
+    if (!profileId || generationActive) return;
+
+    const requestedProfileId = String(profileId);
+
+    setGenerationLoading(true);
+    setGenerationError("");
+    setResearchJob(null);
+    setAdvisorJob(null);
+    setGeneratedBriefing(null);
+
+    try {
+      const response = await submitResearchRequest(
+        profileId,
+        FOUNDER_INTELLIGENCE_QUESTION,
+        {
+          generateFounderAdvice: true,
+        },
+      );
+
+      if (!profileStillSelected(requestedProfileId)) {
+        return;
+      }
+
+      setResearchJob(response.job || null);
+    } catch (requestError) {
+      if (profileStillSelected(requestedProfileId)) {
+        setGenerationError(
+          describeApiFailure(requestError),
+        );
+      }
+    } finally {
+      if (profileStillSelected(requestedProfileId)) {
+        setGenerationLoading(false);
+      }
+    }
+  }
 
   const weakest = data?.weakest_workspace;
   const ctaLabel = weakest ? `Open ${WORKSPACE_LABELS[weakest] || weakest}` : null;
@@ -214,6 +497,120 @@ export default function FounderIntelligencePage({ startupProfile, onNavigate }) 
           </div>
         )}
       </header>
+
+      <section
+        className="intel-card"
+        aria-labelledby="founder-intelligence-generator-title"
+        style={{
+          marginBottom: "1.25rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1rem",
+        }}
+      >
+        <header className="intel-card-header">
+          <span aria-hidden="true" style={{ fontSize: "1.25rem" }}>
+            ✦
+          </span>
+          <div>
+            <h2
+              id="founder-intelligence-generator-title"
+              style={{
+                margin: 0,
+                fontSize: "1.05rem",
+                color: "var(--ink)",
+              }}
+            >
+              Evidence-first Founder Intelligence
+            </h2>
+            <p
+              style={{
+                margin: "0.25rem 0 0",
+                color: "var(--muted)",
+                fontSize: "0.85rem",
+              }}
+            >
+              Research current evidence first, then generate Founder
+              Advice from the verified Research report.
+            </p>
+          </div>
+        </header>
+
+        <button
+          className="button button-primary"
+          disabled={generationActive}
+          onClick={handleGenerateFounderIntelligence}
+          type="button"
+        >
+          {researchActive
+            ? "Research in progress…"
+            : researchWaitingForAdvisor
+              ? "Preparing Founder Advice…"
+              : advisorActive
+                ? "Founder Advice in progress…"
+                : generationLoading
+                  ? "Starting…"
+                  : "Generate Founder Intelligence"}
+        </button>
+
+        {researchJob && (
+          <div className="research-status-grid" role="status">
+            <span>
+              Research: {humanizeStatus(researchJob.status)}
+            </span>
+            <span>
+              Evidence: {researchJob.evidence_items?.length || 0}
+            </span>
+            <span>
+              Report: {researchJob.generated_report
+                ? "Saved"
+                : "Pending"}
+            </span>
+          </div>
+        )}
+
+        {researchJob?.status === "partial" && (
+          <div className="notice notice-warning" role="status">
+            Research completed with partial evidence. Founder Advice
+            uses the available verified sources and records the
+            unavailable sources in its Research context.
+          </div>
+        )}
+
+        {advisorJob && (
+          <div className="research-status-grid" role="status">
+            <span>
+              Founder Advice: {humanizeStatus(advisorJob.status)}
+            </span>
+            <span>
+              Research linked:{" "}
+              {advisorJob.source_research_report_id
+                ? "Yes"
+                : "Pending"}
+            </span>
+            <span>
+              Briefing: {advisorJob.briefing_id
+                ? "Saved"
+                : "Pending"}
+            </span>
+          </div>
+        )}
+
+        {generationError && (
+          <div className="notice notice-danger" role="alert">
+            {generationError}
+          </div>
+        )}
+      </section>
+
+      {generatedBriefing && (
+        <section
+          aria-label="Generated Founder Advice"
+          style={{ marginBottom: "1.5rem" }}
+        >
+          <BriefingDocument briefingRecord={generatedBriefing} />
+        </section>
+      )}
 
       {/* ── Loading / error ── */}
       {loading && (
@@ -387,13 +784,30 @@ export default function FounderIntelligencePage({ startupProfile, onNavigate }) 
                   <span style={{ fontSize: "2rem", fontWeight: 800, lineHeight: 1, color: "var(--ink)" }}>
                     {data.schemes.matched}
                   </span>
-                  <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>matched schemes</span>
+                  <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>ranked scheme matches</span>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  <StatBadge colorClass="status-green" value={`${data.schemes.eligible} eligible`} />
-                  <StatBadge colorClass="status-amber" value={`${data.schemes.conditionally_eligible} conditional`} />
+                  {data.schemes.eligible > 0 && (
+                    <StatBadge
+                      colorClass="status-green"
+                      value={`${data.schemes.eligible} confirmed eligible`}
+                    />
+                  )}
+                  {data.schemes.conditionally_eligible > 0 && (
+                    <StatBadge
+                      colorClass="status-amber"
+                      value={`${data.schemes.conditionally_eligible} conditional`}
+                    />
+                  )}
                   {data.schemes.pending_review > 0 && (
-                    <StatBadge colorClass="status-neutral" value={`${data.schemes.pending_review} pending`} />
+                    <StatBadge
+                      colorClass="status-amber"
+                      value={`${data.schemes.pending_review} potential ${
+                        data.schemes.pending_review === 1
+                          ? "match"
+                          : "matches"
+                      }`}
+                    />
                   )}
                 </div>
               </div>

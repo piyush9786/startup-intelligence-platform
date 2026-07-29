@@ -225,18 +225,33 @@ export default function ResearchPage({ startupProfileId }) {
           return;
         }
 
-        setHistory(records || []);
-        const currentJob = currentPayload?.job || null;
+        const savedReports = Array.isArray(records)
+          ? records
+          : [];
 
-        if (
+        setHistory(savedReports);
+
+        const currentJob = currentPayload?.job || null;
+        const currentJobMatchesProfile = Boolean(
           currentJob
-          && String(currentJob.startup_profile) === selectedProfileId
-        ) {
+          && (
+            !currentJob.startup_profile
+            || String(currentJob.startup_profile)
+              === selectedProfileId
+          ),
+        );
+
+        if (currentJobMatchesProfile) {
           setJob(currentJob);
-          if (currentJob.generated_report) {
-            setReport(currentJob.generated_report);
-          }
         }
+
+        const currentSavedReport =
+          currentJobMatchesProfile
+          && currentJob?.generated_report
+            ? currentJob.generated_report
+            : savedReports[0] || null;
+
+        setReport(currentSavedReport);
       })
       .catch((requestError) => {
         if (
