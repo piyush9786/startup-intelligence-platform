@@ -791,6 +791,13 @@ class StartupAdvisorBriefing(TimeStampedModel):
         on_delete=models.PROTECT,
         related_name="briefings",
     )
+    source_research_report = models.OneToOneField(
+        "research.StartupResearchReport",
+        on_delete=models.PROTECT,
+        related_name="advisor_briefing",
+        null=True,
+        blank=True,
+    )
     provider = models.CharField(max_length=64)
     model_name = models.CharField(max_length=255)
     prompt_version = models.CharField(max_length=64)
@@ -853,6 +860,13 @@ class StartupAdvisorBriefingJob(TimeStampedModel):
         StartupAdvisorSnapshot,
         on_delete=models.PROTECT,
         related_name="briefing_jobs",
+    )
+    source_research_report = models.OneToOneField(
+        "research.StartupResearchReport",
+        on_delete=models.PROTECT,
+        related_name="advisor_generation_job",
+        null=True,
+        blank=True,
     )
     briefing = models.OneToOneField(
         StartupAdvisorBriefing,

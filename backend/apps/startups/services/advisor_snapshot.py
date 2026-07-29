@@ -129,7 +129,55 @@ def snapshot_recommendation(
             recommendation.scheme_version_id,
         ),
         "scheme_name": (recommendation.scheme_version.scheme.canonical_name),
-        "application_status": (recommendation.scheme_version.application_status),
+        "application_status": (
+            recommendation.scheme_version.application_status
+        ),
+        "official_url": (
+            recommendation.scheme_version.official_url
+        ),
+        "application_url": (
+            recommendation.scheme_version.application_url
+        ),
+        "verification_status": (
+            recommendation.scheme_version.verification_status
+        ),
+        "source_document": {
+            "id": str(
+                recommendation.scheme_version.source_document_id
+            ),
+            "title": (
+                recommendation.scheme_version
+                .source_document.title
+            ),
+            "source_url": (
+                recommendation.scheme_version
+                .source_document.source_url
+            ),
+            "final_url": (
+                recommendation.scheme_version
+                .source_document.final_url
+            ),
+            "status": (
+                recommendation.scheme_version
+                .source_document.status
+            ),
+            "content_hash": (
+                recommendation.scheme_version
+                .source_document.content_hash
+            ),
+            "retrieved_at": _json_ready(
+                recommendation.scheme_version
+                .source_document.retrieved_at
+            ),
+            "authority_name": (
+                recommendation.scheme_version
+                .source_document.source.name
+            ),
+            "authority_tier": (
+                recommendation.scheme_version
+                .source_document.source.authority_tier
+            ),
+        },
         "rank": recommendation.rank,
         "score": _json_ready(recommendation.score),
         "score_breakdown": _json_ready(

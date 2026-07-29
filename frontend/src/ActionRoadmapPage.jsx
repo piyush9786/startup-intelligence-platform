@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  generateStartingPlan,
   getCurrentStartingPlan,
   getStartupProfileReadiness,
   listStartupProfiles,
@@ -39,12 +40,17 @@ export default function ActionRoadmapPage({ onNavigate, startupProfileId }) {
       const [readinessData, planData] = await Promise.all([
         getStartupProfileReadiness(startupProfileId),
         Promise.resolve()
-          .then(() => getCurrentStartingPlan(startupProfileId))
+          .then(() => generateStartingPlan(startupProfileId))
+          .catch(() => getCurrentStartingPlan(startupProfileId))
           .catch(() => ({ starting_plan: null })),
       ]);
 
       setAssessment(readinessData.readiness_assessment || readinessData.evaluation || readinessData);
-      setActionPlan(planData.starting_plan || planData.action_plan || null);
+      setActionPlan(
+        planData.starting_plan
+          || planData.action_plan
+          || (Array.isArray(planData.items) ? planData : null),
+      );
     } catch (requestError) {
       setError(humanizeApiError(requestError));
     } finally {
