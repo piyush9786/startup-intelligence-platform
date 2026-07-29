@@ -40,16 +40,39 @@ export default function ActionRoadmapPage({ onNavigate, startupProfileId }) {
       const [readinessData, planData] = await Promise.all([
         getStartupProfileReadiness(startupProfileId),
         Promise.resolve()
-          .then(() => generateStartingPlan(startupProfileId))
+          .then(async () => {
+            const generatedPlan = await generateStartingPlan(startupProfileId);
+
+            if (generatedPlan && typeof generatedPlan === "object") {
+              return generatedPlan;
+            }
+
+            return getCurrentStartingPlan(startupProfileId);
+          })
           .catch(() => getCurrentStartingPlan(startupProfileId))
           .catch(() => ({ starting_plan: null })),
       ]);
 
-      setAssessment(readinessData.readiness_assessment || readinessData.evaluation || readinessData);
+      const safeReadinessData =
+        readinessData && typeof readinessData === "object"
+          ? readinessData
+          : {};
+
+      const safePlanData =
+        planData && typeof planData === "object"
+          ? planData
+          : {};
+
+      setAssessment(
+        safeReadinessData.readiness_assessment
+          || safeReadinessData.evaluation
+          || safeReadinessData,
+      );
+
       setActionPlan(
-        planData.starting_plan
-          || planData.action_plan
-          || (Array.isArray(planData.items) ? planData : null),
+        safePlanData.starting_plan
+          || safePlanData.action_plan
+          || (Array.isArray(safePlanData.items) ? safePlanData : null),
       );
     } catch (requestError) {
       setError(humanizeApiError(requestError));

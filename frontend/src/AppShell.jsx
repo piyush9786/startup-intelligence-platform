@@ -19,7 +19,8 @@
  *   /requirements         → RequirementsPage
  *   /funding              → FundingPage
  *   /milestones           → ExecutionMilestonesPage
- *   /advisor              → FounderIntelligencePage
+ *   /advisor              → Founder Advisor
+ *   /founder-intelligence  → Research-first Intelligence workspace
  *   /reviewer-verifications → ReviewerVerificationWorkspace
  *   /intelligence         → FounderConcierge
  */
@@ -99,6 +100,11 @@ const CapitalPlannerPage = React.lazy(() => import("./CapitalPlannerPage"));
 const DocumentIntakeWorkspace = React.lazy(() => import("./DocumentIntakeWorkspace"));
 const ExecutionMilestonesPage = React.lazy(() => import("./ExecutionMilestonesPage"));
 const FounderIntelligencePage = React.lazy(() => import("./FounderIntelligencePage"));
+const FounderIntelligenceWorkspacePage = React.lazy(
+  () => import(
+    "./founder-intelligence/FounderIntelligenceWorkspacePage"
+  ),
+);
 const FundingPage = React.lazy(() => import("./FundingPage"));
 const FundingPlanPage = React.lazy(() => import("./FundingPlanPage"));
 const MyStartupPage = React.lazy(() => import("./MyStartupPage"));
@@ -126,9 +132,16 @@ function advisorAiReady(status) {
 // Sidebar navigation
 // ---------------------------------------------------------------------------
 
+function navigationTourId(path) {
+  return `nav-item-${path
+    .replace(/^\/+/, "")
+    .replaceAll("/", "-")}`;
+}
+
 function SidebarNavItem({ to, icon, label }) {
   return (
     <NavLink
+      id={navigationTourId(to)}
       to={to}
       className={({ isActive }) =>
         ["nav-item", isActive ? "nav-item-active" : ""].join(" ").trim()
@@ -180,6 +193,7 @@ function Navigation({ canReviewEligibility, onLogout }) {
     {
       label: t("nav.group.guidance"),
       items: [
+        ["/founder-intelligence", "◈", "Founder Intelligence"],
         ["/advisor", "✦", t("nav.advisor")],
         ["/research", "⌕", t("nav.research")],
       ],
@@ -287,10 +301,21 @@ function ProductSidebar({ canReviewEligibility, metrics, onLogout, profile }) {
   );
 }
 
-function ProductTopbar({ profiles = [], query, selectedProfileId, setQuery, setSelectedProfileId }) {
+function ProductTopbar({
+  onStartCompleteTour,
+  onStartPageTour,
+  profiles = [],
+  query,
+  selectedProfileId,
+  setQuery,
+  setSelectedProfileId,
+}) {
   const { t } = useT();
   return (
-    <header className="product-topbar">
+    <header
+      className="product-topbar"
+      id="product-topbar"
+    >
       <label className="dashboard-search">
         <span aria-hidden="true">⌕</span>
         <span className="sr-only">{t("search.sr_label")}</span>
@@ -302,6 +327,28 @@ function ProductTopbar({ profiles = [], query, selectedProfileId, setQuery, setS
         />
       </label>
       <div className="topbar-right-actions">
+        <div
+          aria-label="Website tour options"
+          className="topbar-tour-actions"
+        >
+          <button
+            className="button button-secondary topbar-tour-button"
+            id="tour-launcher"
+            onClick={onStartPageTour}
+            type="button"
+          >
+            Tour this page
+          </button>
+
+          <button
+            className="button button-secondary topbar-tour-button"
+            id="complete-tour-launcher"
+            onClick={onStartCompleteTour}
+            type="button"
+          >
+            Tour whole website
+          </button>
+        </div>
         {profiles && profiles.length > 0 && (
           <div className="profile-switcher">
             <select
@@ -392,6 +439,7 @@ function Workspace({ onSignOut }) {
   const [onboardingProgress, setOnboardingProgress] = useState(null);
   const [onboardingBusy, setOnboardingBusy] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  const [tourMode, setTourMode] = useState("page");
   const [showJourneyDialog, setShowJourneyDialog] = useState(false);
 
   const navigate = useNavigate();
@@ -807,6 +855,14 @@ function Workspace({ onSignOut }) {
       />
       <div className="product-main">
         <ProductTopbar
+          onStartCompleteTour={() => {
+            setTourMode("complete");
+            setShowTour(true);
+          }}
+          onStartPageTour={() => {
+            setTourMode("page");
+            setShowTour(true);
+          }}
           profiles={profiles}
           query={query}
           selectedProfileId={selectedProfileId}
@@ -839,7 +895,10 @@ function Workspace({ onSignOut }) {
             </button>
           </div>
         )}
-        <main className="product-content">
+        <main
+          className="product-content"
+          data-tour-route={location.pathname}
+        >
           {loadingWorkspace ? (
             <div className="dashboard-loader" role="status">
               <span className="spinner" aria-hidden="true" />
@@ -862,7 +921,17 @@ function Workspace({ onSignOut }) {
         </main>
         {showTour && (
           <React.Suspense fallback={null}>
-            <WebsiteTour onClose={() => setShowTour(false)} />
+            <WebsiteTour
+              includeReviewer={canReviewEligibility}
+              mode={tourMode}
+              navigate={navigate}
+              onDismiss={() => {
+                setShowTour(false);
+                setTourMode("page");
+              }}
+              pathname={location.pathname}
+              run={showTour}
+            />
           </React.Suspense>
         )}
         <React.Suspense fallback={null}>
@@ -916,6 +985,10 @@ export function AppRouter({ onSignOut }) {
         <Route path="funding/plans" element={<FundingPlanRoute />} />
         <Route path="starting-plan" element={<StartingPlanRoute />} />
         <Route path="advisor" element={<AdvisorRoute />} />
+        <Route
+          path="founder-intelligence"
+          element={<FounderIntelligenceWorkspaceRoute />}
+        />
         <Route path="research" element={<ResearchRoute />} />
         <Route path="intelligence" element={<IntelligenceRoute />} />
         <Route path="reviewer-verifications" element={<ReviewerRoute />} />
@@ -1153,6 +1226,17 @@ function AdvisorRoute() {
       loading={ctx.loadingWorkspace}
       onGenerate={ctx.handleGenerate}
       onHistorySelection={handleHistorySelection}
+    />
+  );
+}
+
+function FounderIntelligenceWorkspaceRoute() {
+  const ctx = useOutletContext();
+
+  return (
+    <FounderIntelligenceWorkspacePage
+      key={ctx.selectedProfile?.id || "no-startup"}
+      startupProfile={ctx.selectedProfile}
     />
   );
 }
