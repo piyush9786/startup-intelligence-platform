@@ -1,0 +1,359 @@
+.fiw-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.fiw-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.fiw-page-header h1 {
+  margin: 0.25rem 0 0.5rem;
+  max-width: 760px;
+  color: var(--ink);
+  font-size: clamp(1.55rem, 3vw, 2.25rem);
+  line-height: 1.15;
+}
+
+.fiw-page-header p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.fiw-profile-chip,
+.fiw-status-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper-strong);
+  padding: 0.45rem 0.75rem;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fiw-workflow-panel,
+.fiw-content-panel,
+.fiw-history-panel {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.fiw-workflow-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(260px, 1fr) auto;
+  align-items: end;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.fiw-workflow-panel h2 {
+  margin: 0.25rem 0 0.4rem;
+  color: var(--ink);
+  font-size: 1.15rem;
+}
+
+.fiw-workflow-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.fiw-question-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.fiw-question-field textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  padding: 0.75rem;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+
+.fiw-timeline {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fiw-timeline-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper-strong);
+  padding: 1rem;
+}
+
+.fiw-timeline-index {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.fiw-timeline-step.is-active .fiw-timeline-index,
+.fiw-timeline-step.is-complete .fiw-timeline-index {
+  background: #1c5137;
+  color: #ffffff;
+}
+
+.fiw-timeline-step.is-warning .fiw-timeline-index {
+  background: #b06000;
+  color: #ffffff;
+}
+
+.fiw-timeline-step.is-failed .fiw-timeline-index {
+  background: #c5221f;
+  color: #ffffff;
+}
+
+.fiw-timeline-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.fiw-timeline-heading span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.fiw-timeline-step p {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.fiw-history-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.fiw-history-panel,
+.fiw-content-panel {
+  min-width: 0;
+  padding: 1.1rem;
+}
+
+.fiw-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.fiw-panel-heading h2 {
+  margin: 0.2rem 0 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.fiw-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.fiw-history-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  padding: 0.8rem;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.fiw-history-item:hover,
+.fiw-history-item-active {
+  border-color: #1c5137;
+  background: rgba(28, 81, 55, 0.06);
+}
+
+.fiw-history-item span,
+.fiw-history-item small {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.fiw-history-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fiw-report-summary {
+  border-left: 3px solid #1c5137;
+  margin: 0 0 1rem;
+  padding-left: 0.85rem;
+  color: var(--ink);
+}
+
+.fiw-evidence-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.fiw-evidence-card {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  padding: 1rem;
+}
+
+.fiw-evidence-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.fiw-evidence-card h3 {
+  margin: 0.4rem 0 0;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.fiw-evidence-card p {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.fiw-evidence-card a {
+  color: #1c5137;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.fiw-verification-pill {
+  display: inline-flex;
+  border-radius: 999px;
+  background: rgba(28, 81, 55, 0.1);
+  padding: 0.25rem 0.55rem;
+  color: #1c5137;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.fiw-confidence {
+  display: grid;
+  place-items: center;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  border: 3px solid rgba(28, 81, 55, 0.18);
+  border-radius: 50%;
+  color: #1c5137;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.fiw-evidence-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.7rem;
+  margin-top: 0.7rem;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.fiw-empty-panel {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 1.5rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 1050px) {
+  .fiw-workflow-panel {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .fiw-workflow-panel .button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .fiw-page-header {
+    flex-direction: column;
+  }
+
+  .fiw-profile-chip {
+    white-space: normal;
+  }
+
+  .fiw-timeline,
+  .fiw-history-layout,
+  .fiw-evidence-list {
+    grid-template-columns: 1fr;
+  }
+
+  .fiw-history-list {
+    max-height: 280px;
+  }
+
+  .fiw-content-panel,
+  .fiw-history-panel,
+  .fiw-workflow-panel {
+    border-radius: 12px;
+    padding: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .fiw-page {
+    gap: 0.9rem;
+  }
+
+  .fiw-timeline-heading,
+  .fiw-panel-heading {
+    flex-direction: column;
+  }
+
+  .fiw-evidence-card header {
+    flex-direction: column;
+  }
+}

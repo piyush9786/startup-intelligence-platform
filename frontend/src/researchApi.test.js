@@ -16,17 +16,51 @@ vi.mock("./api", () => ({
 }));
 
 describe("researchApi", () => {
-  it("submits research request", async () => {
+  it("submits standalone research by default", async () => {
     client.post.mockResolvedValueOnce({
       data: { job: { id: "job-123", status: "queued" } },
     });
 
-    const result = await submitResearchRequest("prof-1", "What are competitors?");
-    expect(client.post).toHaveBeenCalledWith("/research/requests/", {
-      startup_profile_id: "prof-1",
-      question: "What are competitors?",
-    });
+    const result = await submitResearchRequest(
+      "prof-1",
+      "What are competitors?",
+    );
+
+    expect(client.post).toHaveBeenCalledWith(
+      "/research/requests/",
+      {
+        startup_profile_id: "prof-1",
+        question: "What are competitors?",
+        generate_founder_advice: false,
+      },
+    );
     expect(result.job.id).toBe("job-123");
+  });
+
+  it("submits the Research-first Founder Intelligence workflow", async () => {
+    client.post.mockResolvedValueOnce({
+      data: {
+        workflow_type: "research_first_intelligence",
+        job: { id: "job-456", status: "queued" },
+      },
+    });
+
+    await submitResearchRequest(
+      "prof-1",
+      "Create evidence-backed founder guidance.",
+      {
+        generateFounderAdvice: true,
+      },
+    );
+
+    expect(client.post).toHaveBeenCalledWith(
+      "/research/requests/",
+      {
+        startup_profile_id: "prof-1",
+        question: "Create evidence-backed founder guidance.",
+        generate_founder_advice: true,
+      },
+    );
   });
 
   it("fetches research request job status", async () => {
