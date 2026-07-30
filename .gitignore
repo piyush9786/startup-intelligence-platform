@@ -71,3 +71,8 @@ htmlcov/
 # Archives
 *.zip
 
+# Obsolete one-off repair instructions and generated repository inventories
+/APPLY_*.md
+/FIXES_APPLIED.md
+/ENDPOINT_CATALOG.txt
+/PROJECT_FILE_MANIFEST.txt

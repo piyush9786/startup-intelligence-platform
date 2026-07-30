@@ -2,7 +2,7 @@
 
 > **Laptop quick start:** run `./bootstrap_current_project.sh` from the project
 > root, or `./bootstrap_current_project.sh --gpu` for NVIDIA Ollama acceleration.
-> See [`LAPTOP_SETUP.md`](LAPTOP_SETUP.md) for prerequisites, diagnostics,
+> See [`LAPTOP_SETUP.md`](docs/setup/LAPTOP_SETUP.md) for prerequisites, diagnostics,
 > catalog recovery, and all service addresses.
 
 A verified startup-support intelligence platform for readiness assessment,
@@ -157,7 +157,9 @@ startup-intelligence-platform/
 │   │   └── components/ui.jsx # Shared UI primitives
 │   ├── package.json          # Frontend dependencies (react-router-dom, @tanstack/react-query)
 │   └── vite.config.js        # Vite configuration (outDir: "dist")
-├── docs/                     # Comprehensive architecture and domain documentation
+├── docs/                     # Architecture, setup, operations and domain documentation
+│   ├── setup/                # Laptop setup and end-to-end startup guides
+│   └── changes/              # Historical implementation change notes
 └── infrastructure/           # Deployment scripts
 ```
 
@@ -180,7 +182,7 @@ For NVIDIA GPU acceleration:
 The laptop bootstrap creates safe local environment values, starts every
 service, applies migrations, creates MinIO buckets, imports the verified scheme
 catalog and external support datasets, and runs `platform_doctor --strict`.
-See [`LAPTOP_SETUP.md`](LAPTOP_SETUP.md) for administration, diagnostics,
+See [`LAPTOP_SETUP.md`](docs/setup/LAPTOP_SETUP.md) for administration, diagnostics,
 reset, live-search, and troubleshooting commands.
 
 To import the sample historical-company dataset after startup:
