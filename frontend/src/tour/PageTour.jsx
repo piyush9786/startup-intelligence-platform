@@ -4,10 +4,14 @@ import {
 } from "react-joyride";
 
 import {
+  COMPLETE_TOUR_PAGES,
   PAGE_TOURS,
   navigationTourTarget,
   normalizeTourRoute,
 } from "./tourCatalog";
+
+const PAGE_HEADING_TARGET =
+  ".product-content h1, .product-content h2";
 
 const FALLBACK_TOUR = {
   title: "Startup Intelligence",
@@ -15,6 +19,70 @@ const FALLBACK_TOUR = {
     "Use this workspace to manage and grow the selected startup.",
   navRoute: "/dashboard",
 };
+
+const SHARED_SHELL_TARGETS = new Set([
+  "#product-sidebar",
+  "#product-topbar",
+  "#tour-launcher",
+  "#complete-tour-launcher",
+  "#chatbot-launcher",
+]);
+
+function stepTarget(step) {
+  return (
+    step.spotlightTarget
+    || step.target
+    || ""
+  );
+}
+
+function isDetailedPageTarget(target) {
+  if (
+    !target
+    || target === "body"
+    || target === ".product-content"
+    || target === PAGE_HEADING_TARGET
+    || SHARED_SHELL_TARGETS.has(target)
+    || target.startsWith("#nav-item-")
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function detailedStepsForRoute(
+  normalizedRoute,
+  pageTour,
+) {
+  const chapter = COMPLETE_TOUR_PAGES.find(
+    (item) => (
+      normalizeTourRoute(item.route)
+      === normalizedRoute
+    ),
+  );
+
+  const candidates = [
+    ...(chapter?.steps || []),
+    ...(pageTour.extraSteps || []),
+  ];
+
+  const seenTargets = new Set();
+
+  return candidates.filter((step) => {
+    const target = stepTarget(step);
+
+    if (
+      !isDetailedPageTarget(target)
+      || seenTargets.has(target)
+    ) {
+      return false;
+    }
+
+    seenTargets.add(target);
+    return true;
+  });
+}
 
 export default function PageTour({
   onDismiss,
@@ -28,6 +96,11 @@ export default function PageTour({
     PAGE_TOURS[normalizedRoute]
     || FALLBACK_TOUR;
 
+  const detailedSteps = detailedStepsForRoute(
+    normalizedRoute,
+    pageTour,
+  );
+
   const steps = [
     {
       id: "page-tour-welcome",
@@ -37,8 +110,8 @@ export default function PageTour({
         <div>
           <h2>Welcome to Startup Intelligence</h2>
           <p>
-            This tour explains the current page,
-            navigation and important founder controls.
+            Follow the highlighted controls to learn
+            what this page does and how to use it.
           </p>
         </div>
       ),
@@ -61,19 +134,17 @@ export default function PageTour({
     },
     {
       id: "page-tour-launcher",
-      target: "body",
-      placement: "center",
-      spotlightTarget: "#tour-launcher",
+      target: "#tour-launcher",
+      placement: "bottom",
       skipScroll: true,
       content:
-        "Use these buttons to tour only the current page or automatically visit the whole website.",
+        "Use this button for the current page. The adjacent button automatically visits the complete website.",
     },
     {
       id: "page-tour-content",
-      target: "body",
-      placement: "center",
-      spotlightTarget: ".product-content",
-      scrollTarget: ".product-content",
+      target: PAGE_HEADING_TARGET,
+      placement: "bottom",
+      scrollTarget: PAGE_HEADING_TARGET,
       content: (
         <div>
           <h3>{pageTour.title}</h3>
@@ -81,7 +152,15 @@ export default function PageTour({
         </div>
       ),
     },
-    ...(pageTour.extraSteps || []),
+    ...detailedSteps.map(
+      (step, index) => ({
+        ...step,
+        id:
+          step.id
+          || `page-tour-detail-${index}`,
+        skipBeacon: true,
+      }),
+    ),
     {
       id: "page-tour-assistant",
       target: "#chatbot-launcher",
@@ -130,13 +209,13 @@ export default function PageTour({
         overlayColor:
           "rgba(15, 23, 42, 0.68)",
         primaryColor: "#1c5137",
-        scrollDuration: 250,
-        scrollOffset: 110,
+        scrollDuration: 300,
+        scrollOffset: 120,
         showProgress: true,
         skipBeacon: true,
         spotlightPadding: 8,
         spotlightRadius: 10,
-        targetWaitTimeout: 5000,
+        targetWaitTimeout: 10000,
         textColor: "#334155",
         width:
           "min(420px, calc(100vw - 32px))",
