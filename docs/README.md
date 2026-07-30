@@ -59,6 +59,15 @@ Crawler pipelines, document processing, external scheme reviews, and reviewer qu
 
 ---
 
+### 6. 🧰 Setup & Local Development
+
+- **[Laptop Setup Guide](setup/LAPTOP_SETUP.md)**
+- **[Start-to-Endpoint Guide](setup/START_TO_ENDPOINT_GUIDE.md)**
+
+### 7. 📝 Historical Change Notes
+
+- **[Hybrid Scheme Reranker](changes/HYBRID_SCHEME_RERANKER.md)**
+
 ## 📌 Vision & Roadmap
 
 - **[Product Vision V2](PRODUCT_VISION_V2.md)**

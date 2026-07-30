@@ -152,7 +152,7 @@ POST /api/v1/auth/token/logout/
 /api/v1/startups/<profile_id>/intelligence/
 ```
 
-Other route groups are mounted for assistant, companies, discovery, documents, knowledge, recommendations, schemes, and sources. The generated `ENDPOINT_CATALOG.txt` is the authoritative full list for this exact snapshot.
+Other route groups are mounted for assistant, companies, discovery, documents, knowledge, recommendations, schemes, and sources. Use the live Swagger documentation at `/api/docs/` for the current authoritative API endpoint list.
 
 ## Stack represented by the code
 
