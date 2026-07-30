@@ -104,6 +104,7 @@ export const PAGE_TOURS = {
     extraSteps: [
       {
         target: "#founder-intelligence-workflow",
+        spotlightClicks: true,
         content:
           "Start or retry the complete Research-first Founder Intelligence workflow here.",
         placement: "top",
@@ -172,18 +173,16 @@ export const COMPLETE_TOUR_PAGES = [
           "The sidebar organizes startup management, execution, support discovery, Research and Founder Advice.",
       },
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: "#tour-launcher",
+        target: "#tour-launcher",
+        placement: "bottom",
         skipScroll: true,
         content:
           "Use these controls to tour the current page or automatically visit the complete website.",
       },
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "The dashboard combines readiness, recommendations and the founder's next important actions.",
       },
@@ -212,10 +211,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "My Startup",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Maintain the selected startup's identity, stage, location, registrations and operating facts here.",
       },
@@ -226,27 +224,29 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Startup Builder",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Startup Builder converts an early idea into a structured startup concept.",
       },
       {
         target: "#startup-concept-input",
+        spotlightClicks: true,
         placement: "top",
         content:
           "Describe the startup idea or problem to begin the builder workflow.",
       },
       {
         target: "#industry-sector-select",
+        spotlightClicks: true,
         placement: "top",
         content:
           "Choose the closest industry sector to improve generated guidance.",
       },
       {
         target: "#funding-target-input",
+        spotlightClicks: true,
         placement: "top",
         content:
           "Add an estimated funding target when it is relevant to the idea.",
@@ -258,33 +258,36 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Capital Planner",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Capital Planner calculates burn, runway and alternative allocation scenarios.",
       },
       {
         target: "#available_capital",
+        spotlightClicks: true,
         placement: "right",
         content:
           "Enter the startup's available liquid capital.",
       },
       {
         target: "#monthly_revenue",
+        spotlightClicks: true,
         placement: "right",
         content:
           "Monthly revenue reduces the startup's net burn.",
       },
       {
         target: "#fixed_costs",
+        spotlightClicks: true,
         placement: "right",
         content:
           "Fixed costs capture recurring expenses that do not change with output.",
       },
       {
         target: "#variable_costs",
+        spotlightClicks: true,
         placement: "right",
         content:
           "Variable costs capture expenses that change with activity or sales.",
@@ -296,10 +299,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Application Tracker",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Track government-scheme applications from preparation through final decisions.",
       },
@@ -310,10 +312,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Action Roadmap",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "The roadmap orders readiness gaps and founder actions into practical execution waves.",
       },
@@ -324,15 +325,15 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Execution Milestones",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Execution Milestones records operational goals, dates and progress.",
       },
       {
         target: "#m_title",
+        spotlightClicks: true,
         placement: "right",
         content:
           "Create a clear milestone title that describes the expected result.",
@@ -344,10 +345,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Scheme Explorer",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Explore verified and reviewed government-support programmes.",
       },
@@ -370,10 +370,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Requirements",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Review documents, certifications and evidence needed for relevant programmes.",
       },
@@ -384,10 +383,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Funding and Loans",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Explore grants, loans and other capital-support opportunities.",
       },
@@ -398,10 +396,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Funding Plan",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "The funding plan organizes suitable capital sources and preparation actions.",
       },
@@ -412,10 +409,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Starting Plan",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Follow an ordered launch plan generated from the startup's current information.",
       },
@@ -426,10 +422,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Founder Advisor",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Review evidence-backed Founder Advice and persisted briefing history.",
       },
@@ -446,15 +441,15 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Research",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Run standalone market, competitor, scheme and compliance Research.",
       },
       {
         target: "#research-question",
+        spotlightClicks: true,
         placement: "top",
         content:
           "Enter the Research question or focus for the selected startup.",
@@ -473,6 +468,7 @@ export const COMPLETE_TOUR_PAGES = [
       },
       {
         target: "#founder-intelligence-workflow",
+        spotlightClicks: true,
         placement: "top",
         content:
           "Start or retry the complete Research-first workflow here.",
@@ -496,10 +492,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Intelligence Command Center",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "The command center summarizes founder activity and intelligence signals.",
       },
@@ -522,10 +517,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Document Intake",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Upload documents, inspect extracted facts and confirm changes before applying them.",
       },
@@ -536,10 +530,9 @@ export const COMPLETE_TOUR_PAGES = [
     title: "Startup Assessment",
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Complete the structured startup assessment and resolve readiness gaps.",
       },
@@ -557,10 +550,9 @@ export const COMPLETE_TOUR_PAGES = [
     reviewerOnly: true,
     steps: [
       {
-        target: "body",
-        placement: "center",
-        spotlightTarget: ".product-content",
-        scrollTarget: ".product-content",
+        target: ".product-content h1, .product-content h2",
+        placement: "bottom",
+        scrollTarget: ".product-content h1, .product-content h2",
         content:
           "Authorized reviewers inspect submitted evidence and record verification decisions.",
       },
