@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: smart_energy_postgres
+    environment:
+      POSTGRES_DB: smart_energy
+      POSTGRES_USER: energy_user
+      POSTGRES_PASSWORD: energy_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/warehouse/create_tables.sql:/docker-entrypoint-initdb.d/01_create_tables.sql
+
+  api:
+    build: .
+    container_name: smart_energy_api
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: smart_energy
+      DATABASE_USER: energy_user
+      DATABASE_PASSWORD: energy_pass
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+
+volumes:
+  postgres_data:

@@ -1,0 +1,37 @@
+data_generation:
+  num_meters: 5
+  start_date: "2024-01-01"
+  end_date: "2024-03-31"
+  interval_minutes: 15
+  anomaly_rate: 0.02
+  output_dir: "data/raw"
+  sample_output_dir: "data/sample"
+  seed: 42
+
+paths:
+  raw: "data/raw"
+  bronze: "data/bronze"
+  silver: "data/silver"
+  gold: "data/gold"
+  models: "models"
+
+processing:
+  spark_master: "local[*]"
+  app_name: "SmartEnergyAnalytics"
+
+ml:
+  test_size_ratio: 0.2
+  random_state: 42
+  target_column: "energy_consumption_kwh"
+
+api:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+
+database:
+  host: "localhost"
+  port: 5432
+  name: "smart_energy"
+  user: "energy_user"
+  password: "energy_pass"

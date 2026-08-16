@@ -1,0 +1,38 @@
+data_generation:
+  num_meters: 10
+  start_date: "2024-01-01"
+  end_date: "2024-03-31"
+  interval_minutes: 15
+  anomaly_rate: 0.02
+  output_dir: "data/raw"
+  sample_output_dir: "data/sample"
+
+processing:
+  bronze_dir: "data/bronze"
+  silver_dir: "data/silver"
+  gold_dir: "data/gold"
+  use_spark: true
+  spark_master: "local[*]"
+
+ml:
+  model_dir: "models"
+  test_size_days: 14
+  random_state: 42
+  lag_features: [1, 4, 96]
+  rolling_windows: [4, 24, 96]
+
+anomaly:
+  contamination: 0.02
+  random_state: 42
+
+api:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+
+database:
+  host: "localhost"
+  port: 5432
+  database: "energy_analytics"
+  user: "energy_user"
+  password: "energy_pass"
