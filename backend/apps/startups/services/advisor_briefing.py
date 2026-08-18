@@ -19,19 +19,17 @@ from apps.startups.models import (
 )
 
 from .briefing_schema import (
-    BriefingOutputValidationError,
     BRIEFING_DISCLAIMER,
     BRIEFING_SCHEMA_VERSION,
     STARTUP_ADVISOR_BRIEFING_SCHEMA,
+    BriefingOutputValidationError,
     validate_startup_advisor_briefing,
 )
 from .llm_provider import (
     LLMProviderResponseError,
     StartupAdvisorLLMProvider,
-    get_startup_advisor_llm_provider,
     get_startupintel_runtime_provider,
 )
-
 from .slm_alias_contract import (
     SLMAliasContractError,
 )
@@ -39,7 +37,6 @@ from .slm_runtime_contract import (
     build_compact_advisor_request,
     validate_and_expand_compact_advisor_output,
 )
-
 
 BRIEFING_PROMPT_VERSION = "startup-advisor-briefing-prompt-v5"
 

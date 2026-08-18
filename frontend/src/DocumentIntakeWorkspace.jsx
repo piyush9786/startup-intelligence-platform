@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { autofillStartupProfileFromDocument } from "./api";
 import { humanizeApiError } from "./advisor";

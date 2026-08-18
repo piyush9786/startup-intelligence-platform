@@ -24,7 +24,6 @@ from .slm_alias_contract import (
     expand_compact_advisor_output,
 )
 
-
 ADVISOR_SYSTEM = (
     "TASK=FOUNDER_ADVISOR\n"
     "Use only supplied facts and REF_### aliases. "

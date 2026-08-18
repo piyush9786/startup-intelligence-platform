@@ -1,4 +1,3 @@
-import React from "react";
 
 export default function StartupResumeView({ resumeData, onClose }) {
   if (!resumeData) return null;

@@ -8,8 +8,8 @@ from .advisor_views import (
     StartupAdvisorBriefingJobCurrentView,
     StartupAdvisorBriefingJobDetailView,
     StartupAdvisorBriefingListView,
-    StartupAdvisorRecommendationSourceDownloadView,
     StartupAdvisorCurrentView,
+    StartupAdvisorRecommendationSourceDownloadView,
     StartupAdvisorSnapshotGenerateView,
 )
 from .assessment_views import (

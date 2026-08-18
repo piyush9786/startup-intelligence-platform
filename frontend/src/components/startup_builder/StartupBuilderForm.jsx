@@ -1,4 +1,3 @@
-import React from "react";
 import SampleIdeaSelector from "./SampleIdeaSelector";
 
 export default function StartupBuilderForm({

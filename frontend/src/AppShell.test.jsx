@@ -2,7 +2,6 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AppShell from "./AppShell";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
 // Mock the API clients

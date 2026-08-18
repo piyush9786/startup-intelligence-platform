@@ -135,8 +135,8 @@ def generate_search_queries(
     """Generate search queries only for the founder's requested intent."""
     from apps.research.services.research_intent import (
         BROAD_RESEARCH,
-        COMPLIANCE,
         COMPETITORS,
+        COMPLIANCE,
         FAILURE_CASES,
         FUNDING,
         MARKET,

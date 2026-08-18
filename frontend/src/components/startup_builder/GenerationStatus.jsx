@@ -1,4 +1,3 @@
-import React from "react";
 
 export const REASONING_STEPS = [
   "🧠 Phase 1/4: Analyzing Market Opportunity & Commercial Viability...",

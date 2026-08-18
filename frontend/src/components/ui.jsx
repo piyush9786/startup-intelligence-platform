@@ -2,7 +2,6 @@
  * Shared UI primitives extracted from App.jsx.
  * These are small, stateless display components used across many pages.
  */
-import React from "react";
 import * as m from "motion/react-m";
 
 const MOTION_EASE = [0.22, 1, 0.36, 1];

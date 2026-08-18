@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import StartupResumeView from "./StartupResumeView";
 import GenerationStatus, { REASONING_STEPS } from "./components/startup_builder/GenerationStatus";
 import MasterPlanResults from "./components/startup_builder/MasterPlanResults";

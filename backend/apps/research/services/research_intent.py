@@ -1,7 +1,6 @@
 """Deterministic research-intent detection for founder questions."""
 from __future__ import annotations
 
-
 COMPETITORS = "competitors"
 SUCCESS_CASES = "success_cases"
 FAILURE_CASES = "failure_cases"

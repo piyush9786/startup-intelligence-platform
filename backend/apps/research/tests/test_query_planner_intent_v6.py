@@ -6,7 +6,6 @@ from apps.research.services.research_intent import (
     detect_research_intents,
 )
 
-
 IDEA = {
     "product": "AegisSilicon",
     "industry": "DeepTech",

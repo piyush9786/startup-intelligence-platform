@@ -20,13 +20,13 @@ from apps.research.services.search_router import decide_live_search
 from apps.research.services.tavily_client import WebSearchError
 from apps.research.services.vector_retrieval import VectorRetrievalError
 from apps.startups.services.llm_provider import LLMProviderError
+from apps.startups.services.slm_alias_contract import (
+    SLMAliasContractError,
+)
 from apps.startups.services.slm_runtime_contract import (
     build_compact_research_request,
     normalize_compact_research_output,
     validate_compact_research_output,
-)
-from apps.startups.services.slm_alias_contract import (
-    SLMAliasContractError,
 )
 
 from .dependencies import ResearchDependencies

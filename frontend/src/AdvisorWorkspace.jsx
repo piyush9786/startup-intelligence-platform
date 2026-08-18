@@ -1,4 +1,3 @@
-import React from "react";
 import BriefingDocument from "./BriefingDocument.jsx";
 import { formatDateTime } from "./advisor";
 import { PageHeader } from "./components/ui";

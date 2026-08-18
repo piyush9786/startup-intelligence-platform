@@ -1,4 +1,3 @@
-import React from "react";
 
 const PILLAR_CONFIG = {
   problem: { title: "Problem Definition", icon: "🎯", color: "#f87171" },

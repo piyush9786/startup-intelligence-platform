@@ -1,4 +1,3 @@
-import React from "react";
 import { useT } from "./i18n/index.jsx";
 import * as m from "motion/react-m";
 

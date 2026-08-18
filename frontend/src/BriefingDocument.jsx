@@ -131,10 +131,6 @@ function RecommendationSourceCard({
   briefingId,
   recommendation,
 }) {
-  if (!recommendation) {
-    return null;
-  }
-
   const [
     pdfDownloadState,
     setPdfDownloadState,
@@ -142,6 +138,10 @@ function RecommendationSourceCard({
     downloading: false,
     error: "",
   });
+
+  if (!recommendation) {
+    return null;
+  }
 
   async function handleSecurePdfDownload() {
     if (

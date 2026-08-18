@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { generateCapitalPlan, getCurrentCapitalPlan } from "./capitalPlannerApi";
 
 export default function CapitalPlannerPage({ onNavigate }) {

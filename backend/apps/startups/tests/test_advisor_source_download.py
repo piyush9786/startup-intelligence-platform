@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 from rest_framework.exceptions import (
+    NotFound,
     ValidationError,
 )
 from rest_framework.test import (
@@ -83,7 +84,7 @@ def test_private_source_address_is_rejected():
 def test_recommendation_must_belong_to_briefing():
     briefing, _ = fake_briefing()
 
-    with pytest.raises(Exception):
+    with pytest.raises(NotFound):
         _advisor_recommendation(
             briefing,
             uuid4(),
