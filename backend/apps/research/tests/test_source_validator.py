@@ -38,9 +38,52 @@ def test_evidence_ranking():
         ),
     ]
 
-    extracted = extract_and_score_evidence(results, "scheme")
-    ranked = rank_and_deduplicate_evidence(extracted)
+    extracted = extract_and_score_evidence(
+        results,
+        "scheme",
+    )
+    ranked = rank_and_deduplicate_evidence(
+        extracted
+    )
 
+    assert len(extracted) == 2
     assert len(ranked) == 2
-    assert ranked[0]["title"] == "Official DPIIT Portal"
     assert ranked[0]["verification_status"] == "official_live"
+    assert ranked[0]["title"] == "Official DPIIT Portal"
+    assert ranked[1]["verification_status"] == "unverified_live"
+
+    rejected = next(
+        item
+        for item in extracted
+        if item["title"] == "Tech Blog Entry"
+    )
+
+    assert (
+        rejected["source_type"]
+        == "web_source"
+    )
+    assert (
+        rejected["verification_status"]
+        == "unverified_live"
+    )
+
+    # A valid unknown web source may contribute as a low-trust signal,
+    # but it must never be promoted to trusted evidence.
+    assert rejected["verification_status"] not in {
+        "official_live",
+        "reputable_secondary",
+    }
+
+    # Valid unknown domains remain available only as low-trust
+    # unverified evidence; they must rank below trusted sources.
+    assert len(ranked) == 2
+    assert ranked[0]["verification_status"] == "official_live"
+    assert ranked[1]["verification_status"] == "unverified_live"
+    assert (
+        ranked[0]["title"]
+        == "Official DPIIT Portal"
+    )
+    assert (
+        ranked[0]["verification_status"]
+        == "official_live"
+    )

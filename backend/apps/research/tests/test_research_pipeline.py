@@ -77,7 +77,7 @@ def test_research_report_marks_unavailable_live_search_partial(
         question="What is the latest market situation for smart health wristbands?",
     )
     monkeypatch.setattr(
-        "apps.research.services.report_generator.get_startup_advisor_llm_provider",
+        "apps.research.services.report_generator.get_startupintel_runtime_provider",
         lambda: SuccessfulLLM(
             sources=["internal://companies/invented-company"]
         ),
@@ -94,9 +94,23 @@ def test_research_report_marks_unavailable_live_search_partial(
     assert report.report["research_metadata"]["live_search_status"] == "unavailable"
     assert report.report["research_metadata"]["llm_status"] == "generated"
     assert "internal://companies/invented-company" not in report.report["sources"]
-    assert req.search_queries.filter(
+    # Intent-aware research only executes the searches
+    # required by the founder's question. This question is
+    # market-specific, so the planner generates three market queries.
+    failed_queries = req.search_queries.filter(
         status=ResearchSearchQuery.Status.FAILED,
-    ).count() == 3
+    )
+
+    assert failed_queries.count() == 3
+
+    combined_queries = " ".join(
+        item.query.lower()
+        for item in failed_queries
+    )
+
+    assert "market trends" in combined_queries
+    assert "market demand" in combined_queries
+    assert "industry growth" in combined_queries
 
 
 @pytest.mark.django_db

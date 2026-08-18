@@ -8,6 +8,7 @@ from .advisor_views import (
     StartupAdvisorBriefingJobCurrentView,
     StartupAdvisorBriefingJobDetailView,
     StartupAdvisorBriefingListView,
+    StartupAdvisorRecommendationSourceDownloadView,
     StartupAdvisorCurrentView,
     StartupAdvisorSnapshotGenerateView,
 )
@@ -83,6 +84,11 @@ urlpatterns = [
     path("startup-advisor/briefings/jobs/<uuid:job_id>/", StartupAdvisorBriefingJobDetailView.as_view(), name="startup-advisor-briefing-job-detail"),
     path("startup-advisor/briefings/current/", StartupAdvisorBriefingCurrentView.as_view(), name="startup-advisor-briefing-current"),
     path("startup-advisor/briefings/", StartupAdvisorBriefingListView.as_view(), name="startup-advisor-briefing-list"),
+    path(
+        "startup-advisor/briefings/<uuid:briefing_id>/recommendations/<uuid:recommendation_id>/source-download/",
+        StartupAdvisorRecommendationSourceDownloadView.as_view(),
+        name="startup-advisor-recommendation-source-download",
+    ),
     path("startup-advisor/briefings/<uuid:briefing_id>/", StartupAdvisorBriefingDetailView.as_view(), name="startup-advisor-briefing-detail"),
     path("startup-advisor/current/", StartupAdvisorCurrentView.as_view(), name="startup-advisor-current"),
     path("startup-advisor/snapshots/generate/", StartupAdvisorSnapshotGenerateView.as_view(), name="startup-advisor-snapshot-generate"),

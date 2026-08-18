@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -18,7 +21,10 @@ from apps.assistant.services import (
     append_agent_message,
     create_or_get_active_session,
 )
-from apps.startups.models import StartupProfile
+from apps.startups.models import (
+    StartupProfile,
+    StartupReadinessAssessment,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -418,3 +424,457 @@ def test_current_endpoint_returns_existing_history():
         "Stored question",
         "Stored answer",
     ]
+
+
+@override_settings(
+    CHATBOT_LLM_ENABLED=True,
+)
+def test_startup_readiness_routes_to_tool_before_llm():
+    founder = make_user(
+        "chatbot-grounded-readiness"
+    )
+
+    profile = make_profile(
+        owner=founder,
+        name="Grounded Router Startup",
+    )
+
+    StartupReadinessAssessment.objects.create(
+        requested_by=founder,
+        startup_profile=profile,
+        assessment_date=(
+            timezone.localdate()
+        ),
+        status=(
+            StartupReadinessAssessment
+            .Status
+            .READY
+        ),
+        score=92,
+        critical_score=100,
+        recommended_score=84,
+        findings=[],
+        blocking_findings=[],
+        summary=(
+            "The persisted readiness "
+            "assessment is ready."
+        ),
+        engine_version="test-v1",
+    )
+
+    with patch(
+        "apps.assistant.services.chatbot."
+        "_build_llm_reply"
+    ) as llm_reply:
+        response = (
+            authenticated_client(
+                founder
+            ).post(
+                MESSAGE_ENDPOINT,
+                {
+                    "message": (
+                        "What is my "
+                        "readiness score?"
+                    ),
+                    "startup_profile_id": (
+                        str(profile.pk)
+                    ),
+                    "page_context": {
+                        "current_view": (
+                            "dashboard"
+                        ),
+                    },
+                },
+                format="json",
+            )
+        )
+
+    assert (
+        response.status_code
+        == status.HTTP_201_CREATED
+    )
+
+    llm_reply.assert_not_called()
+
+    agent_message = (
+        response.data[
+            "messages"
+        ][-1]
+    )
+
+    assert (
+        agent_message[
+            "metadata"
+        ]["intent"]
+        == "readiness"
+    )
+
+    assert (
+        "92/100"
+        in agent_message[
+            "content"
+        ]
+    )
+
+    assert (
+        agent_message[
+            "metadata"
+        ]["tool_call_ids"]
+    )
+
+    assert (
+        agent_message[
+            "claims"
+        ]
+    )
+
+    tool_log = (
+        AgentToolCallLog.objects
+        .get(
+            tool_name=(
+                "get_readiness_context"
+            )
+        )
+    )
+
+    assert (
+        tool_log.status
+        == AgentToolCallLog
+        .Status
+        .SUCCEEDED
+    )
+
+    assert (
+        tool_log
+        .authorization_context[
+            "allowed"
+        ]
+        is True
+    )
+
+
+@override_settings(CHATBOT_LLM_ENABLED=True)
+def test_greeting_does_not_call_llm():
+    founder = make_user(
+        "chatbot-grounded-greeting"
+    )
+
+    with patch(
+        "apps.assistant.services.chatbot._build_llm_reply"
+    ) as llm_reply:
+        response = authenticated_client(founder).post(
+            MESSAGE_ENDPOINT,
+            {
+                "message": "hii",
+                "page_context": {
+                    "current_view": "dashboard",
+                },
+            },
+            format="json",
+        )
+
+    assert (
+        response.status_code
+        == status.HTTP_201_CREATED
+    )
+
+    llm_reply.assert_not_called()
+
+    message = response.data["messages"][-1]
+
+    assert (
+        message["metadata"]["intent"]
+        == "platform_help"
+    )
+
+
+@override_settings(
+    CHATBOT_LLM_ENABLED=True,
+)
+def test_out_of_scope_question_is_blocked_before_llm():
+    founder = make_user(
+        "chatbot-out-of-scope-founder"
+    )
+
+    with patch(
+        "apps.assistant.services.chatbot._build_llm_reply"
+    ) as llm_reply:
+        response = authenticated_client(
+            founder
+        ).post(
+            MESSAGE_ENDPOINT,
+            {
+                "message": (
+                    "Explain quantum physics to me."
+                ),
+                "page_context": {
+                    "current_view": "dashboard",
+                },
+            },
+            format="json",
+        )
+
+    assert (
+        response.status_code
+        == status.HTTP_201_CREATED
+    )
+
+    llm_reply.assert_not_called()
+
+    agent_message = response.data[
+        "messages"
+    ][-1]
+
+    metadata = agent_message[
+        "metadata"
+    ]
+
+    assert (
+        metadata["intent"]
+        == "out_of_scope"
+    )
+
+    assert (
+        "only help with information available"
+        in agent_message["content"]
+    )
+
+
+@override_settings(
+    CHATBOT_LLM_ENABLED=True,
+)
+def test_general_programming_question_is_blocked():
+    founder = make_user(
+        "chatbot-programming-block-founder"
+    )
+
+    with patch(
+        "apps.assistant.services.chatbot._build_llm_reply"
+    ) as llm_reply:
+        response = authenticated_client(
+            founder
+        ).post(
+            MESSAGE_ENDPOINT,
+            {
+                "message": (
+                    "Write a Java program for quicksort."
+                ),
+                "page_context": {
+                    "current_view": "dashboard",
+                },
+            },
+            format="json",
+        )
+
+    assert (
+        response.status_code
+        == status.HTTP_201_CREATED
+    )
+
+    llm_reply.assert_not_called()
+
+    message = response.data[
+        "messages"
+    ][-1]
+
+    assert (
+        message["metadata"]["intent"]
+        == "out_of_scope"
+    )
+
+
+@override_settings(
+    CHATBOT_LLM_ENABLED=True,
+)
+def test_platform_profile_question_still_uses_grounded_route():
+    founder = make_user(
+        "chatbot-grounded-scope-founder"
+    )
+
+    profile = make_profile(
+        owner=founder,
+        name="Scoped Founder Startup",
+    )
+
+    with patch(
+        "apps.assistant.services.chatbot._build_llm_reply"
+    ) as llm_reply:
+        response = authenticated_client(
+            founder
+        ).post(
+            MESSAGE_ENDPOINT,
+            {
+                "message": (
+                    "Which startup profile are you using?"
+                ),
+                "startup_profile_id": (
+                    str(profile.pk)
+                ),
+                "page_context": {
+                    "current_view": "startup",
+                },
+            },
+            format="json",
+        )
+
+    assert (
+        response.status_code
+        == status.HTTP_201_CREATED
+    )
+
+    llm_reply.assert_not_called()
+
+    message = response.data[
+        "messages"
+    ][-1]
+
+    assert (
+        "Scoped Founder Startup"
+        in message["content"]
+    )
+
+
+@override_settings(
+    CHATBOT_LLM_ENABLED=True,
+)
+def test_out_of_scope_question_is_blocked_before_llm():
+    founder = make_user(
+        "chatbot-out-of-scope-founder"
+    )
+
+    with patch(
+        "apps.assistant.services.chatbot._build_llm_reply"
+    ) as llm_reply:
+        response = authenticated_client(
+            founder
+        ).post(
+            MESSAGE_ENDPOINT,
+            {
+                "message": (
+                    "Explain quantum physics to me."
+                ),
+                "page_context": {
+                    "current_view": "dashboard",
+                },
+            },
+            format="json",
+        )
+
+    assert (
+        response.status_code
+        == status.HTTP_201_CREATED
+    )
+
+    llm_reply.assert_not_called()
+
+    agent_message = response.data[
+        "messages"
+    ][-1]
+
+    metadata = agent_message[
+        "metadata"
+    ]
+
+    assert (
+        metadata["intent"]
+        == "out_of_scope"
+    )
+
+    assert (
+        "only help with information available"
+        in agent_message["content"]
+    )
+
+
+@override_settings(
+    CHATBOT_LLM_ENABLED=True,
+)
+def test_general_programming_question_is_blocked():
+    founder = make_user(
+        "chatbot-programming-block-founder"
+    )
+
+    with patch(
+        "apps.assistant.services.chatbot._build_llm_reply"
+    ) as llm_reply:
+        response = authenticated_client(
+            founder
+        ).post(
+            MESSAGE_ENDPOINT,
+            {
+                "message": (
+                    "Write a Java program for quicksort."
+                ),
+                "page_context": {
+                    "current_view": "dashboard",
+                },
+            },
+            format="json",
+        )
+
+    assert (
+        response.status_code
+        == status.HTTP_201_CREATED
+    )
+
+    llm_reply.assert_not_called()
+
+    message = response.data[
+        "messages"
+    ][-1]
+
+    assert (
+        message["metadata"]["intent"]
+        == "out_of_scope"
+    )
+
+
+@override_settings(
+    CHATBOT_LLM_ENABLED=True,
+)
+def test_platform_profile_question_still_uses_grounded_route():
+    founder = make_user(
+        "chatbot-grounded-scope-founder"
+    )
+
+    profile = make_profile(
+        owner=founder,
+        name="Scoped Founder Startup",
+    )
+
+    with patch(
+        "apps.assistant.services.chatbot._build_llm_reply"
+    ) as llm_reply:
+        response = authenticated_client(
+            founder
+        ).post(
+            MESSAGE_ENDPOINT,
+            {
+                "message": (
+                    "Which startup profile are you using?"
+                ),
+                "startup_profile_id": (
+                    str(profile.pk)
+                ),
+                "page_context": {
+                    "current_view": "startup",
+                },
+            },
+            format="json",
+        )
+
+    assert (
+        response.status_code
+        == status.HTTP_201_CREATED
+    )
+
+    llm_reply.assert_not_called()
+
+    message = response.data[
+        "messages"
+    ][-1]
+
+    assert (
+        "Scoped Founder Startup"
+        in message["content"]
+    )

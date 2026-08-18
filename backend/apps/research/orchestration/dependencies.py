@@ -17,7 +17,7 @@ from apps.research.services.vector_retrieval import (
 )
 from apps.startups.services.llm_provider import (
     StartupAdvisorLLMProvider,
-    get_startup_advisor_llm_provider,
+    get_startupintel_runtime_provider,
 )
 
 
@@ -42,4 +42,4 @@ class ResearchDependencies:
     llm_provider_factory: Callable[
         [],
         StartupAdvisorLLMProvider,
-    ] = get_startup_advisor_llm_provider
+    ] = get_startupintel_runtime_provider

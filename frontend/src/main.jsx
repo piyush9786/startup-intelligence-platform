@@ -10,6 +10,7 @@ import { queryClient } from "./queryClient";
 import "./styles.css";
 import "./responsive.css";
 import "./scroll-fix.css";
+import "./competition.css";
 
 if ("scrollRestoration" in window.history) {
   window.history.scrollRestoration = "manual";

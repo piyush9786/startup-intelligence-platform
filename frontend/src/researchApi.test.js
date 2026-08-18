@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { authenticatedApiClient as client } from "./api";
 import {
   getResearchReport,
+  getResearchIntelligence,
   getResearchRequest,
   listResearchReports,
   submitResearchRequest,
@@ -94,4 +95,17 @@ describe("researchApi", () => {
     expect(client.get).toHaveBeenCalledWith("/research/reports/rep-1/");
     expect(result.report.startup_summary).toBe("Summary");
   });
+  it("fetches persisted adviser intelligence", async () => {
+    client.get.mockResolvedValueOnce({
+      data: { insights: [{ id: "ins-1" }], decisions: [{ id: "dec-1" }] },
+    });
+
+    const result = await getResearchIntelligence("prof-1");
+    expect(client.get).toHaveBeenCalledWith("/research/intelligence/", {
+      params: { startup_profile_id: "prof-1" },
+    });
+    expect(result.insights).toHaveLength(1);
+    expect(result.decisions).toHaveLength(1);
+  });
+
 });

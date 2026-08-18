@@ -36,3 +36,16 @@ export async function getResearchReport(reportId) {
   const response = await client.get(`/research/reports/${reportId}/`);
   return response.data;
 }
+
+export async function getResearchIntelligence(startupProfileId, insightType = "") {
+  const params = {
+    startup_profile_id: startupProfileId,
+  };
+  if (insightType) {
+    params.type = insightType;
+  }
+  const response = await client.get("/research/intelligence/", {
+    params,
+  });
+  return response.data;
+}

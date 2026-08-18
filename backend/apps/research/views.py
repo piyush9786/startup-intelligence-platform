@@ -20,8 +20,15 @@ from apps.startups.services import (
     create_startup_advisor_snapshot,
 )
 
-from .models import ResearchRequest, StartupResearchReport
+from .models import (
+    DecisionRecommendation,
+    ResearchInsight,
+    ResearchRequest,
+    StartupResearchReport,
+)
 from .serializers import (
+    DecisionRecommendationSerializer,
+    ResearchInsightSerializer,
     ResearchRequestCreateSerializer,
     ResearchRequestDetailSerializer,
     StartupResearchReportSerializer,
@@ -279,3 +286,37 @@ class StartupResearchReportDetailView(APIView):
             )
 
         return Response(StartupResearchReportSerializer(report).data)
+
+
+class StartupResearchIntelligenceView(APIView):
+    """Read reusable research memory for one founder-owned startup."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        profile_id = request.query_params.get("startup_profile_id")
+        if not profile_id:
+            return Response(
+                {"detail": "startup_profile_id query parameter is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        profile = _resolve_profile(request.user, profile_id)
+        insights = ResearchInsight.objects.filter(
+            startup_profile=profile,
+        ).order_by("-last_verified_at", "-created_at")
+
+        insight_type = request.query_params.get("type")
+        valid_types = {value for value, _label in ResearchInsight.InsightType.choices}
+        if insight_type in valid_types:
+            insights = insights.filter(insight_type=insight_type)
+
+        decisions = DecisionRecommendation.objects.filter(
+            startup_profile=profile,
+        ).order_by("-generated_at", "-created_at")
+
+        return Response({
+            "startup_profile_id": str(profile.id),
+            "insights": ResearchInsightSerializer(insights[:100], many=True).data,
+            "decisions": DecisionRecommendationSerializer(decisions[:20], many=True).data,
+        })

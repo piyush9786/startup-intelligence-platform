@@ -34,6 +34,7 @@ _NAV_HINT_MAP: list[tuple[tuple[str, ...], str]] = [
     (("scheme explorer", "schemes", "scheme match", "dpiit", "startup india"), "schemes"),
     (("action roadmap", "roadmap", "next action", "next step"), "roadmap"),
     (("founder advisor", "advisor briefing", "advisor"), "advisor"),
+    (("research", "competitor", "market research", "market gap"), "research"),
     (("execution", "milestones", "milestone"), "milestones"),
     (("capital planner", "runway", "burn rate"), "capital-planner"),
     (("startup builder", "builder", "business canvas", "persona"), "builder"),
@@ -65,6 +66,7 @@ PLATFORM PAGES (sidebar navigation slugs in parentheses):
 • Scheme Explorer (schemes): Government schemes ranked by eligibility match
 • Action Roadmap (roadmap): Ordered remediation actions from readiness gaps
 • Founder Advisor (advisor): Deep AI briefing grounded in all profile data
+• Research (research): Evidence-backed competitor, market, scheme, risk and opportunity research
 • Execution & Milestones (milestones): Dependency-enforced task tracker with evidence
 • Capital Planner (capital-planner): Burn rate, runway, Conservative/Balanced/Growth scenarios
 • Startup Builder (builder): Problem statement, customer persona, validation experiments
@@ -130,7 +132,13 @@ BEHAVIOUR RULES:
 3. When navigation is helpful, name the exact page and say you can take them there.
 4. Do NOT include chain-of-thought, preambles, or markdown headers in your reply.
 5. If you genuinely do not know something, say so briefly and offer to help otherwise.
-6. Use plain, friendly language — not formal corporate tone.\
+6. Use plain, friendly language — not formal corporate tone.
+7. You are a WEBSITE ASSISTANT, not a general-purpose chatbot.
+8. Answer only questions about this Startup Intelligence Platform, its pages, navigation, workflows, features, and the founder's supplied platform context.
+9. Do not answer general knowledge, market research, competitor research, funding research, scheme research, news, legal updates, or other external-domain questions from model memory.
+10. Current or external startup intelligence belongs to Founder Research.
+11. If a question is outside the website-help scope, explain briefly that you help with the platform and that startup research should be done in Founder Research.
+12. Never invent external facts.\
 """
 
 

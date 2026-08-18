@@ -15,6 +15,14 @@ def rank_and_deduplicate_evidence(
     deduped: list[dict[str, Any]] = []
 
     for item in items:
+        # Rejected sources never enter the report
+        # generation context or reusable evidence set.
+        if (
+            item.get("verification_status")
+            == "rejected"
+        ):
+            continue
+
         h = item["content_hash"]
         u = item["url"].lower().rstrip("/")
 

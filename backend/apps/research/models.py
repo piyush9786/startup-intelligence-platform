@@ -194,3 +194,118 @@ class StartupResearchReport(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"StartupResearchReport({self.id}, profile={self.startup_profile_id})"
+
+# ADVISER_DECISION_INTELLIGENCE_V1
+class ResearchInsight(TimeStampedModel):
+    """Reusable structured intelligence extracted from a grounded report."""
+
+    class InsightType(models.TextChoices):
+        BENEFIT = "benefit", "Benefit"
+        COMPETITOR = "competitor", "Competitor"
+        SUCCESS_CASE = "success_case", "Success case"
+        FAILURE_CASE = "failure_case", "Failure case"
+        CHALLENGE = "challenge", "Challenge"
+        OPPORTUNITY = "opportunity", "Opportunity"
+        RISK = "risk", "Risk"
+        MARKET_GAP = "market_gap", "Market gap"
+        LESSON = "lesson", "Lesson"
+
+    class FreshnessStatus(models.TextChoices):
+        CURRENT = "current", "Current"
+        AGING = "aging", "Aging"
+        STALE = "stale", "Stale"
+        REVERIFY = "reverify", "Reverify"
+
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="research_insights",
+    )
+    source_report = models.ForeignKey(
+        StartupResearchReport,
+        on_delete=models.CASCADE,
+        related_name="structured_insights",
+    )
+    insight_type = models.CharField(max_length=32, choices=InsightType.choices)
+    title = models.CharField(max_length=255)
+    summary = models.TextField()
+    details = models.JSONField(default=dict, blank=True)
+    evidence_urls = models.JSONField(default=list, blank=True)
+    confidence_score = models.FloatField(default=0.5)
+    freshness_status = models.CharField(
+        max_length=16,
+        choices=FreshnessStatus.choices,
+        default=FreshnessStatus.CURRENT,
+    )
+    last_verified_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-last_verified_at", "-created_at"]
+        indexes = [
+            models.Index(
+                fields=["startup_profile", "insight_type", "last_verified_at"],
+                name="research_insight_profile_idx",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["source_report", "insight_type", "title"],
+                name="research_unique_report_insight",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(confidence_score__gte=0.0)
+                    & Q(confidence_score__lte=1.0)
+                ),
+                name="research_insight_conf_rng",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.insight_type}: {self.title}"
+
+
+class DecisionRecommendation(TimeStampedModel):
+    """Persisted evidence-backed recommendation for future review."""
+
+    startup_profile = models.ForeignKey(
+        StartupProfile,
+        on_delete=models.CASCADE,
+        related_name="decision_recommendations",
+    )
+    source_report = models.OneToOneField(
+        StartupResearchReport,
+        on_delete=models.CASCADE,
+        related_name="decision_recommendation",
+    )
+    question = models.TextField()
+    recommended_direction = models.TextField()
+    rationale = models.TextField(blank=True, default="")
+    alternatives = models.JSONField(default=list, blank=True)
+    decision_matrix = models.JSONField(default=list, blank=True)
+    conditions_to_reconsider = models.JSONField(default=list, blank=True)
+    immediate_actions = models.JSONField(default=list, blank=True)
+    action_plan = models.JSONField(default=dict, blank=True)
+    confidence_score = models.FloatField(default=0.5)
+    generated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-generated_at", "-created_at"]
+        indexes = [
+            models.Index(
+                fields=["startup_profile", "generated_at"],
+                name="research_decision_profile_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(confidence_score__gte=0.0)
+                    & Q(confidence_score__lte=1.0)
+                ),
+                name="research_decision_conf_rng",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"DecisionRecommendation({self.startup_profile_id}, {self.generated_at})"

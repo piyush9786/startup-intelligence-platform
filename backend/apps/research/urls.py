@@ -5,6 +5,7 @@ from .views import (
     CurrentResearchRequestView,
     ResearchRequestCreateView,
     ResearchRequestDetailView,
+    StartupResearchIntelligenceView,
     StartupResearchReportDetailView,
     StartupResearchReportListView,
 )
@@ -19,4 +20,9 @@ urlpatterns = [
     path("requests/<uuid:pk>/", ResearchRequestDetailView.as_view(), name="research-request-detail"),
     path("reports/", StartupResearchReportListView.as_view(), name="research-report-list"),
     path("reports/<uuid:pk>/", StartupResearchReportDetailView.as_view(), name="research-report-detail"),
+    path(
+        "intelligence/",
+        StartupResearchIntelligenceView.as_view(),
+        name="research-intelligence",
+    ),
 ]

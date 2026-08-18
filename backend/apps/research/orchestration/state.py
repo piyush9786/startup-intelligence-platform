@@ -27,6 +27,7 @@ class ResearchState:
     live_evidence: list[dict[str, Any]] = field(default_factory=list)
     local_evidence: list[dict[str, Any]] = field(default_factory=list)
     vector_evidence: list[dict[str, Any]] = field(default_factory=list)
+    prior_intelligence: list[dict[str, Any]] = field(default_factory=list)
     search_failures: list[SearchFailure] = field(default_factory=list)
 
     vector_retrieval_status: str = "disabled"

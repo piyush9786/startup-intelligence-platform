@@ -1,0 +1,45 @@
+
+/*
+ * Startup Intelligence Platform
+ * Competition presentation mode
+ */
+
+/* Language switching stays out of the competition build until
+   every translated workflow passes complete smoke testing. */
+.lang-switcher {
+  display: none !important;
+}
+
+
+/* External catalog governance is useful internally but does not
+   belong in the primary founder pitch. */
+.scheme-review-summary {
+  display: none !important;
+}
+
+
+/* Requirements and Funding each place their external discovery
+   dataset as the final nested page-stack section. */
+.funding-page > section.page-stack:last-child {
+  display: none !important;
+}
+
+.requirements-page > section.page-stack:last-child {
+  display: none !important;
+}
+
+
+/* Internal clustering diagnostics are not founder-facing value. */
+.resume-badge.badge-cohort {
+  display: none !important;
+}
+
+
+/* Improve projected-screen readability. */
+.product-navigation .nav-item-label {
+  font-weight: 650;
+}
+
+.dashboard-content-grid {
+  align-items: start;
+}

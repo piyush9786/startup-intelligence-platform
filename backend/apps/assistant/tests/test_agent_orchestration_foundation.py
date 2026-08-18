@@ -232,28 +232,67 @@ def test_default_registry_contains_bounded_founder_tools():
     registry = default_tool_registry()
     definitions = registry.list()
 
-    assert [definition.name for definition in definitions] == [
+    by_name = {
+        definition.name: definition
+        for definition in definitions
+    }
+
+    assert len(definitions) == len(by_name)
+
+    assert set(by_name) == {
+        "get_current_recommendations",
+        "get_founder_advisor_context",
+        "get_latest_research_report",
+        "get_readiness_context",
         "get_startup_profile",
         "update_startup_assessment_draft",
-    ]
+    }
 
-    profile_tool = definitions[0]
-    draft_update_tool = definitions[1]
+    profile_tool = by_name[
+        "get_startup_profile"
+    ]
 
     assert profile_tool.version == "v1"
     assert profile_tool.read_only is True
     assert profile_tool.write_capability is None
-    assert profile_tool.allowed_agent_types == frozenset(AgentSession.AgentType.values)
+    assert profile_tool.allowed_agent_types == frozenset(
+        AgentSession.AgentType.values
+    )
+
+    chatbot_read_tools = {
+        "get_current_recommendations",
+        "get_founder_advisor_context",
+        "get_latest_research_report",
+        "get_readiness_context",
+    }
+
+    for tool_name in chatbot_read_tools:
+        definition = by_name[tool_name]
+
+        assert definition.version == "v1"
+        assert definition.read_only is True
+        assert definition.write_capability is None
+        assert definition.allowed_agent_types == frozenset(
+            {
+                AgentSession.AgentType.CHATBOT,
+            }
+        )
+
+    draft_update_tool = by_name[
+        "update_startup_assessment_draft"
+    ]
 
     assert draft_update_tool.version == "v1"
     assert draft_update_tool.read_only is False
-    assert draft_update_tool.write_capability == "assessment_draft_update"
+    assert (
+        draft_update_tool.write_capability
+        == "assessment_draft_update"
+    )
     assert draft_update_tool.allowed_agent_types == frozenset(
         {
             AgentSession.AgentType.CONCIERGE,
         }
     )
-
 
 def test_registry_rejects_duplicate_tool_names():
     registry = AgentToolRegistry()

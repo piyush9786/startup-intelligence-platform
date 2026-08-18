@@ -76,3 +76,29 @@ htmlcov/
 /FIXES_APPLIED.md
 /ENDPOINT_CATALOG.txt
 /PROJECT_FILE_MANIFEST.txt
+
+# ==========================================
+# Local training and model artifacts
+# ==========================================
+
+training/**/outputs/
+training/**/logs/
+training/**/evaluation/
+training/**/checkpoint-*/
+training/**/tools/llama.cpp/
+
+*.gguf
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.onnx
+
+# ==========================================
+# Local backups and generated artifacts
+# ==========================================
+
+.*_backup_*/
+.competition_mvp_backup/
+*_backup_*/
+*.patch

@@ -7,9 +7,18 @@ from uuid import UUID
 from django.db import transaction
 from rest_framework import serializers
 
+from apps.recommendations.models import (
+    RecommendationGenerationRun,
+)
+from apps.research.models import (
+    StartupResearchReport,
+)
 from apps.startups.models import (
+    StartupAdvisorBriefing,
     StartupAssessmentDraft,
     StartupProfile,
+    StartupReadinessActionPlan,
+    StartupReadinessAssessment,
 )
 from apps.startups.serializers import (
     StartupAssessmentDraftUpdateSerializer,
@@ -196,6 +205,578 @@ def update_startup_assessment_draft(
     }
 
 
+
+def _reject_read_tool_inputs(
+    tool_name: str,
+    input_params: dict[str, Any],
+) -> None:
+    if input_params:
+        raise AgentToolInputError(
+            f"{tool_name} does not accept input parameters."
+        )
+
+
+def _bounded_list(
+    value: Any,
+    *,
+    limit: int = 5,
+) -> list[Any]:
+    if not isinstance(value, list):
+        return []
+
+    return value[:limit]
+
+
+def get_readiness_context(
+    context: AgentToolContext,
+    input_params: dict[str, Any],
+) -> dict[str, Any]:
+    _reject_read_tool_inputs(
+        "get_readiness_context",
+        input_params,
+    )
+
+    if context.startup_profile_id is None:
+        return {
+            "readiness": None,
+            "action_plan": None,
+            "scope": "global",
+        }
+
+    assessment = (
+        StartupReadinessAssessment.objects
+        .filter(
+            startup_profile_id=(
+                context.startup_profile_id
+            ),
+            startup_profile__owner_id=(
+                context.founder_id
+            ),
+        )
+        .order_by(
+            "-created_at",
+            "-id",
+        )
+        .first()
+    )
+
+    action_plan = (
+        StartupReadinessActionPlan.objects
+        .filter(
+            startup_profile_id=(
+                context.startup_profile_id
+            ),
+            startup_profile__owner_id=(
+                context.founder_id
+            ),
+        )
+        .order_by(
+            "-created_at",
+            "-id",
+        )
+        .first()
+    )
+
+    readiness_data = None
+
+    if assessment is not None:
+        readiness_data = {
+            "id": str(assessment.pk),
+            "status": assessment.status,
+            "score": assessment.score,
+            "critical_score": (
+                assessment.critical_score
+            ),
+            "recommended_score": (
+                assessment.recommended_score
+            ),
+            "summary": assessment.summary,
+            "blocking_findings": (
+                _bounded_list(
+                    assessment.blocking_findings,
+                    limit=5,
+                )
+            ),
+            "findings": (
+                _bounded_list(
+                    assessment.findings,
+                    limit=5,
+                )
+            ),
+            "assessment_date": (
+                assessment.assessment_date.isoformat()
+            ),
+            "engine_version": (
+                assessment.engine_version
+            ),
+        }
+
+    action_plan_data = None
+
+    if action_plan is not None:
+        action_plan_data = {
+            "id": str(action_plan.pk),
+            "has_actions": (
+                action_plan.has_actions
+            ),
+            "next_action": (
+                action_plan.next_action
+            ),
+            "blocker_count": (
+                action_plan.blocker_count
+            ),
+            "recommendation_count": (
+                action_plan.recommendation_count
+            ),
+            "total_action_count": (
+                action_plan.total_action_count
+            ),
+            "items": _bounded_list(
+                action_plan.items,
+                limit=5,
+            ),
+            "planner_version": (
+                action_plan.planner_version
+            ),
+        }
+
+    return {
+        "readiness": readiness_data,
+        "action_plan": action_plan_data,
+        "scope": "startup_profile",
+    }
+
+
+def get_founder_advisor_context(
+    context: AgentToolContext,
+    input_params: dict[str, Any],
+) -> dict[str, Any]:
+    _reject_read_tool_inputs(
+        "get_founder_advisor_context",
+        input_params,
+    )
+
+    if context.startup_profile_id is None:
+        return {
+            "briefing": None,
+            "recommendation_sources": [],
+            "scope": "global",
+        }
+
+    record = (
+        StartupAdvisorBriefing.objects
+        .filter(
+            startup_profile_id=(
+                context.startup_profile_id
+            ),
+            startup_profile__owner_id=(
+                context.founder_id
+            ),
+        )
+        .order_by(
+            "-completed_at",
+            "-created_at",
+            "-id",
+        )
+        .first()
+    )
+
+    if record is None:
+        return {
+            "briefing": None,
+            "recommendation_sources": [],
+            "scope": "startup_profile",
+        }
+
+    payload = (
+        record.briefing
+        if isinstance(
+            record.briefing,
+            dict,
+        )
+        else {}
+    )
+
+    prompt_snapshot = (
+        record.prompt_snapshot
+        if isinstance(
+            record.prompt_snapshot,
+            dict,
+        )
+        else {}
+    )
+
+    source_input = (
+        prompt_snapshot.get(
+            "source_input",
+            {},
+        )
+    )
+
+    if not isinstance(
+        source_input,
+        dict,
+    ):
+        source_input = {}
+
+    source_recommendations = (
+        source_input.get(
+            "recommendations",
+            [],
+        )
+    )
+
+    recommendation_sources = []
+
+    if isinstance(
+        source_recommendations,
+        list,
+    ):
+        for recommendation in (
+            source_recommendations[:5]
+        ):
+            if not isinstance(
+                recommendation,
+                dict,
+            ):
+                continue
+
+            source_document = (
+                recommendation.get(
+                    "source_document",
+                    {},
+                )
+            )
+
+            if not isinstance(
+                source_document,
+                dict,
+            ):
+                source_document = {}
+
+            recommendation_sources.append(
+                {
+                    "id": str(
+                        recommendation.get(
+                            "id",
+                            "",
+                        )
+                    ),
+                    "scheme_name": (
+                        recommendation.get(
+                            "scheme_name"
+                        )
+                    ),
+                    "assessment_result": (
+                        recommendation.get(
+                            "assessment_result"
+                        )
+                    ),
+                    "official_url": (
+                        recommendation.get(
+                            "official_url"
+                        )
+                    ),
+                    "application_url": (
+                        recommendation.get(
+                            "application_url"
+                        )
+                    ),
+                    "source_document": {
+                        "title": (
+                            source_document.get(
+                                "title"
+                            )
+                        ),
+                        "authority_name": (
+                            source_document.get(
+                                "authority_name"
+                            )
+                        ),
+                        "status": (
+                            source_document.get(
+                                "status"
+                            )
+                        ),
+                        "final_url": (
+                            source_document.get(
+                                "final_url"
+                            )
+                        ),
+                    },
+                }
+            )
+
+    briefing = {
+        "id": str(record.pk),
+        "executive_summary": (
+            payload.get(
+                "executive_summary"
+            )
+        ),
+        "current_position": (
+            payload.get(
+                "current_position"
+            )
+        ),
+        "top_priorities": (
+            _bounded_list(
+                payload.get(
+                    "top_priorities"
+                ),
+                limit=3,
+            )
+        ),
+        "scheme_guidance": (
+            _bounded_list(
+                payload.get(
+                    "scheme_guidance"
+                ),
+                limit=3,
+            )
+        ),
+        "risks": (
+            _bounded_list(
+                payload.get("risks"),
+                limit=3,
+            )
+        ),
+        "questions_for_founder": (
+            _bounded_list(
+                payload.get(
+                    "questions_for_founder"
+                ),
+                limit=2,
+            )
+        ),
+        "completed_at": (
+            record.completed_at.isoformat()
+        ),
+        "model_name": (
+            record.model_name
+        ),
+    }
+
+    return {
+        "briefing": briefing,
+        "recommendation_sources": (
+            recommendation_sources
+        ),
+        "scope": "startup_profile",
+    }
+
+
+def get_current_recommendations(
+    context: AgentToolContext,
+    input_params: dict[str, Any],
+) -> dict[str, Any]:
+    _reject_read_tool_inputs(
+        "get_current_recommendations",
+        input_params,
+    )
+
+    if context.startup_profile_id is None:
+        return {
+            "generation": None,
+            "recommendations": [],
+            "scope": "global",
+        }
+
+    generation = (
+        RecommendationGenerationRun.objects
+        .filter(
+            startup_profile_id=(
+                context.startup_profile_id
+            ),
+            startup_profile__owner_id=(
+                context.founder_id
+            ),
+            is_current=True,
+        )
+        .order_by(
+            "-completed_at",
+            "-created_at",
+        )
+        .first()
+    )
+
+    if generation is None:
+        return {
+            "generation": None,
+            "recommendations": [],
+            "scope": "startup_profile",
+        }
+
+    rows = (
+        generation.recommendations
+        .select_related(
+            "scheme_version__scheme",
+            "assessment",
+        )
+        .order_by("rank")[:5]
+    )
+
+    recommendations = []
+
+    for row in rows:
+        recommendations.append(
+            {
+                "id": str(row.pk),
+                "rank": row.rank,
+                "score": str(row.score),
+                "scheme_name": (
+                    row.scheme_version
+                    .scheme
+                    .canonical_name
+                ),
+                "assessment_result": (
+                    row.assessment.result
+                ),
+                "score_breakdown": (
+                    row.score_breakdown
+                    if isinstance(
+                        row.score_breakdown,
+                        dict,
+                    )
+                    else {}
+                ),
+                "ranking_version": (
+                    row.ranking_version
+                ),
+            }
+        )
+
+    return {
+        "generation": {
+            "id": str(generation.pk),
+            "assessment_date": (
+                generation
+                .assessment_date
+                .isoformat()
+            ),
+            "ranking_version": (
+                generation.ranking_version
+            ),
+            "recommendation_count": (
+                generation
+                .recommendation_count
+            ),
+        },
+        "recommendations": recommendations,
+        "scope": "startup_profile",
+    }
+
+
+def get_latest_research_report(
+    context: AgentToolContext,
+    input_params: dict[str, Any],
+) -> dict[str, Any]:
+    _reject_read_tool_inputs(
+        "get_latest_research_report",
+        input_params,
+    )
+
+    if context.startup_profile_id is None:
+        return {
+            "research": None,
+            "scope": "global",
+        }
+
+    record = (
+        StartupResearchReport.objects
+        .filter(
+            startup_profile_id=(
+                context.startup_profile_id
+            ),
+            startup_profile__owner_id=(
+                context.founder_id
+            ),
+        )
+        .select_related(
+            "research_request",
+        )
+        .order_by(
+            "-created_at",
+            "-id",
+        )
+        .first()
+    )
+
+    if record is None:
+        return {
+            "research": None,
+            "scope": "startup_profile",
+        }
+
+    raw_report = (
+        record.report
+        if isinstance(
+            record.report,
+            dict,
+        )
+        else {}
+    )
+
+    report = {}
+
+    bounded_fields = (
+        "historical_peers",
+        "current_competitors",
+        "recent_market_developments",
+        "government_schemes",
+        "compliance_requirements",
+        "funding_opportunities",
+        "loan_options",
+        "risks",
+        "market_gaps",
+        "recommended_next_actions",
+        "sources",
+    )
+
+    for field in bounded_fields:
+        report[field] = (
+            _bounded_list(
+                raw_report.get(field),
+                limit=4,
+            )
+        )
+
+    for field in (
+        "startup_summary",
+        "capital_scenarios",
+        "confidence_score",
+    ):
+        if field in raw_report:
+            report[field] = (
+                raw_report.get(field)
+            )
+
+    return {
+        "research": {
+            "id": str(record.pk),
+            "question": (
+                record
+                .research_request
+                .question
+            ),
+            "request_status": (
+                record
+                .research_request
+                .status
+            ),
+            "created_at": (
+                record.created_at.isoformat()
+            ),
+            "model_name": (
+                record.model_name
+            ),
+            "report": report,
+        },
+        "scope": "startup_profile",
+    }
+
+
+
 def register_default_tools(
     registry: AgentToolRegistry,
 ) -> None:
@@ -212,6 +793,82 @@ def register_default_tools(
             read_only=True,
         )
     )
+    registry.register(
+        AgentToolDefinition(
+            name="get_readiness_context",
+            version="v1",
+            description=(
+                "Return the latest persisted readiness "
+                "assessment and action plan for the "
+                "founder-owned startup profile."
+            ),
+            handler=get_readiness_context,
+            allowed_agent_types=frozenset(
+                {
+                    AgentSession.AgentType.CHATBOT,
+                }
+            ),
+            read_only=True,
+        )
+    )
+
+    registry.register(
+        AgentToolDefinition(
+            name="get_founder_advisor_context",
+            version="v1",
+            description=(
+                "Return the latest persisted grounded "
+                "Founder Advisor briefing and its "
+                "verified recommendation source metadata."
+            ),
+            handler=get_founder_advisor_context,
+            allowed_agent_types=frozenset(
+                {
+                    AgentSession.AgentType.CHATBOT,
+                }
+            ),
+            read_only=True,
+        )
+    )
+
+    registry.register(
+        AgentToolDefinition(
+            name="get_current_recommendations",
+            version="v1",
+            description=(
+                "Return the current deterministic "
+                "scheme recommendation ranking for the "
+                "founder-owned startup profile."
+            ),
+            handler=get_current_recommendations,
+            allowed_agent_types=frozenset(
+                {
+                    AgentSession.AgentType.CHATBOT,
+                }
+            ),
+            read_only=True,
+        )
+    )
+
+    registry.register(
+        AgentToolDefinition(
+            name="get_latest_research_report",
+            version="v1",
+            description=(
+                "Return the latest persisted grounded "
+                "research report for the founder-owned "
+                "startup profile."
+            ),
+            handler=get_latest_research_report,
+            allowed_agent_types=frozenset(
+                {
+                    AgentSession.AgentType.CHATBOT,
+                }
+            ),
+            read_only=True,
+        )
+    )
+
     registry.register(
         AgentToolDefinition(
             name=ASSESSMENT_DRAFT_UPDATE_TOOL,

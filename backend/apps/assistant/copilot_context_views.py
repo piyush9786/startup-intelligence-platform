@@ -24,25 +24,34 @@ logger = logging.getLogger(__name__)
 # Whitelist of known workspace slugs the frontend can inject context for.
 ALLOWED_WORKSPACES = frozenset(
     {
-        "overview",
+        # Current frontend workspace slugs
+        "dashboard",
         "startup",
         "builder",
         "capital-planner",
+        "tracker",
+        "roadmap",
         "milestones",
+        "schemes",
+        "requirements",
+        "funding",
+        "advisor",
+        "research",
+        "intelligence",
+        "reviewer-verifications",
+        "onboarding",
+        "documents",
+
+        # Backward-compatible aliases
+        "overview",
         "document-intake",
         "assessment",
         "starting-plan",
         "funding-plan",
-        "roadmap",
-        "schemes",
         "scheme-detail",
-        "requirements",
-        "funding",
         "verification",
-        "advisor",
     }
 )
-
 
 class CopilotContextSerializer(serializers.Serializer):
     workspace = serializers.CharField(max_length=64)

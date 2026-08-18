@@ -1,7 +1,10 @@
+// ADVISER_DECISION_INTELLIGENCE_FRONTEND_V1
 import { useEffect, useRef, useState } from "react";
 
 import { describeApiFailure } from "./api";
+import AdviserDecisionIntelligence from "./AdviserDecisionIntelligence";
 import {
+  getResearchIntelligence,
   getResearchRequest,
   getCurrentResearchRequest,
   getResearchReport,
@@ -9,6 +12,7 @@ import {
   submitResearchRequest,
 } from "./researchApi";
 import { PageHeader } from "./components/ui";
+import { takeResearchHandoff } from "./researchHandoff";
 
 const ACTIVE_STATUSES = new Set(["queued", "running"]);
 
@@ -70,7 +74,7 @@ function ReportSection({ title, value }) {
   );
 }
 
-function ResearchReport({ report }) {
+function ResearchReport({ report, intelligence, intelligenceError }) {
   if (!report) return null;
   const payload = report.report || {};
   const metadata = payload.research_metadata || {};
@@ -107,6 +111,12 @@ function ResearchReport({ report }) {
           </span>
         </div>
       </header>
+      <AdviserDecisionIntelligence
+        reportPayload={payload}
+        reportRecord={report}
+        intelligence={intelligence}
+        error={intelligenceError}
+      />
       <ReportSection
         title="Historical peers"
         value={payload.historical_peers}
@@ -179,7 +189,13 @@ export default function ResearchPage({ startupProfileId }) {
   const [job, setJob] = useState(null);
   const [report, setReport] = useState(null);
   const [history, setHistory] = useState([]);
+  const [intelligence, setIntelligence] = useState({
+    insights: [],
+    decisions: [],
+  });
+  const [intelligenceError, setIntelligenceError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState("");
   const active = ACTIVE_STATUSES.has(job?.status);
   const currentProfileRef = useRef(startupProfileId);
@@ -195,6 +211,27 @@ export default function ResearchPage({ startupProfileId }) {
     );
   }
 
+  async function refreshIntelligence(requestedProfileId = startupProfileId) {
+    if (!requestedProfileId) {
+      setIntelligence({ insights: [], decisions: [] });
+      setIntelligenceError("");
+      return;
+    }
+
+    try {
+      const payload = await getResearchIntelligence(requestedProfileId);
+      if (!profileStillSelected(requestedProfileId)) return;
+      setIntelligence({
+        insights: Array.isArray(payload?.insights) ? payload.insights : [],
+        decisions: Array.isArray(payload?.decisions) ? payload.decisions : [],
+      });
+      setIntelligenceError("");
+    } catch (requestError) {
+      if (!profileStillSelected(requestedProfileId)) return;
+      setIntelligenceError(describeApiFailure(requestError));
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -202,16 +239,22 @@ export default function ResearchPage({ startupProfileId }) {
     setJob(null);
     setReport(null);
     setHistory([]);
+    setIntelligence({ insights: [], decisions: [] });
+    setIntelligenceError("");
     setLoading(false);
+    setInitialized(false);
     setError("");
 
     if (!startupProfileId) {
+      setInitialized(true);
       return () => {
         cancelled = true;
       };
     }
 
     const selectedProfileId = String(startupProfileId);
+
+    refreshIntelligence(selectedProfileId);
 
     Promise.all([
       listResearchReports(startupProfileId),
@@ -260,6 +303,16 @@ export default function ResearchPage({ startupProfileId }) {
         ) {
           setError(describeApiFailure(requestError));
         }
+      })
+      .finally(() => {
+        if (
+          !cancelled
+          && profileStillSelected(
+            selectedProfileId,
+          )
+        ) {
+          setInitialized(true);
+        }
       });
 
     return () => {
@@ -305,6 +358,7 @@ export default function ResearchPage({ startupProfileId }) {
               (item) => item.id !== nextJob.generated_report.id,
             ),
           ]);
+          refreshIntelligence(selectedProfileId);
         }
 
         if (nextJob.status === "failed") {
@@ -337,11 +391,23 @@ export default function ResearchPage({ startupProfileId }) {
     };
   }, [job?.id, startupProfileId]);
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-    if (!startupProfileId || question.trim().length < 5) return;
+  async function startResearch(
+    researchQuestion,
+  ) {
+    const normalizedQuestion = String(
+      researchQuestion || "",
+    ).trim();
 
-    const requestedProfileId = String(startupProfileId);
+    if (
+      !startupProfileId
+      || normalizedQuestion.length < 5
+    ) {
+      return;
+    }
+
+    const requestedProfileId = String(
+      startupProfileId,
+    );
 
     setLoading(true);
     setError("");
@@ -350,31 +416,91 @@ export default function ResearchPage({ startupProfileId }) {
     try {
       const response = await submitResearchRequest(
         startupProfileId,
-        question.trim(),
+        normalizedQuestion,
       );
-      if (!profileStillSelected(requestedProfileId)) {
+
+      if (
+        !profileStillSelected(
+          requestedProfileId,
+        )
+      ) {
         return;
       }
+
       if (
         response.job
         && (
           !response.job.startup_profile
-          || String(response.job.startup_profile)
-            === requestedProfileId
+          || String(
+            response.job.startup_profile,
+          ) === requestedProfileId
         )
       ) {
         setJob(response.job);
       }
     } catch (requestError) {
-      if (profileStillSelected(requestedProfileId)) {
-        setError(describeApiFailure(requestError));
+      if (
+        profileStillSelected(
+          requestedProfileId,
+        )
+      ) {
+        setError(
+          describeApiFailure(
+            requestError,
+          ),
+        );
       }
     } finally {
-      if (profileStillSelected(requestedProfileId)) {
+      if (
+        profileStillSelected(
+          requestedProfileId,
+        )
+      ) {
         setLoading(false);
       }
     }
   }
+
+
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    startResearch(question);
+  }
+
+
+  useEffect(() => {
+    if (
+      !initialized
+      || !startupProfileId
+      || active
+    ) {
+      return;
+    }
+
+    const handoff = takeResearchHandoff({
+      startupProfileId,
+    });
+
+    if (!handoff) {
+      return;
+    }
+
+    setQuestion(
+      handoff.question,
+    );
+
+    if (handoff.autoSubmit) {
+      startResearch(
+        handoff.question,
+      );
+    }
+  }, [
+    initialized,
+    startupProfileId,
+    active,
+  ]);
+
 
   async function handleHistorySelection(reportId) {
     const requestedProfileId = String(startupProfileId);
@@ -522,7 +648,11 @@ export default function ResearchPage({ startupProfileId }) {
               </div>
             </section>
           )}
-          <ResearchReport report={report} />
+          <ResearchReport
+            report={report}
+            intelligence={intelligence}
+            intelligenceError={intelligenceError}
+          />
           {!report && !active && (
             <div className="empty-state">
               <span className="empty-icon" aria-hidden="true">

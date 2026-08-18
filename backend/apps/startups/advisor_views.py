@@ -1,6 +1,20 @@
+import ipaddress
+import re
+import socket
+from tempfile import SpooledTemporaryFile
+from urllib.parse import urljoin, urlsplit
+
+import httpx
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import (
+    APIException,
+    NotFound,
+    UnsupportedMediaType,
+    ValidationError,
+)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -94,6 +108,609 @@ def _resolve_target_briefing(user, briefing_id):
         StartupAdvisorBriefing.objects.filter(startup_profile__owner=user),
         pk=briefing_id,
     )
+
+
+
+ADVISOR_SOURCE_MAX_BYTES = (
+    30 * 1024 * 1024
+)
+
+ADVISOR_SOURCE_REDIRECT_LIMIT = 4
+
+ADVISOR_SOURCE_CHUNK_SIZE = (
+    64 * 1024
+)
+
+
+class AdvisorSourceDownloadUpstreamError(
+    APIException
+):
+    status_code = 502
+    default_code = (
+        "advisor_source_download_failed"
+    )
+    default_detail = (
+        "The verified source could not "
+        "be downloaded."
+    )
+
+
+class AdvisorSourceDownloadTooLarge(
+    APIException
+):
+    status_code = 413
+    default_code = (
+        "advisor_source_too_large"
+    )
+    default_detail = (
+        "The source document exceeds "
+        "the download size limit."
+    )
+
+
+def _advisor_snapshot_recommendations(
+    briefing,
+):
+    prompt_snapshot = (
+        briefing.prompt_snapshot
+        if isinstance(
+            briefing.prompt_snapshot,
+            dict,
+        )
+        else {}
+    )
+
+    source_input = (
+        prompt_snapshot.get(
+            "source_input",
+            {},
+        )
+    )
+
+    if not isinstance(
+        source_input,
+        dict,
+    ):
+        source_input = {}
+
+    recommendations = (
+        source_input.get(
+            "recommendations",
+            [],
+        )
+    )
+
+    if isinstance(
+        recommendations,
+        list,
+    ) and recommendations:
+        return recommendations
+
+    # Backward-compatible fallback for an
+    # older persisted briefing shape.
+    snapshot = getattr(
+        briefing,
+        "source_snapshot",
+        None,
+    )
+
+    if snapshot is None:
+        return []
+
+    recommendations = getattr(
+        snapshot,
+        "recommendations_snapshot",
+        [],
+    )
+
+    return (
+        recommendations
+        if isinstance(
+            recommendations,
+            list,
+        )
+        else []
+    )
+
+
+def _advisor_recommendation(
+    briefing,
+    recommendation_id,
+):
+    expected_id = str(
+        recommendation_id
+    )
+
+    for recommendation in (
+        _advisor_snapshot_recommendations(
+            briefing
+        )
+    ):
+        if not isinstance(
+            recommendation,
+            dict,
+        ):
+            continue
+
+        if (
+            str(
+                recommendation.get(
+                    "id",
+                    "",
+                )
+            )
+            == expected_id
+        ):
+            return recommendation
+
+    raise NotFound(
+        "The recommendation does not "
+        "belong to this briefing."
+    )
+
+
+def _source_document_dict(
+    recommendation,
+):
+    source_document = (
+        recommendation.get(
+            "source_document",
+            {},
+        )
+    )
+
+    return (
+        source_document
+        if isinstance(
+            source_document,
+            dict,
+        )
+        else {}
+    )
+
+
+def _looks_like_pdf_url(
+    value,
+):
+    value = str(
+        value or ""
+    ).strip()
+
+    if not value:
+        return False
+
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return False
+
+    return parsed.path.lower().endswith(
+        ".pdf"
+    )
+
+
+def _recommendation_source_url(
+    recommendation,
+):
+    source_document = (
+        _source_document_dict(
+            recommendation
+        )
+    )
+
+    candidates = [
+        source_document.get(
+            "download_url"
+        ),
+        source_document.get(
+            "final_url"
+        ),
+        source_document.get(
+            "source_url"
+        ),
+        recommendation.get(
+            "official_url"
+        ),
+        recommendation.get(
+            "application_url"
+        ),
+    ]
+
+    candidates = [
+        str(value).strip()
+        for value in candidates
+        if str(value or "").strip()
+    ]
+
+    if not candidates:
+        raise NotFound(
+            "No downloadable source is "
+            "stored for this recommendation."
+        )
+
+    # Prefer an explicitly PDF-like URL when
+    # more than one source is persisted.
+    for candidate in candidates:
+        if _looks_like_pdf_url(
+            candidate
+        ):
+            return candidate
+
+    return candidates[0]
+
+
+def _validate_public_source_url(
+    value,
+):
+    value = str(
+        value or ""
+    ).strip()
+
+    try:
+        parsed = urlsplit(value)
+    except ValueError as exc:
+        raise ValidationError(
+            "The persisted source URL "
+            "is invalid."
+        ) from exc
+
+    if parsed.scheme not in {
+        "http",
+        "https",
+    }:
+        raise ValidationError(
+            "Only HTTP and HTTPS source "
+            "URLs may be downloaded."
+        )
+
+    if not parsed.hostname:
+        raise ValidationError(
+            "The persisted source URL "
+            "has no hostname."
+        )
+
+    if (
+        parsed.username
+        or parsed.password
+    ):
+        raise ValidationError(
+            "Credential-bearing source "
+            "URLs are not allowed."
+        )
+
+    try:
+        port = (
+            parsed.port
+            or (
+                443
+                if parsed.scheme
+                == "https"
+                else 80
+            )
+        )
+    except ValueError as exc:
+        raise ValidationError(
+            "The persisted source URL "
+            "contains an invalid port."
+        ) from exc
+
+    # Government/official source retrieval does
+    # not require arbitrary internal ports.
+    if port not in {
+        80,
+        443,
+    }:
+        raise ValidationError(
+            "The persisted source URL "
+            "uses a disallowed port."
+        )
+
+    hostname = parsed.hostname
+
+    try:
+        address_info = (
+            socket.getaddrinfo(
+                hostname,
+                port,
+                type=socket.SOCK_STREAM,
+            )
+        )
+    except socket.gaierror as exc:
+        raise AdvisorSourceDownloadUpstreamError(
+            "The verified source hostname "
+            "could not be resolved."
+        ) from exc
+
+    if not address_info:
+        raise AdvisorSourceDownloadUpstreamError(
+            "The verified source hostname "
+            "could not be resolved."
+        )
+
+    for item in address_info:
+        raw_address = str(
+            item[4][0]
+        ).split(
+            "%",
+            1,
+        )[0]
+
+        try:
+            ip = ipaddress.ip_address(
+                raw_address
+            )
+        except ValueError as exc:
+            raise ValidationError(
+                "The source hostname resolved "
+                "to an invalid address."
+            ) from exc
+
+        # Reject localhost, private networks,
+        # link-local, reserved, multicast,
+        # CGNAT and other non-public targets.
+        if not ip.is_global:
+            raise ValidationError(
+                "The verified source does not "
+                "resolve to a public address."
+            )
+
+    return value
+
+
+def _download_verified_pdf(
+    source_url,
+):
+    current_url = str(
+        source_url
+    ).strip()
+
+    timeout = httpx.Timeout(
+        connect=8.0,
+        read=45.0,
+        write=10.0,
+        pool=10.0,
+    )
+
+    headers = {
+        "Accept": (
+            "application/pdf,"
+            "application/octet-stream;"
+            "q=0.9,*/*;q=0.5"
+        ),
+        "User-Agent": (
+            "StartupIntelligencePlatform/"
+            "1.0 verified-source-downloader"
+        ),
+    }
+
+    # trust_env=False prevents environment proxy
+    # variables from silently routing this
+    # security-sensitive request elsewhere.
+    with httpx.Client(
+        timeout=timeout,
+        headers=headers,
+        follow_redirects=False,
+        trust_env=False,
+    ) as client:
+        for _ in range(
+            ADVISOR_SOURCE_REDIRECT_LIMIT
+            + 1
+        ):
+            _validate_public_source_url(
+                current_url
+            )
+
+            try:
+                with client.stream(
+                    "GET",
+                    current_url,
+                ) as upstream:
+                    if upstream.status_code in {
+                        301,
+                        302,
+                        303,
+                        307,
+                        308,
+                    }:
+                        location = (
+                            upstream.headers.get(
+                                "location"
+                            )
+                        )
+
+                        if not location:
+                            raise (
+                                AdvisorSourceDownloadUpstreamError(
+                                    "The verified source "
+                                    "returned an invalid "
+                                    "redirect."
+                                )
+                            )
+
+                        current_url = urljoin(
+                            current_url,
+                            location,
+                        )
+
+                        continue
+
+                    if (
+                        upstream.status_code
+                        < 200
+                        or upstream.status_code
+                        >= 300
+                    ):
+                        raise (
+                            AdvisorSourceDownloadUpstreamError(
+                                "The verified source "
+                                f"returned HTTP "
+                                f"{upstream.status_code}."
+                            )
+                        )
+
+                    declared_length = (
+                        upstream.headers.get(
+                            "content-length"
+                        )
+                    )
+
+                    if declared_length:
+                        try:
+                            if (
+                                int(
+                                    declared_length
+                                )
+                                > ADVISOR_SOURCE_MAX_BYTES
+                            ):
+                                raise (
+                                    AdvisorSourceDownloadTooLarge()
+                                )
+                        except ValueError:
+                            pass
+
+                    output = (
+                        SpooledTemporaryFile(
+                            max_size=(
+                                2
+                                * 1024
+                                * 1024
+                            ),
+                            mode="w+b",
+                        )
+                    )
+
+                    total = 0
+
+                    try:
+                        for chunk in (
+                            upstream.iter_bytes(
+                                ADVISOR_SOURCE_CHUNK_SIZE
+                            )
+                        ):
+                            if not chunk:
+                                continue
+
+                            total += len(
+                                chunk
+                            )
+
+                            if (
+                                total
+                                > ADVISOR_SOURCE_MAX_BYTES
+                            ):
+                                raise (
+                                    AdvisorSourceDownloadTooLarge()
+                                )
+
+                            output.write(
+                                chunk
+                            )
+
+                        if total == 0:
+                            raise (
+                                AdvisorSourceDownloadUpstreamError(
+                                    "The verified source "
+                                    "returned an empty "
+                                    "document."
+                                )
+                            )
+
+                        output.seek(0)
+
+                        signature = (
+                            output.read(
+                                min(
+                                    1024,
+                                    total,
+                                )
+                            )
+                        )
+
+                        # Validate the bytes, not merely
+                        # the URL extension or Content-Type.
+                        if (
+                            b"%PDF-"
+                            not in signature
+                        ):
+                            raise (
+                                UnsupportedMediaType(
+                                    "The verified source "
+                                    "is not a PDF document."
+                                )
+                            )
+
+                        output.seek(0)
+
+                        return (
+                            output,
+                            current_url,
+                            total,
+                        )
+
+                    except Exception:
+                        output.close()
+                        raise
+
+            except (
+                APIException,
+                UnsupportedMediaType,
+            ):
+                raise
+            except httpx.TimeoutException as exc:
+                raise AdvisorSourceDownloadUpstreamError(
+                    "The verified source timed out."
+                ) from exc
+            except httpx.HTTPError as exc:
+                raise AdvisorSourceDownloadUpstreamError(
+                    "The verified source could not "
+                    "be retrieved."
+                ) from exc
+
+    raise AdvisorSourceDownloadUpstreamError(
+        "The verified source exceeded "
+        "the redirect limit."
+    )
+
+
+def _advisor_pdf_filename(
+    recommendation,
+):
+    source_document = (
+        _source_document_dict(
+            recommendation
+        )
+    )
+
+    base_name = str(
+        source_document.get(
+            "title"
+        )
+        or recommendation.get(
+            "scheme_name"
+        )
+        or "verified-source"
+    )
+
+    safe_name = re.sub(
+        r"[^A-Za-z0-9._-]+",
+        "-",
+        base_name,
+    ).strip(
+        ".-_"
+    )
+
+    if not safe_name:
+        safe_name = (
+            "verified-source"
+        )
+
+    if not safe_name.lower().endswith(
+        ".pdf"
+    ):
+        safe_name += ".pdf"
+
+    return safe_name[:180]
+
 
 
 class StartupAdvisorCurrentView(APIView):
@@ -403,6 +1020,81 @@ class StartupAdvisorBriefingListView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+
+class StartupAdvisorRecommendationSourceDownloadView(
+    APIView
+):
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def get(
+        self,
+        request,
+        briefing_id,
+        recommendation_id,
+    ):
+        # Ownership/visibility is enforced by
+        # the existing Advisor resolver.
+        briefing = (
+            _resolve_target_briefing(
+                request.user,
+                briefing_id,
+            )
+        )
+
+        recommendation = (
+            _advisor_recommendation(
+                briefing,
+                recommendation_id,
+            )
+        )
+
+        source_url = (
+            _recommendation_source_url(
+                recommendation
+            )
+        )
+
+        (
+            pdf_file,
+            final_url,
+            size_bytes,
+        ) = _download_verified_pdf(
+            source_url
+        )
+
+        response = FileResponse(
+            pdf_file,
+            as_attachment=True,
+            filename=(
+                _advisor_pdf_filename(
+                    recommendation
+                )
+            ),
+            content_type="application/pdf",
+        )
+
+        response[
+            "Content-Length"
+        ] = str(size_bytes)
+
+        response[
+            "X-Content-Type-Options"
+        ] = "nosniff"
+
+        response[
+            "Cache-Control"
+        ] = "private, no-store"
+
+        response[
+            "X-Advisor-Source"
+        ] = "verified-recommendation"
+
+        return response
+
 
 
 class StartupAdvisorBriefingDetailView(APIView):

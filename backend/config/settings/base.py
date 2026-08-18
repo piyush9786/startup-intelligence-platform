@@ -274,7 +274,7 @@ RESEARCH_VECTOR_RAG_ENABLED = (
 )
 STARTUP_ADVISOR_QDRANT_COLLECTION = os.environ.get(
     "STARTUP_ADVISOR_QDRANT_COLLECTION",
-    "startup_document_chunks_v1",
+    "startup_founder_document_chunks_v1",
 )
 RESEARCH_VECTOR_QDRANT_COLLECTION = os.environ.get(
     "RESEARCH_VECTOR_QDRANT_COLLECTION",
@@ -413,6 +413,24 @@ STARTUP_ADVISOR_LLM_PROVIDER = os.environ.get(
 OLLAMA_BASE_URL = os.environ.get(
     "OLLAMA_BASE_URL",
     "http://ollama:11434",
+)
+
+STARTUPINTEL_SLM_BASE_URL = os.environ.get(
+    "STARTUPINTEL_SLM_BASE_URL",
+    "http://host.docker.internal:8091",
+).rstrip("/")
+
+STARTUPINTEL_SLM_API_TOKEN = os.environ.get(
+    "STARTUPINTEL_SLM_API_TOKEN",
+    "",
+)
+
+STARTUPINTEL_SLM_ENABLED = (
+    os.environ.get(
+        "STARTUPINTEL_SLM_ENABLED",
+        "false",
+    ).strip().lower()
+    in {"1", "true", "yes", "on"}
 )
 OLLAMA_CONTEXT_LENGTH = max(
     1024,

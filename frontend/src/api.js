@@ -550,6 +550,66 @@ export async function getStartupAdvisorBriefing(briefingId) {
   return response.data;
 }
 
+
+function downloadFilenameFromDisposition(
+  disposition,
+  fallback,
+) {
+  const value = String(
+    disposition || "",
+  );
+
+  const utf8Match =
+    value.match(
+      /filename\*=UTF-8''([^;]+)/i,
+    );
+
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(
+        utf8Match[1],
+      );
+    } catch {
+      // Continue to normal filename.
+    }
+  }
+
+  const normalMatch =
+    value.match(
+      /filename="?([^";]+)"?/i,
+    );
+
+  return (
+    normalMatch?.[1]
+    || fallback
+  );
+}
+
+
+export async function downloadStartupAdvisorRecommendationSourcePdf(
+  briefingId,
+  recommendationId,
+) {
+  const response = await client.get(
+    `/startup-advisor/briefings/${briefingId}/recommendations/${recommendationId}/source-download/`,
+    {
+      responseType: "blob",
+      timeout: 120000,
+    },
+  );
+
+  return {
+    blob: response.data,
+    filename:
+      downloadFilenameFromDisposition(
+        response.headers[
+          "content-disposition"
+        ],
+        "verified-source.pdf",
+      ),
+  };
+}
+
 export async function getCurrentStartupAdvisorBriefingJob(
   startupProfileId,
   config = {},

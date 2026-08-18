@@ -19,6 +19,8 @@ from apps.startups.models import (
 )
 
 from .briefing_schema import (
+    BriefingOutputValidationError,
+    BRIEFING_DISCLAIMER,
     BRIEFING_SCHEMA_VERSION,
     STARTUP_ADVISOR_BRIEFING_SCHEMA,
     validate_startup_advisor_briefing,
@@ -27,7 +29,17 @@ from .llm_provider import (
     LLMProviderResponseError,
     StartupAdvisorLLMProvider,
     get_startup_advisor_llm_provider,
+    get_startupintel_runtime_provider,
 )
+
+from .slm_alias_contract import (
+    SLMAliasContractError,
+)
+from .slm_runtime_contract import (
+    build_compact_advisor_request,
+    validate_and_expand_compact_advisor_output,
+)
+
 
 BRIEFING_PROMPT_VERSION = "startup-advisor-briefing-prompt-v5"
 
@@ -1051,6 +1063,735 @@ def _research_report_to_advisor_evidence(
     }
 
 
+
+def _normalize_generated_briefing_payload(
+    payload: Any,
+    *,
+    source_snapshot: StartupAdvisorSnapshot,
+) -> Any:
+    """Repair only deterministic structural details.
+
+    Business facts, eligibility, evidence and citation contents
+    are not invented or replaced here.
+    """
+
+    if not isinstance(payload, dict):
+        return payload
+
+    normalized = deepcopy(payload)
+
+    # The disclaimer is application-owned, not model-owned.
+    normalized["disclaimer"] = BRIEFING_DISCLAIMER
+
+    # Priority sequence is application structure.
+    priorities = normalized.get("top_priorities")
+
+    if isinstance(priorities, list):
+        for number, item in enumerate(
+            priorities,
+            start=1,
+        ):
+            if isinstance(item, dict):
+                item["priority"] = number
+
+    # Never allow scheme guidance if there are no
+    # persisted recommendation records.
+    recommendations = (
+        source_snapshot.recommendations_snapshot
+        or []
+    )
+
+    has_recommendations = any(
+        isinstance(item, dict)
+        and item.get("id")
+        for item in recommendations
+    )
+
+    if not has_recommendations:
+        normalized["scheme_guidance"] = []
+
+    return normalized
+
+
+
+def _generate_advisor_provider_payload(
+    *,
+    provider: StartupAdvisorLLMProvider,
+    prompt_snapshot: dict[str, Any],
+):
+    """Generate using the compact Advisor contract for local LLMs."""
+
+    if (
+        getattr(
+            provider,
+            "provider_name",
+            "",
+        )
+        not in {
+            "startupintel_slm",
+            "ollama",
+        }
+    ):
+        result = provider.generate(
+            messages=prompt_snapshot["messages"],
+            response_schema=prompt_snapshot[
+                "response_schema"
+            ],
+        )
+
+        return (
+            result,
+            result.payload,
+            None,
+        )
+
+    compact_request = build_compact_advisor_request(
+        source_input=prompt_snapshot[
+            "source_input"
+        ],
+        retrieved_evidence=prompt_snapshot[
+            "retrieved_evidence"
+        ],
+    )
+
+    result = provider.generate(
+        messages=compact_request["messages"],
+        response_schema=compact_request[
+            "response_schema"
+        ],
+    )
+
+    try:
+        expanded_payload = (
+            validate_and_expand_compact_advisor_output(
+                result.payload,
+                reference_map=compact_request[
+                    "reference_map"
+                ],
+            )
+        )
+    except SLMAliasContractError as exc:
+        raise LLMProviderResponseError(
+            "StartupIntel compact Advisor output "
+            f"failed validation: {exc}",
+            retryable=False,
+        ) from exc
+
+    metadata = {
+        "task": "FOUNDER_ADVISOR",
+        "reference_count": len(
+            compact_request["reference_map"]
+        ),
+        "reference_aliases": sorted(
+            compact_request["reference_map"]
+        ),
+    }
+
+    return (
+        result,
+        expanded_payload,
+        metadata,
+    )
+
+
+
+
+def _enforce_grounded_advisor_sections(
+    payload: dict[str, Any],
+    *,
+    source_snapshot: StartupAdvisorSnapshot,
+) -> dict[str, Any]:
+    """Enforce sections that are owned by deterministic platform data.
+
+    The SLM may explain the startup state, but it does not decide:
+    - whether a readiness risk exists,
+    - which persisted schemes exist,
+    - whether scheme eligibility is verified,
+    - which official source belongs to a recommendation.
+
+    No new eligibility fact is invented here.
+    """
+
+    completed = deepcopy(payload)
+
+    original_priorities = (
+        deepcopy(
+            completed.get(
+                "top_priorities",
+                [],
+            )
+        )
+        if isinstance(
+            completed.get(
+                "top_priorities",
+                [],
+            ),
+            list,
+        )
+        else []
+    )
+
+    original_scheme_guidance = (
+        deepcopy(
+            completed.get(
+                "scheme_guidance",
+                [],
+            )
+        )
+        if isinstance(
+            completed.get(
+                "scheme_guidance",
+                [],
+            ),
+            list,
+        )
+        else []
+    )
+
+    readiness = (
+        source_snapshot.readiness_snapshot
+        if isinstance(
+            source_snapshot.readiness_snapshot,
+            dict,
+        )
+        else {}
+    )
+
+    action_plan = (
+        source_snapshot.action_plan_snapshot
+        if isinstance(
+            source_snapshot.action_plan_snapshot,
+            dict,
+        )
+        else {}
+    )
+
+    recommendations = [
+        item
+        for item in (
+            source_snapshot.recommendations_snapshot
+            or []
+        )
+        if isinstance(item, dict)
+        and item.get("id")
+    ]
+
+    blockers = readiness.get(
+        "blocking_findings",
+        [],
+    )
+
+    if not isinstance(blockers, list):
+        blockers = []
+
+    # -------------------------------------------------
+    # 1. Risks
+    # -------------------------------------------------
+    #
+    # A readiness score of "ready" with zero blocking findings
+    # must never be transformed into a readiness risk.
+    #
+    # Evidence-backed research risks may still survive.
+    # -------------------------------------------------
+
+    readiness_is_clear = (
+        str(
+            readiness.get("status", "")
+        ).lower()
+        == "ready"
+        and not blockers
+    )
+
+    raw_risks = completed.get("risks", [])
+
+    if not isinstance(raw_risks, list):
+        raw_risks = []
+
+    cleaned_risks = []
+
+    for risk in raw_risks:
+        if not isinstance(risk, dict):
+            continue
+
+        references = risk.get(
+            "source_references",
+            [],
+        )
+
+        if not isinstance(references, list):
+            references = []
+
+        has_external_evidence = any(
+            isinstance(reference, dict)
+            and reference.get("source_type")
+            == "evidence_chunk"
+            for reference in references
+        )
+
+        has_readiness_reference = any(
+            isinstance(reference, dict)
+            and reference.get("source_type")
+            == "readiness"
+            for reference in references
+        )
+
+        risk_text = " ".join(
+            [
+                str(risk.get("title", "")),
+                str(risk.get("reason", "")),
+            ]
+        ).lower()
+
+        obvious_no_gap_risk = any(
+            phrase in risk_text
+            for phrase in (
+                "no current readiness",
+                "no readiness gap",
+                "0 critical",
+                "0 recommended",
+                "no current gap",
+            )
+        )
+
+        if readiness_is_clear:
+            if obvious_no_gap_risk:
+                continue
+
+            if (
+                has_readiness_reference
+                and not has_external_evidence
+            ):
+                continue
+
+        cleaned_risks.append(risk)
+
+    completed["risks"] = cleaned_risks[:3]
+
+    # -------------------------------------------------
+    # 2. Deterministic top priorities
+    # -------------------------------------------------
+
+    priorities = []
+
+    action_items = action_plan.get(
+        "items",
+        [],
+    )
+
+    if not isinstance(action_items, list):
+        action_items = []
+
+    action_plan_id = action_plan.get("id")
+
+    for index, item in enumerate(
+        action_items[:3]
+    ):
+        if not isinstance(item, dict):
+            continue
+
+        title = str(
+            item.get("title")
+            or item.get("action")
+            or item.get("name")
+            or "Complete readiness action"
+        ).strip()
+
+        reason = str(
+            item.get("reason")
+            or item.get("description")
+            or "This action is present in the saved readiness action plan."
+        ).strip()
+
+        recommended_action = str(
+            item.get("recommended_action")
+            or item.get("action")
+            or title
+        ).strip()
+
+        if not title or not recommended_action:
+            continue
+
+        reference_path = (
+            f"/items/{index}/action"
+            if item.get("action")
+            else f"/items/{index}/title"
+        )
+
+        references = []
+
+        if action_plan_id:
+            references.append(
+                {
+                    "source_type": "action_plan",
+                    "source_id": str(
+                        action_plan_id
+                    ),
+                    "field_path": reference_path,
+                }
+            )
+
+        priorities.append(
+            {
+                "priority": len(priorities) + 1,
+                "title": title[:300],
+                "reason": reason[:1500],
+                "recommended_action": (
+                    recommended_action[:1500]
+                ),
+                "source_references": references,
+            }
+        )
+
+        if len(priorities) >= 3:
+            break
+
+    # If readiness is already complete, the next real work is
+    # verifying high-ranked potential scheme matches.
+    if len(priorities) < 3:
+        for recommendation in recommendations:
+            if len(priorities) >= 3:
+                break
+
+            assessment_result = str(
+                recommendation.get(
+                    "assessment_result",
+                    "",
+                )
+            ).strip()
+
+            if assessment_result not in {
+                "verification_required",
+                "likely_eligible",
+                "conditionally_eligible",
+                "insufficient_information",
+            }:
+                continue
+
+            recommendation_id = str(
+                recommendation["id"]
+            )
+
+            scheme_name = str(
+                recommendation.get(
+                    "scheme_name",
+                    "",
+                )
+            ).strip()
+
+            if not scheme_name:
+                continue
+
+            score_breakdown = (
+                recommendation.get(
+                    "score_breakdown",
+                    {}
+                )
+            )
+
+            if not isinstance(
+                score_breakdown,
+                dict,
+            ):
+                score_breakdown = {}
+
+            reason_parts = []
+
+            if score_breakdown.get(
+                "sector_match"
+            ) is True:
+                reason_parts.append(
+                    "The saved recommendation matches "
+                    "the startup's sector profile."
+                )
+
+            if score_breakdown.get(
+                "stage_match"
+            ) is False:
+                reason_parts.append(
+                    "The saved recommendation does not "
+                    "show an exact stage match."
+                )
+
+            if assessment_result == (
+                "verification_required"
+            ):
+                reason_parts.append(
+                    "Eligibility is not yet confirmed "
+                    "and requires verification."
+                )
+
+            if not reason_parts:
+                reason_parts.append(
+                    "This is a persisted ranked scheme "
+                    "recommendation that still requires "
+                    "founder review."
+                )
+
+            references = [
+                {
+                    "source_type": "recommendation",
+                    "source_id": recommendation_id,
+                    "field_path": "/scheme_name",
+                },
+                {
+                    "source_type": "recommendation",
+                    "source_id": recommendation_id,
+                    "field_path": "/assessment_result",
+                },
+            ]
+
+            if recommendation.get(
+                "official_url"
+            ):
+                references.append(
+                    {
+                        "source_type": "recommendation",
+                        "source_id": recommendation_id,
+                        "field_path": "/official_url",
+                    }
+                )
+
+            priorities.append(
+                {
+                    "priority": len(priorities) + 1,
+                    "title": (
+                        f"Verify {scheme_name} eligibility"
+                    )[:300],
+                    "reason": " ".join(
+                        reason_parts
+                    )[:1500],
+                    "recommended_action": (
+                        "Open the verified official source "
+                        "and confirm the current stage "
+                        "eligibility, application window, "
+                        "required documents and any manual "
+                        "verification conditions before "
+                        "applying."
+                    ),
+                    "source_references": (
+                        references[:10]
+                    ),
+                }
+            )
+
+    if priorities:
+        completed["top_priorities"] = (
+            priorities[:3]
+        )
+    else:
+        # Preserve the generated section when the deterministic
+        # snapshot has no replacement. This is important because
+        # the normal briefing validator must still inspect and
+        # reject bad model references rather than having them
+        # silently removed here.
+        completed["top_priorities"] = (
+            original_priorities[:3]
+        )
+
+    # -------------------------------------------------
+    # 3. Scheme guidance belongs to backend recommendations
+    # -------------------------------------------------
+
+    scheme_guidance = []
+
+    for recommendation in recommendations[:3]:
+        recommendation_id = str(
+            recommendation["id"]
+        )
+
+        scheme_name = str(
+            recommendation.get(
+                "scheme_name",
+                "",
+            )
+        ).strip()
+
+        if not scheme_name:
+            continue
+
+        assessment_result = str(
+            recommendation.get(
+                "assessment_result",
+                "",
+            )
+        ).strip()
+
+        source_document = (
+            recommendation.get(
+                "source_document",
+                {}
+            )
+        )
+
+        if not isinstance(
+            source_document,
+            dict,
+        ):
+            source_document = {}
+
+        score_breakdown = (
+            recommendation.get(
+                "score_breakdown",
+                {}
+            )
+        )
+
+        if not isinstance(
+            score_breakdown,
+            dict,
+        ):
+            score_breakdown = {}
+
+        if assessment_result == (
+            "verification_required"
+        ):
+            guidance = (
+                "This is a verified-source potential match, "
+                "not confirmed eligibility. Review the "
+                "official scheme conditions and verify the "
+                "current stage rules, application window "
+                "and required documents before applying."
+            )
+        else:
+            guidance = (
+                "Review the current eligibility conditions, "
+                "application window and required documents "
+                "on the verified official source before "
+                "submitting an application."
+            )
+
+        if (
+            score_breakdown.get(
+                "sector_match"
+            )
+            is True
+        ):
+            guidance += (
+                " The saved ranking confirms a sector match."
+            )
+
+        if (
+            score_breakdown.get(
+                "stage_match"
+            )
+            is False
+        ):
+            guidance += (
+                " The saved ranking does not show an exact "
+                "stage match, so stage eligibility must be "
+                "checked carefully."
+            )
+
+        references = [
+            {
+                "source_type": "recommendation",
+                "source_id": recommendation_id,
+                "field_path": "/scheme_name",
+            },
+            {
+                "source_type": "recommendation",
+                "source_id": recommendation_id,
+                "field_path": "/assessment_result",
+            },
+        ]
+
+        if recommendation.get(
+            "official_url"
+        ):
+            references.append(
+                {
+                    "source_type": "recommendation",
+                    "source_id": recommendation_id,
+                    "field_path": "/official_url",
+                }
+            )
+        elif recommendation.get(
+            "application_url"
+        ):
+            references.append(
+                {
+                    "source_type": "recommendation",
+                    "source_id": recommendation_id,
+                    "field_path": "/application_url",
+                }
+            )
+
+        if source_document.get(
+            "final_url"
+        ):
+            references.append(
+                {
+                    "source_type": "recommendation",
+                    "source_id": recommendation_id,
+                    "field_path": (
+                        "/source_document/final_url"
+                    ),
+                }
+            )
+
+        if source_document.get("title"):
+            references.append(
+                {
+                    "source_type": "recommendation",
+                    "source_id": recommendation_id,
+                    "field_path": (
+                        "/source_document/title"
+                    ),
+                }
+            )
+
+        if source_document.get("status"):
+            references.append(
+                {
+                    "source_type": "recommendation",
+                    "source_id": recommendation_id,
+                    "field_path": (
+                        "/source_document/status"
+                    ),
+                }
+            )
+
+        scheme_guidance.append(
+            {
+                "scheme_name": scheme_name[:500],
+                "guidance": guidance[:1500],
+                "source_references": (
+                    references[:10]
+                ),
+            }
+        )
+
+    if scheme_guidance:
+        completed["scheme_guidance"] = (
+            scheme_guidance
+        )
+    else:
+        # Do not erase generated guidance when no persisted
+        # recommendation exists. The existing schema/grounding
+        # validator is responsible for deciding whether it is valid.
+        completed["scheme_guidance"] = (
+            original_scheme_guidance[:3]
+        )
+
+    # Questions remain an SLM explanation feature.
+    questions = completed.get(
+        "questions_for_founder",
+        [],
+    )
+
+    if isinstance(questions, list):
+        completed[
+            "questions_for_founder"
+        ] = questions[:2]
+    else:
+        completed[
+            "questions_for_founder"
+        ] = []
+
+    return completed
+
+
+
 def generate_startup_advisor_briefing(
     *,
     source_snapshot: StartupAdvisorSnapshot,
@@ -1103,7 +1844,9 @@ def generate_startup_advisor_briefing(
         retrieved_evidence=retrieved_evidence,
         retrieval=retrieval,
     )
-    active_provider = provider if provider is not None else get_startup_advisor_llm_provider()
+    active_provider = provider if provider is not None else get_startupintel_runtime_provider()
+    slm_contract_metadata = None
+
     generation_attempts = [
         {
             "attempt": 1,
@@ -1112,9 +1855,13 @@ def generate_startup_advisor_briefing(
     ]
 
     try:
-        generation_result = active_provider.generate(
-            messages=prompt_snapshot["messages"],
-            response_schema=prompt_snapshot["response_schema"],
+        (
+            generation_result,
+            generated_payload,
+            slm_contract_metadata,
+        ) = _generate_advisor_provider_payload(
+            provider=active_provider,
+            prompt_snapshot=prompt_snapshot,
         )
         generation_attempts[0]["status"] = "succeeded"
     except LLMProviderResponseError as exc:
@@ -1148,34 +1895,165 @@ def generate_startup_advisor_briefing(
                 "retrieved_evidence_count": 0,
             }
         )
-        generation_result = active_provider.generate(
-            messages=prompt_snapshot["messages"],
-            response_schema=prompt_snapshot["response_schema"],
+        (
+            generation_result,
+            generated_payload,
+            slm_contract_metadata,
+        ) = _generate_advisor_provider_payload(
+            provider=active_provider,
+            prompt_snapshot=prompt_snapshot,
         )
         generation_attempts[1]["status"] = "succeeded"
 
-    prompt_snapshot["generation_attempts"] = generation_attempts
-
     completed_generation_payload = (
         _ensure_persisted_scheme_guidance(
-            payload=generation_result.payload,
+            payload=generated_payload,
             source_snapshot=source_snapshot,
         )
     )
 
-    briefing_payload, evidence_usage = (
-        _apply_retrieved_evidence_usage(
-            payload=completed_generation_payload,
+    normalized_payload = (
+        _enforce_grounded_advisor_sections(
+            _normalize_generated_briefing_payload(
+                completed_generation_payload,
+                source_snapshot=source_snapshot,
+            ),
             source_snapshot=source_snapshot,
-            evidence_documents=prompt_snapshot[
-                "retrieved_evidence"
-            ],
-            retrieval=prompt_snapshot["retrieval"],
         )
     )
+
+    try:
+        briefing_payload, evidence_usage = (
+            _apply_retrieved_evidence_usage(
+                payload=normalized_payload,
+                source_snapshot=source_snapshot,
+                evidence_documents=prompt_snapshot[
+                    "retrieved_evidence"
+                ],
+                retrieval=prompt_snapshot[
+                    "retrieval"
+                ],
+            )
+        )
+
+    except BriefingOutputValidationError as exc:
+        # Valid JSON can still violate our citation/source/path
+        # contract. Give Qwen exactly one correction attempt.
+        validation_message = str(exc)[:1200]
+
+        generation_attempts.append(
+            {
+                "attempt": (
+                    len(generation_attempts) + 1
+                ),
+                "status": (
+                    "retrying_after_"
+                    "validation_failure"
+                ),
+                "validation_error": (
+                    validation_message
+                ),
+                "retrieved_evidence_count": (
+                    len(research_evidence)
+                ),
+            }
+        )
+
+        retry_retrieval = {
+            **prompt_snapshot["retrieval"],
+            "status": (
+                "validation_retry_"
+                "research_evidence_only"
+            ),
+            "initial_result_count": len(
+                prompt_snapshot[
+                    "retrieved_evidence"
+                ]
+            ),
+            "result_count": len(
+                research_evidence
+            ),
+        }
+
+        # Preserve trusted Research evidence, but omit
+        # ordinary vector retrieval during correction.
+        retry_prompt = (
+            build_startup_advisor_briefing_prompt(
+                source_snapshot=source_snapshot,
+                retrieved_evidence=research_evidence,
+                retrieval=retry_retrieval,
+            )
+        )
+
+        retry_prompt["messages"][0]["content"] = (
+            f"{retry_prompt['messages'][0]['content']}\n\n"
+            f"{RETRY_SYSTEM_INSTRUCTION}\n\n"
+            "Your previous JSON response failed strict backend "
+            "validation for this exact reason:\n"
+            f"{validation_message}\n\n"
+            "Correct ONLY the invalid structure/citation issue. "
+            "Use only source IDs present in citation_contract. "
+            "Every source_id must exactly match an allowed ID. "
+            "Every field_path must be a valid RFC 6901 JSON "
+            "Pointer resolving inside that source document. "
+            "Do not invent startup facts, recommendation IDs, "
+            "scheme facts, deadlines, evidence or eligibility. "
+            "Do not add properties outside the supplied schema. "
+            "Return only the corrected JSON object."
+        )
+
+        (
+            generation_result,
+            generated_payload,
+            slm_contract_metadata,
+        ) = _generate_advisor_provider_payload(
+            provider=active_provider,
+            prompt_snapshot=retry_prompt,
+        )
+
+        generation_attempts[-1][
+            "status"
+        ] = "succeeded"
+
+        prompt_snapshot = retry_prompt
+
+        completed_generation_payload = (
+            _ensure_persisted_scheme_guidance(
+                payload=generated_payload,
+                source_snapshot=source_snapshot,
+            )
+        )
+
+        normalized_payload = (
+            _normalize_generated_briefing_payload(
+                completed_generation_payload,
+                source_snapshot=source_snapshot,
+            )
+        )
+
+        # Strict validation happens again.
+        # A second failure is intentionally NOT suppressed.
+        briefing_payload, evidence_usage = (
+            _apply_retrieved_evidence_usage(
+                payload=normalized_payload,
+                source_snapshot=source_snapshot,
+                evidence_documents=prompt_snapshot[
+                    "retrieved_evidence"
+                ],
+                retrieval=prompt_snapshot[
+                    "retrieval"
+                ],
+            )
+        )
+
+    prompt_snapshot[
+        "generation_attempts"
+    ] = generation_attempts
+
     prompt_snapshot["evidence_usage"] = deepcopy(
         evidence_usage,
     )
+
     response_metadata = deepcopy(
         generation_result.response_metadata or {},
     )
@@ -1185,6 +2063,19 @@ def generate_startup_advisor_briefing(
     response_metadata["evidence_usage"] = deepcopy(
         evidence_usage,
     )
+
+    if slm_contract_metadata is not None:
+        prompt_snapshot[
+            "slm_contract"
+        ] = deepcopy(
+            slm_contract_metadata
+        )
+
+        response_metadata[
+            "slm_contract"
+        ] = deepcopy(
+            slm_contract_metadata
+        )
 
     with transaction.atomic():
         locked_snapshot = (

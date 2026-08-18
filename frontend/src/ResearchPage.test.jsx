@@ -13,9 +13,11 @@ import {
 } from "vitest";
 
 import ResearchPage from "./ResearchPage";
+import { saveResearchHandoff } from "./researchHandoff";
 
 const mocks = vi.hoisted(() => ({
   getCurrentRequest: vi.fn(),
+  getIntelligence: vi.fn(),
   getRequest: vi.fn(),
   getReport: vi.fn(),
   listReports: vi.fn(),
@@ -24,6 +26,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("./researchApi", () => ({
   getCurrentResearchRequest: mocks.getCurrentRequest,
+  getResearchIntelligence: mocks.getIntelligence,
   getResearchRequest: mocks.getRequest,
   getResearchReport: mocks.getReport,
   listResearchReports: mocks.listReports,
@@ -33,12 +36,15 @@ vi.mock("./researchApi", () => ({
 describe("ResearchPage", () => {
   beforeEach(() => {
     mocks.getCurrentRequest.mockReset();
+    mocks.getIntelligence.mockReset();
     mocks.getRequest.mockReset();
     mocks.getReport.mockReset();
     mocks.listReports.mockReset();
     mocks.submit.mockReset();
     mocks.getCurrentRequest.mockResolvedValue(null);
+    mocks.getIntelligence.mockResolvedValue({ insights: [], decisions: [] });
     mocks.listReports.mockResolvedValue([]);
+    window.sessionStorage.clear();
   });
 
   test("submits a founder research question", async () => {
@@ -108,4 +114,53 @@ describe("ResearchPage", () => {
       screen.getByText("internal://startups/profile-one"),
     ).toBeInTheDocument();
   });
+  test(
+    "automatically submits a chatbot research handoff",
+    async () => {
+      mocks.submit.mockResolvedValue({
+        job: {
+          id: "handoff-job",
+          status: "queued",
+          startup_profile: "profile-one",
+        },
+      });
+
+      saveResearchHandoff({
+        question: (
+          "What are the latest government schemes "
+          + "for my startup?"
+        ),
+        startupProfileId: "profile-one",
+        autoSubmit: true,
+      });
+
+      render(
+        <ResearchPage
+          startupProfileId="profile-one"
+        />,
+      );
+
+      await waitFor(() => {
+        expect(
+          mocks.submit,
+        ).toHaveBeenCalledWith(
+          "profile-one",
+          (
+            "What are the latest government schemes "
+            + "for my startup?"
+          ),
+        );
+      });
+
+      expect(
+        screen.getByLabelText(
+          "Research question",
+        ),
+      ).toHaveValue(
+        "What are the latest government schemes for my startup?",
+      );
+    },
+  );
+
+
 });

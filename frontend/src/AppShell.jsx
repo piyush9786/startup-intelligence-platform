@@ -115,7 +115,9 @@ const SchemeDetailPage = React.lazy(() => import("./SchemeDetailPage"));
 const SchemeExplorerPage = React.lazy(() => import("./SchemeExplorerPage"));
 const StartingPlanPage = React.lazy(() => import("./StartingPlanPage"));
 const StartupBuilderPage = React.lazy(() => import("./StartupBuilderPage"));
-const WebsiteTour = React.lazy(() => import("./WebsiteTour"));
+const ExistingStartupTour = React.lazy(
+  () => import("./ExistingStartupTour")
+);
 const ChatbotDrawer = React.lazy(() => import("./ChatbotDrawer"));
 import { JourneyDialog } from "./JourneyDialog.jsx";
 
@@ -167,18 +169,13 @@ function SidebarNavItem({ to, icon, label }) {
 
 function Navigation({ canReviewEligibility, onLogout }) {
   const { t } = useT();
-  const navigate = useNavigate();
 
   const groups = [
     {
       label: t("nav.group.workspace"),
       items: [
-        ["/intelligence", "✦", t("nav.intelligence")],
         ["/dashboard", "⌂", t("nav.dashboard")],
         ["/startup", "◉", t("nav.my_startup")],
-        ["/builder", "🛠", t("nav.builder")],
-        ["/capital-planner", "📊", t("nav.capital_planner")],
-        ["/tracker", "📌", t("nav.application_tracker")],
         ["/roadmap", "↗", t("nav.roadmap")],
       ],
     },
@@ -193,7 +190,6 @@ function Navigation({ canReviewEligibility, onLogout }) {
     {
       label: t("nav.group.guidance"),
       items: [
-        ["/founder-intelligence", "◈", "Founder Intelligence"],
         ["/advisor", "✦", t("nav.advisor")],
         ["/research", "⌕", t("nav.research")],
       ],
@@ -302,8 +298,7 @@ function ProductSidebar({ canReviewEligibility, metrics, onLogout, profile }) {
 }
 
 function ProductTopbar({
-  onStartCompleteTour,
-  onStartPageTour,
+  onStartStartupTour,
   profiles = [],
   query,
   selectedProfileId,
@@ -327,28 +322,16 @@ function ProductTopbar({
         />
       </label>
       <div className="topbar-right-actions">
-        <div
-          aria-label="Website tour options"
-          className="topbar-tour-actions"
+        <button
+          aria-label="Open startup guide"
+          className="button button-secondary topbar-tour-button"
+          id="startup-guide-launcher"
+          onClick={onStartStartupTour}
+          type="button"
         >
-          <button
-            className="button button-secondary topbar-tour-button"
-            id="tour-launcher"
-            onClick={onStartPageTour}
-            type="button"
-          >
-            Tour this page
-          </button>
-
-          <button
-            className="button button-secondary topbar-tour-button"
-            id="complete-tour-launcher"
-            onClick={onStartCompleteTour}
-            type="button"
-          >
-            Tour whole website
-          </button>
-        </div>
+          <span aria-hidden="true">◎</span>
+          Startup guide
+        </button>
         {profiles && profiles.length > 0 && (
           <div className="profile-switcher">
             <select
@@ -439,7 +422,6 @@ function Workspace({ onSignOut }) {
   const [onboardingProgress, setOnboardingProgress] = useState(null);
   const [onboardingBusy, setOnboardingBusy] = useState(false);
   const [showTour, setShowTour] = useState(false);
-  const [tourMode, setTourMode] = useState("page");
   const [showJourneyDialog, setShowJourneyDialog] = useState(false);
 
   const navigate = useNavigate();
@@ -855,14 +837,7 @@ function Workspace({ onSignOut }) {
       />
       <div className="product-main">
         <ProductTopbar
-          onStartCompleteTour={() => {
-            setTourMode("complete");
-            setShowTour(true);
-          }}
-          onStartPageTour={() => {
-            setTourMode("page");
-            setShowTour(true);
-          }}
+          onStartStartupTour={() => setShowTour(true)}
           profiles={profiles}
           query={query}
           selectedProfileId={selectedProfileId}
@@ -905,7 +880,9 @@ function Workspace({ onSignOut }) {
               {t("loading.module")}
             </div>
           ) : (
-            <WorkspaceErrorBoundary>
+            <WorkspaceErrorBoundary
+              key={location.pathname}
+            >
               <React.Suspense
                 fallback={
                   <div className="dashboard-loader" role="status">
@@ -921,16 +898,15 @@ function Workspace({ onSignOut }) {
         </main>
         {showTour && (
           <React.Suspense fallback={null}>
-            <WebsiteTour
-              includeReviewer={canReviewEligibility}
-              mode={tourMode}
-              navigate={navigate}
-              onDismiss={() => {
-                setShowTour(false);
-                setTourMode("page");
-              }}
-              pathname={location.pathname}
-              run={showTour}
+            <ExistingStartupTour
+              onClose={() => setShowTour(false)}
+              onNavigate={(route) => navigate(route)}
+              open={showTour}
+              startupName={
+                selectedProfile?.startup_name
+                || selectedProfile?.name
+                || ""
+              }
             />
           </React.Suspense>
         )}

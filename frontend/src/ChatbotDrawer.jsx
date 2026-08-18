@@ -11,11 +11,27 @@ import {
   sendCurrentChatbotMessage,
 } from "./api";
 import { injectCopilotContext } from "./copilotApi";
+import { saveResearchHandoff } from "./researchHandoff";
 
 
 // Workspace-aware quick prompts for the Universal AI Copilot.
 // Each key maps to the active sidebar view slug.
 const WORKSPACE_QUICK_PROMPTS = {
+  advisor: [
+    "What should I do next?",
+    "What risks should I manage right now?",
+    "Why is GENESIS recommended?",
+  ],
+  research: [
+    "Who are my competitors?",
+    "What market gaps did the research find?",
+    "What recent market developments matter?",
+  ],
+  requirements: [
+    "Which documents do I still need?",
+    "Which requirements need verification?",
+    "What evidence should I prepare?",
+  ],
   milestones: [
     "Which milestones should I prioritize?",
     "How do I set up milestone dependencies?",
@@ -62,9 +78,24 @@ function getWorkspacePrompts(view) {
   return WORKSPACE_QUICK_PROMPTS[view] || WORKSPACE_QUICK_PROMPTS._default;
 }
 
-const VIEW_ALIASES = {
-  dashboard: "overview",
-};
+const VALID_NAVIGATION_VIEWS = new Set([
+  "dashboard",
+  "startup",
+  "builder",
+  "capital-planner",
+  "tracker",
+  "roadmap",
+  "milestones",
+  "schemes",
+  "requirements",
+  "funding",
+  "advisor",
+  "research",
+  "intelligence",
+  "reviewer-verifications",
+  "onboarding",
+  "documents",
+]);
 
 
 function navigationView(navigation) {
@@ -73,18 +104,28 @@ function navigationView(navigation) {
   }
 
   if (navigation.action === "start_assessment") {
-    return "assessment";
+    return "onboarding";
   }
 
   if (navigation.action !== "navigate") {
     return null;
   }
 
-  return (
-    VIEW_ALIASES[navigation.view]
-    || navigation.view
-    || null
-  );
+  const requestedView = String(
+    navigation.view || "",
+  ).trim();
+
+  // Compatibility with the old pre-router state-machine name.
+  const normalizedView =
+    requestedView === "overview"
+      ? "dashboard"
+      : requestedView === "assessment"
+        ? "onboarding"
+        : requestedView;
+
+  return VALID_NAVIGATION_VIEWS.has(normalizedView)
+    ? normalizedView
+    : null;
 }
 
 function messageClaims(message = {}) {
@@ -288,6 +329,56 @@ export default function ChatbotDrawer({
 
       setPayload(nextPayload);
       setDraft("");
+
+      const responseMessages = Array.isArray(
+        nextPayload?.messages,
+      )
+        ? nextPayload.messages
+        : [];
+
+      const lastMessage = responseMessages[
+        responseMessages.length - 1
+      ];
+
+      const metadata = (
+        lastMessage?.metadata
+        && typeof lastMessage.metadata === "object"
+      )
+        ? lastMessage.metadata
+        : {};
+
+      const research = (
+        metadata.research
+        && typeof metadata.research === "object"
+      )
+        ? metadata.research
+        : null;
+
+      const navigation = (
+        metadata.navigation
+        && typeof metadata.navigation === "object"
+      )
+        ? metadata.navigation
+        : null;
+
+      if (
+        metadata.intent === "research_handoff"
+        && navigationView(navigation) === "research"
+        && research?.question
+      ) {
+        const saved = saveResearchHandoff({
+          question: research.question,
+          startupProfileId,
+          autoSubmit: (
+            research.auto_submit !== false
+          ),
+        });
+
+        if (saved) {
+          setOpen(false);
+          onNavigate("research");
+        }
+      }
     } catch (requestError) {
       setError(describeApiFailure(requestError));
     } finally {
@@ -450,7 +541,7 @@ export default function ChatbotDrawer({
                   aria-hidden="true"
                   className="spinner"
                 />
-                Thinking with Qwen3…
+                Preparing grounded response…
               </div>
             )}
 

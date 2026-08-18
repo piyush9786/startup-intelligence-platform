@@ -22,7 +22,13 @@ def test_query_planner():
 
     queries = generate_search_queries(idea, question)
     assert len(queries) >= 3
-    assert any("HealthPulse" in q for q in queries)
+
+    combined = " ".join(queries).lower()
+
+    # Search discovery should use the startup's actual market/problem
+    # terms rather than depending on an unpublished startup name.
+    assert "health" in combined
+    assert "india" in combined
 
 
 def test_query_planner_does_not_treat_question_grammar_as_industry():

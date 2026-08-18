@@ -42,8 +42,8 @@ function SectionBadge({ field, profile }) {
   }
 
   return (
-    <span className="badge badge-claim" title="Self-reported by founder">
-      Verified claim
+    <span className="badge badge-claim" title="Provided by the founder; not independently verified">
+      Founder provided
     </span>
   );
 }
@@ -70,18 +70,13 @@ function StartupResumeView({ completeness, onGoToAssessment, profile }) {
                   <b aria-hidden="true">✓</b> DPIIT Recognized
                 </span>
               )}
-              {profile?.ml_cohort_id !== undefined && profile?.ml_cohort_id !== null && (
-                <span className="resume-badge badge-cohort" style={{ background: "rgba(99, 102, 241, 0.15)", color: "#818cf8", border: "1px solid rgba(99, 102, 241, 0.3)" }} title="Assigned by K-Means Cohort Clustering">
-                  🤖 Cohort #{profile.ml_cohort_id + 1}
-                </span>
-              )}
               {profile?.is_anomalous ? (
                 <span className="resume-badge badge-anomaly" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#f87171", border: "1px solid rgba(239, 68, 68, 0.3)" }} title="Flagged by Isolation Forest model for manual review">
                   ⚠️ Review Flagged
                 </span>
               ) : (
-                <span className="resume-badge badge-verified-profile" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", border: "1px solid rgba(16, 185, 129, 0.3)" }} title="Integrity verified by Isolation Forest model">
-                  ✓ Verified Profile
+                <span className="resume-badge badge-verified-profile" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#34d399", border: "1px solid rgba(16, 185, 129, 0.3)" }} title="Automated consistency checks found no anomaly; this does not independently verify founder-provided facts.">
+                  ✓ Consistency checks passed
                 </span>
               )}
               <span className="resume-badge badge-stage">
@@ -124,7 +119,7 @@ function StartupResumeView({ completeness, onGoToAssessment, profile }) {
               <strong className="resume-metric-value">{completeness.overallPercent}%</strong>
             </div>
             <div className="resume-metric-item">
-              <span className="resume-metric-label">Verified Facts</span>
+              <span className="resume-metric-label">Profile Facts</span>
               <strong className="resume-metric-value">{completeness.filledFields} / {completeness.totalFields}</strong>
             </div>
             <div className="resume-metric-item">
@@ -193,7 +188,7 @@ function StartupResumeView({ completeness, onGoToAssessment, profile }) {
         <footer className="resume-footer">
           <div className="resume-footer-info">
             <span>Official Founder Factsheet · Startup Intelligence Platform</span>
-            <small>All facts shown are sourced from submitted drafts, certificates, and verified evidence logs.</small>
+            <small>Facts are labeled by provenance: founder-provided, document-extracted, or reviewer-verified.</small>
           </div>
           <button
             className="button button-secondary button-small"

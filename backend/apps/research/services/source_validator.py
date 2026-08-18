@@ -14,6 +14,12 @@ OFFICIAL_DOMAINS = {
     "sebi.gov.in",
 }
 
+STARTUP_DIRECTORIES = {
+    "tracxn.com",
+    "f6s.com",
+    "growthlist.co",
+}
+
 REPUTABLE_MEDIA = {
     "inc42.com",
     "yourstory.com",
@@ -47,11 +53,28 @@ def classify_source_type(url: str, publisher: str | None = None) -> str:
 
     if any(_is_matching_domain(domain, d) for d in OFFICIAL_DOMAINS):
         return "official_portal"
-    if any(_is_matching_domain(domain, d) for d in REPUTABLE_MEDIA):
+    if any(
+        _is_matching_domain(domain, d)
+        for d in REPUTABLE_MEDIA
+    ):
         return "news"
-    if "report" in url.lower() or "research" in url.lower():
+
+    if any(
+        _is_matching_domain(domain, d)
+        for d in STARTUP_DIRECTORIES
+    ):
+        return "startup_directory"
+
+    if (
+        "report" in url.lower()
+        or "research" in url.lower()
+    ):
         return "market_report"
-    return "company_website"
+
+    # An arbitrary web domain is NOT automatically
+    # the official website of a company. Treat it as
+    # an unknown web source until explicitly trusted.
+    return "web_source"
 
 
 def compute_content_hash(text: str) -> str:
@@ -63,33 +86,62 @@ def compute_evidence_confidence(
     source_type: str,
     retrieval_relevance: float,
 ) -> tuple[float, str]:
-    """Calculate multi-factor confidence combining domain authority and retrieval relevance.
+    """Score evidence authority without confusing low trust with invalidity.
 
-    Returns:
-        (final_confidence_score, verification_status)
+    Search-provider relevance affects ranking, while source type determines
+    the verification tier. A valid but unknown web result remains usable as
+    unverified evidence rather than being silently discarded.
     """
     AUTHORITY_WEIGHTS = {
         "official_portal": 0.95,
         "news": 0.75,
         "market_report": 0.70,
-        "company_website": 0.55,
+        "startup_directory": 0.50,
+        "web_source": 0.15,
     }
 
-    authority_score = AUTHORITY_WEIGHTS.get(source_type, 0.5)
-    # Combine 60% authority + 40% search relevance
-    final_score = round(0.60 * authority_score + 0.40 * min(max(retrieval_relevance, 0.0), 1.0), 2)
+    authority_score = AUTHORITY_WEIGHTS.get(
+        source_type,
+        0.15,
+    )
+
+    relevance = min(
+        max(float(retrieval_relevance), 0.0),
+        1.0,
+    )
+
+    final_score = round(
+        0.60 * authority_score
+        + 0.40 * relevance,
+        2,
+    )
 
     if source_type == "official_portal":
         status = "official_live"
-    elif source_type in ("news", "market_report") and final_score >= 0.65:
-        status = "reputable_secondary"
-    elif final_score >= 0.45:
+
+    elif source_type in {
+        "news",
+        "market_report",
+    }:
+        # Recognised secondary sources remain stronger than generic
+        # web results. Very weak matches are retained but downgraded.
+        if final_score >= 0.55:
+            status = "reputable_secondary"
+        else:
+            status = "unverified_live"
+
+    elif source_type in {
+        "startup_directory",
+        "web_source",
+    }:
+        # Low authority means unverified, not invalid.
+        # Confidence still controls ranking.
         status = "unverified_live"
+
     else:
-        status = "rejected"
+        status = "unverified_live"
 
     return final_score, status
-
 
 def classify_verification_status(source_type: str, confidence: float) -> str:
     _, status = compute_evidence_confidence(source_type, confidence)

@@ -132,14 +132,19 @@ def test_ollama_provider_simplifies_complex_generation_schema():
         "properties": {
             "summary": {
                 "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "pattern": "^.+$",
             },
             "disclaimer": {
                 "enum": ["Fixed"],
             },
             "items": {
                 "type": "array",
+                "maxItems": 10,
                 "items": {
                     "type": "string",
+                    "maxLength": 500,
                 },
             },
         },

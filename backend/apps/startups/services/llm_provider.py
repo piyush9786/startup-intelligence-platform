@@ -58,22 +58,250 @@ class StartupAdvisorLLMProvider(Protocol):
     ) -> LLMGenerationResult: ...
 
 
-def _clean_and_parse_json_payload(content: Any) -> dict[str, Any]:
-    """Robust JSON cleaning and parsing for LLM output.
+def _repair_missing_object_comma(
+    text: str,
+    error: json.JSONDecodeError,
+) -> str | None:
+    """Conservatively repair a missing comma between object members.
 
-    Strips markdown code fences (```json ... ```), extracts outer JSON objects,
-    repairs trailing commas, and parses into a dictionary.
+    Example:
+
+        {"a":"x" "b":"y"}
+
+    becomes:
+
+        {"a":"x","b":"y"}
+
+    This deliberately does NOT attempt arbitrary semantic JSON repair.
+    Downstream JSON Schema and alias validation remain authoritative.
     """
+
+    if error.msg != "Expecting ',' delimiter":
+        return None
+
+    index = error.pos
+
+    while (
+        index < len(text)
+        and text[index].isspace()
+    ):
+        index += 1
+
+    if index >= len(text):
+        return None
+
+    # Most common model failure:
+    #
+    #   "previous value" "next_key":
+    #
+    # Only insert a comma when the unexpected quoted token is
+    # clearly followed by a colon, meaning it is an object key.
+    if text[index] == '"':
+        cursor = index + 1
+        escaped = False
+
+        while cursor < len(text):
+            char = text[cursor]
+
+            if escaped:
+                escaped = False
+
+            elif char == "\\":
+                escaped = True
+
+            elif char == '"':
+                break
+
+            cursor += 1
+
+        if cursor >= len(text):
+            return None
+
+        after_key = cursor + 1
+
+        while (
+            after_key < len(text)
+            and text[after_key].isspace()
+        ):
+            after_key += 1
+
+        if (
+            after_key < len(text)
+            and text[after_key] == ":"
+        ):
+            return (
+                text[:index]
+                + ","
+                + text[index:]
+            )
+
+    # Also handle a missing comma before a nested object/array
+    # after another completed object/array:
+    #
+    #   [{...} {...}]
+    #
+    previous = index - 1
+
+    while (
+        previous >= 0
+        and text[previous].isspace()
+    ):
+        previous -= 1
+
+    if (
+        previous >= 0
+        and text[previous] in "}]"
+        and text[index] in "{["
+    ):
+        return (
+            text[:index]
+            + ","
+            + text[index:]
+        )
+
+    return None
+
+
+
+def _repair_mismatched_container_close(
+    text: str,
+    error: json.JSONDecodeError,
+) -> str | None:
+    """Repair one missing container closer.
+
+    Examples:
+
+        [{"a":"b"]
+    becomes:
+        [{"a":"b"}]
+
+    and:
+
+        {"a":[1,2}
+    becomes:
+        {"a":[1,2]}
+
+    The repair is allowed only when a lightweight structural scan
+    proves that the current closing token does not match the
+    innermost still-open JSON container.
+    """
+
+    if error.msg != "Expecting ',' delimiter":
+        return None
+
+    index = error.pos
+
+    while (
+        index < len(text)
+        and text[index].isspace()
+    ):
+        index += 1
+
+    if index >= len(text):
+        return None
+
+    current = text[index]
+
+    if current not in "]}":
+        return None
+
+    stack: list[str] = []
+    in_string = False
+    escaped = False
+
+    for char in text[:index]:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+
+            continue
+
+        if char == '"':
+            in_string = True
+
+        elif char in "{[":
+            stack.append(char)
+
+        elif char in "}]":
+            if not stack:
+                return None
+
+            expected = (
+                "}"
+                if stack[-1] == "{"
+                else "]"
+            )
+
+            if char != expected:
+                # Do not repair if the structure was already
+                # malformed earlier in the document.
+                return None
+
+            stack.pop()
+
+    if not stack:
+        return None
+
+    innermost = stack[-1]
+
+    # Object is still open but model emitted array close.
+    if (
+        innermost == "{"
+        and current == "]"
+    ):
+        return (
+            text[:index]
+            + "}"
+            + text[index:]
+        )
+
+    # Array is still open but model emitted object close.
+    if (
+        innermost == "["
+        and current == "}"
+    ):
+        return (
+            text[:index]
+            + "]"
+            + text[index:]
+        )
+
+    return None
+
+
+
+def _clean_and_parse_json_payload(
+    content: Any,
+) -> dict[str, Any]:
+    """Clean and deterministically parse structured LLM JSON.
+
+    Repairs only bounded syntax defects:
+    - outer markdown fences,
+    - text surrounding the outer JSON object,
+    - trailing commas,
+    - missing commas between clearly identifiable object members.
+
+    Semantic repair is intentionally forbidden. JSON Schema and alias
+    validation remain responsible for validating model meaning.
+    """
+
     if isinstance(content, dict):
         return content
 
-    if not isinstance(content, str) or not content.strip():
-        raise LLMResponseFormatError("LLM response content is empty.")
+    if (
+        not isinstance(content, str)
+        or not content.strip()
+    ):
+        raise LLMResponseFormatError(
+            "LLM response content is empty."
+        )
 
     cleaned = content.strip()
 
-    # Remove only the outer fence. A non-greedy object regex would
-    # cut valid advisor JSON at the first nested closing brace.
     if "```" in cleaned:
         cleaned = re.sub(
             r"^\s*```(?:json)?\s*",
@@ -81,33 +309,101 @@ def _clean_and_parse_json_payload(content: Any) -> dict[str, Any]:
             cleaned,
             flags=re.IGNORECASE,
         )
-        cleaned = re.sub(r"\s*```\s*$", "", cleaned)
 
-    # Extract JSON object substring between first '{' and last '}'
-    if not (cleaned.startswith("{") and cleaned.endswith("}")):
+        cleaned = re.sub(
+            r"\s*```\s*$",
+            "",
+            cleaned,
+        )
+
+    if not (
+        cleaned.startswith("{")
+        and cleaned.endswith("}")
+    ):
         start_idx = cleaned.find("{")
         end_idx = cleaned.rfind("}")
-        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-            cleaned = cleaned[start_idx : end_idx + 1].strip()
 
-    # Standard JSON parse
+        if (
+            start_idx != -1
+            and end_idx != -1
+            and end_idx > start_idx
+        ):
+            cleaned = cleaned[
+                start_idx : end_idx + 1
+            ].strip()
+
+    # Strict JSON first.
     try:
         data = json.loads(cleaned)
+
         if isinstance(data, dict):
             return data
-    except ValueError:
+
+    except json.JSONDecodeError:
         pass
 
-    # Secondary repair attempt: strip trailing commas before closing braces/brackets
-    repaired = re.sub(r",\s*([\}\]])", r"\1", cleaned)
+    # Existing bounded repair:
+    # remove trailing commas before } or ].
+    repaired = re.sub(
+        r",\s*([\}\]])",
+        r"\1",
+        cleaned,
+    )
+
+    # Bounded missing-comma repair.
+    #
+    # Multiple passes are supported because a response can contain
+    # more than one missing delimiter. Four is intentionally small
+    # to avoid turning this into a general-purpose semantic repairer.
+    for _ in range(4):
+        try:
+            data = json.loads(repaired)
+
+            if isinstance(data, dict):
+                return data
+
+            break
+
+        except json.JSONDecodeError as exc:
+            next_repair = (
+                _repair_missing_object_comma(
+                    repaired,
+                    exc,
+                )
+            )
+
+            if next_repair is None:
+                next_repair = (
+                    _repair_mismatched_container_close(
+                        repaired,
+                        exc,
+                    )
+                )
+
+            if (
+                next_repair is None
+                or next_repair == repaired
+            ):
+                raise LLMResponseFormatError(
+                    "The model returned an invalid response: malformed JSON."
+                ) from exc
+
+            repaired = next_repair
+
     try:
         data = json.loads(repaired)
+
         if isinstance(data, dict):
             return data
-    except ValueError as exc:
-        raise LLMResponseFormatError("The local Ollama model returned an invalid response.") from exc
 
-    raise LLMResponseFormatError("The local Ollama model returned an invalid response.")
+    except json.JSONDecodeError as exc:
+        raise LLMResponseFormatError(
+            "The model returned an invalid response: malformed JSON."
+        ) from exc
+
+    raise LLMResponseFormatError(
+        "The model response JSON must be an object."
+    )
 
 
 def _ollama_generation_schema(schema: Any) -> Any:
@@ -125,6 +421,13 @@ def _ollama_generation_schema(schema: Any) -> Any:
         "additionalProperties",
         "required",
         "enum",
+        "minItems",
+        "maxItems",
+        "minLength",
+        "maxLength",
+        "pattern",
+        "minimum",
+        "maximum",
     ):
         if key in schema:
             simplified[key] = schema[key]
@@ -141,9 +444,6 @@ def _ollama_generation_schema(schema: Any) -> Any:
         simplified["items"] = _ollama_generation_schema(
             schema["items"],
         )
-
-    if schema.get("maxItems") == 0:
-        simplified["maxItems"] = 0
 
     return simplified
 
@@ -322,17 +622,6 @@ class OllamaStartupAdvisorProvider:
                 "The local Ollama model payload lacks a 'response' or 'message' field."
             ) from exc
 
-        if response_data.get("done_reason") == "length":
-            _log_invalid_ollama_advisor_response(
-                model_name=self.model_name,
-                response=response,
-                response_data=response_data,
-                content=content,
-            )
-            raise LLMOutputTruncatedError(
-                "The advisor response was truncated because the output token limit was reached."
-            )
-
         if response_data.get("done") is False:
             _log_invalid_ollama_advisor_response(
                 model_name=self.model_name,
@@ -353,6 +642,18 @@ class OllamaStartupAdvisorProvider:
                 response_data=response_data,
                 content=content,
             )
+
+            if (
+                response_data.get("done_reason")
+                == "length"
+            ):
+                raise LLMOutputTruncatedError(
+                    "The Ollama structured response was "
+                    "truncated because the output token "
+                    "limit was reached before completing "
+                    "valid JSON."
+                ) from exc
+
             raise exc
 
         return LLMGenerationResult(
@@ -377,6 +678,215 @@ class OllamaStartupAdvisorProvider:
             },
         )
 
+
+
+class StartupIntelSLMProvider:
+    """HTTP client for the host-side StartupIntel NF4 + PEFT service."""
+
+    provider_name = "startupintel_slm"
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        timeout_seconds: float,
+        max_output_tokens: int,
+        api_token: str = "",
+        transport: httpx.BaseTransport | None = None,
+    ):
+        self.base_url = base_url.rstrip("/")
+        self.model_name = "StartupIntel-SLM-0.6B-NF4-PEFT"
+        self.timeout_seconds = float(timeout_seconds)
+        self.max_output_tokens = max(
+            64,
+            int(max_output_tokens),
+        )
+        self.api_token = api_token.strip()
+        self.transport = transport
+
+    @property
+    def generation_parameters(self) -> dict[str, Any]:
+        return {
+            "runtime": "transformers_nf4_peft",
+            "do_sample": False,
+            "max_output_tokens": self.max_output_tokens,
+            "generation_serialized": True,
+        }
+
+    def generate(
+        self,
+        *,
+        messages: list[dict[str, str]],
+        response_schema: dict[str, Any],
+    ) -> LLMGenerationResult:
+        # response_schema remains a Django-side validation contract.
+        # The SLM server only performs deterministic text generation.
+        del response_schema
+
+        headers = {
+            "Content-Type": "application/json",
+        }
+
+        if self.api_token:
+            headers["Authorization"] = (
+                f"Bearer {self.api_token}"
+            )
+
+        request_payload = {
+            "messages": messages,
+            "max_new_tokens": self.max_output_tokens,
+        }
+
+        try:
+            with httpx.Client(
+                timeout=self.timeout_seconds,
+                transport=self.transport,
+            ) as client:
+                response = client.post(
+                    f"{self.base_url}/generate",
+                    json=request_payload,
+                    headers=headers,
+                )
+                response.raise_for_status()
+
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+
+            if status == 400:
+                raise LLMProviderResponseError(
+                    "StartupIntel SLM rejected the generation request.",
+                    retryable=False,
+                ) from exc
+
+            if status in {401, 403}:
+                raise LLMProviderUnavailableError(
+                    "StartupIntel SLM authentication failed."
+                ) from exc
+
+            if status >= 500:
+                raise LLMProviderUnavailableError(
+                    "StartupIntel SLM failed during generation."
+                ) from exc
+
+            raise LLMProviderUnavailableError(
+                f"StartupIntel SLM returned HTTP {status}."
+            ) from exc
+
+        except (
+            httpx.ConnectError,
+            httpx.TimeoutException,
+        ) as exc:
+            raise LLMProviderUnavailableError(
+                "StartupIntel SLM service is unavailable."
+            ) from exc
+
+        except httpx.HTTPError as exc:
+            raise LLMProviderUnavailableError(
+                "StartupIntel SLM request failed."
+            ) from exc
+
+        try:
+            response_data = response.json()
+        except ValueError as exc:
+            raise LLMResponseFormatError(
+                "StartupIntel SLM returned invalid HTTP JSON."
+            ) from exc
+
+        if not isinstance(response_data, dict):
+            raise LLMResponseFormatError(
+                "StartupIntel SLM response must be an object."
+            )
+
+        if response_data.get("done") is False:
+            raise LLMResponseFormatError(
+                "StartupIntel SLM generation did not complete."
+            )
+
+        content = response_data.get("response")
+
+        try:
+            payload = _clean_and_parse_json_payload(
+                content,
+            )
+        except LLMResponseFormatError as exc:
+            if (
+                response_data.get("done_reason")
+                == "length"
+            ):
+                raise LLMOutputTruncatedError(
+                    "StartupIntel SLM output reached "
+                    "its token limit before completing "
+                    "valid JSON."
+                ) from exc
+
+            content_length = (
+                len(content)
+                if isinstance(content, str)
+                else None
+            )
+
+            content_preview = (
+                content[:1200]
+                if isinstance(content, str)
+                else None
+            )
+
+            content_tail = (
+                content[-600:]
+                if isinstance(content, str)
+                else None
+            )
+
+            logger.warning(
+                "Invalid StartupIntel SLM response: "
+                "error=%s parser_cause=%r "
+                "done_reason=%r eval_count=%r "
+                "content_length=%r "
+                "preview=%r tail=%r",
+                exc,
+                exc.__cause__,
+                response_data.get(
+                    "done_reason"
+                ),
+                response_data.get(
+                    "eval_count"
+                ),
+                content_length,
+                content_preview,
+                content_tail,
+            )
+
+            raise
+
+        return LLMGenerationResult(
+            payload=payload,
+            provider=self.provider_name,
+            model_name=str(
+                response_data.get("model")
+                or self.model_name
+            ),
+            prompt_token_count=_optional_nonnegative_int(
+                response_data.get("prompt_eval_count"),
+            ),
+            output_token_count=_optional_nonnegative_int(
+                response_data.get("eval_count"),
+            ),
+            total_duration_ns=_optional_nonnegative_int(
+                response_data.get("total_duration"),
+            ),
+            response_metadata={
+                "done": bool(
+                    response_data.get("done", True)
+                ),
+                "done_reason": response_data.get(
+                    "done_reason"
+                ),
+                "runtime": response_data.get(
+                    "runtime",
+                    "transformers_nf4_peft",
+                ),
+            },
+        )
 
 def _log_invalid_ollama_advisor_response(
     *,
@@ -409,21 +919,72 @@ def _optional_nonnegative_int(value: Any) -> int | None:
     return None
 
 
-def get_startup_advisor_llm_provider() -> StartupAdvisorLLMProvider:
-    provider_name = settings.STARTUP_ADVISOR_LLM_PROVIDER
 
-    if provider_name != "ollama":
-        raise ImproperlyConfigured(
-            "STARTUP_ADVISOR_LLM_PROVIDER must be 'ollama'."
+def get_startupintel_slm_provider() -> StartupAdvisorLLMProvider:
+    """Return the dedicated compact StartupIntel SLM provider."""
+
+    return StartupIntelSLMProvider(
+        base_url=settings.STARTUPINTEL_SLM_BASE_URL,
+        timeout_seconds=(
+            settings.STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS
+        ),
+        max_output_tokens=(
+            settings.STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS
+        ),
+        api_token=settings.STARTUPINTEL_SLM_API_TOKEN,
+    )
+
+
+def get_startupintel_runtime_provider() -> StartupAdvisorLLMProvider:
+    """Provider used only by trained StartupIntel SLM tasks.
+
+    Founder Advisor and Research may use the custom SLM.
+    Other LLM features continue using the normal Ollama provider.
+    """
+
+    if getattr(
+        settings,
+        "STARTUPINTEL_SLM_ENABLED",
+        False,
+    ):
+        return get_startupintel_slm_provider()
+
+    return get_startup_advisor_llm_provider()
+
+
+
+def get_startup_advisor_llm_provider() -> StartupAdvisorLLMProvider:
+    provider_name = (
+        settings.STARTUP_ADVISOR_LLM_PROVIDER
+        .strip()
+        .lower()
+    )
+
+    if provider_name == "ollama":
+        return OllamaStartupAdvisorProvider(
+            base_url=settings.OLLAMA_BASE_URL,
+            model_name=settings.STARTUP_ADVISOR_LLM_MODEL,
+            timeout_seconds=settings.STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS,
+            temperature=settings.STARTUP_ADVISOR_LLM_TEMPERATURE,
+            seed=settings.STARTUP_ADVISOR_LLM_SEED,
+            max_output_tokens=settings.STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS,
+            keep_alive=settings.STARTUP_ADVISOR_LLM_KEEP_ALIVE,
+            context_length=settings.OLLAMA_CONTEXT_LENGTH,
         )
 
-    return OllamaStartupAdvisorProvider(
-        base_url=settings.OLLAMA_BASE_URL,
-        model_name=settings.STARTUP_ADVISOR_LLM_MODEL,
-        timeout_seconds=settings.STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS,
-        temperature=settings.STARTUP_ADVISOR_LLM_TEMPERATURE,
-        seed=settings.STARTUP_ADVISOR_LLM_SEED,
-        max_output_tokens=settings.STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS,
-        keep_alive=settings.STARTUP_ADVISOR_LLM_KEEP_ALIVE,
-        context_length=settings.OLLAMA_CONTEXT_LENGTH,
+    if provider_name == "startupintel_slm":
+        return StartupIntelSLMProvider(
+            base_url=settings.STARTUPINTEL_SLM_BASE_URL,
+            timeout_seconds=(
+                settings.STARTUP_ADVISOR_LLM_TIMEOUT_SECONDS
+            ),
+            max_output_tokens=(
+                settings.STARTUP_ADVISOR_LLM_MAX_OUTPUT_TOKENS
+            ),
+            api_token=settings.STARTUPINTEL_SLM_API_TOKEN,
+        )
+
+    raise ImproperlyConfigured(
+        "STARTUP_ADVISOR_LLM_PROVIDER must be "
+        "'ollama' or 'startupintel_slm'."
     )

@@ -5,7 +5,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from .models import (
+    DecisionRecommendation,
     ResearchEvidence,
+    ResearchInsight,
     ResearchRequest,
     ResearchSearchQuery,
     StartupResearchReport,
@@ -43,7 +45,33 @@ class ResearchSearchQuerySerializer(serializers.ModelSerializer):
         ]
 
 
+class ResearchInsightSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResearchInsight
+        fields = [
+            "id", "source_report", "insight_type", "title", "summary",
+            "details", "evidence_urls", "confidence_score",
+            "freshness_status", "last_verified_at", "created_at",
+        ]
+
+
+class DecisionRecommendationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DecisionRecommendation
+        fields = [
+            "id", "source_report", "question", "recommended_direction",
+            "rationale", "alternatives", "decision_matrix",
+            "conditions_to_reconsider", "immediate_actions", "action_plan",
+            "confidence_score", "generated_at", "created_at",
+        ]
+
+
 class StartupResearchReportSerializer(serializers.ModelSerializer):
+    structured_insights = ResearchInsightSerializer(many=True, read_only=True)
+    decision_recommendation = DecisionRecommendationSerializer(
+        read_only=True, allow_null=True,
+    )
+
     class Meta:
         model = StartupResearchReport
         fields = [
@@ -55,6 +83,8 @@ class StartupResearchReportSerializer(serializers.ModelSerializer):
             "model_name",
             "algorithm_version",
             "report",
+            "structured_insights",
+            "decision_recommendation",
             "created_at",
         ]
 

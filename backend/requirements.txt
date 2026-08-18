@@ -10,7 +10,7 @@ django-celery-beat>=2.8,<3
 django-celery-results>=2.6,<3
 gunicorn>=23,<24
 whitenoise>=6.9,<7
-qdrant-client>=1.14,<2
+qdrant-client==1.14.3
 neo4j>=5.28,<6
 minio>=7.2,<8
 httpx>=0.28,<0.29

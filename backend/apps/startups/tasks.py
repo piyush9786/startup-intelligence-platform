@@ -389,13 +389,25 @@ def generate_startup_advisor_briefing_task(
             error_code="provider_unavailable",
         )
         return _terminal_result(failed_job)
-    except LLMProviderResponseError:
+    except LLMProviderResponseError as exc:
+        logger.error(
+            "Startup advisor provider response invalid "
+            "for job %s: %s",
+            job_id,
+            exc,
+        )
         failed_job = _mark_job_failed(
             job_id=job_id,
             error_code="provider_response_invalid",
         )
         return _terminal_result(failed_job)
-    except BriefingOutputValidationError:
+    except BriefingOutputValidationError as exc:
+        logger.error(
+            "Startup advisor briefing validation failed "
+            "for job %s: %s",
+            job_id,
+            exc,
+        )
         failed_job = _mark_job_failed(
             job_id=job_id,
             error_code="briefing_validation_failed",

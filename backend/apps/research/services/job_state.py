@@ -193,10 +193,14 @@ def persist_research_result(
                 now if state.live_evidence else None
             ),
             model_name=state.model_name or "unknown",
-            algorithm_version="v1.2-vanilla-orchestrator",
+            algorithm_version="v1.3-adviser-decision-intelligence",
             report=state.report_data,
             source_snapshot=state.context_payload,
         )
+
+        from apps.research.services.intelligence_memory import persist_report_intelligence
+
+        persist_report_intelligence(report)
 
         request.status = (
             ResearchRequest.Status.PARTIAL
